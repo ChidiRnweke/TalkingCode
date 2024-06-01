@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "dataprocessing"
+version = "0.1.0"
+description = "Data processing for the chatGPITpt project. The responsibilities of this subproject are downloading the git history, making the embeddings and scheduling this in a pipeline run."
+authors = ["ChidiRNweke <chidi125@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10,<3.13"
+dagster = "^1.7.8"
+dagster-webserver = "^1.7.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
