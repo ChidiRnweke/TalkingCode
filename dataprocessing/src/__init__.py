@@ -1,6 +1,6 @@
 from dagster import Definitions, load_assets_from_modules
 from dotenv import load_dotenv
-from . import assets
+from .orchestration import assets
 
 load_dotenv("config/.env.secret")
 
