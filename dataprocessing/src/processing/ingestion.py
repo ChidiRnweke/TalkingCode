@@ -7,11 +7,11 @@ from src.processing.database import GithubFileModel
 from src.processing.database import GitHubRepositoryModel
 from src.processing.database import LanguagesModel
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy import select
 
 
 def save_and_persist_data(session_maker: sessionmaker[Session], client: Github) -> None:
-    data = repositories_by_user(client)
-    write_to_database(session_maker, data)
+    process_repositories(client, session_maker)
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ class GitHubRepository:
             user=self.user,
             description=self.description,
             url=self.url,
-            languages=set(),
+            languages=[],
         )
 
 
@@ -38,6 +38,7 @@ class GitHubFile:
     name: str
     content_url: str
     last_modified: datetime
+    extension: str
 
     def to_db_object(self, repository: GitHubRepository) -> "GithubFileModel":
         return GithubFileModel(
@@ -46,49 +47,85 @@ class GitHubFile:
             last_modified=self.last_modified,
             repository_name=repository.name,
             repository_user=repository.user,
+            file_extension=self.extension,
+            latest_version=True,
+            is_embedded=False,
         )
 
 
-def repositories_by_user(
-    client: Github,
-) -> list[tuple[GitHubRepository, list[GitHubFile]]]:
-    user_repos = client.get_user().get_repos()
+def process_repositories(client: Github, session_maker: sessionmaker[Session]) -> None:
+    for repo in client.get_user().get_repos():
+        if repo.fork or repo.owner.login != client.get_user().login:
+            continue
+        data = repositories_by_user(repo)
+        write_to_database(session_maker, data)
 
-    result = []
-    for repo in user_repos:
-        repository = create_repository_object(repo)
-        repo_contents = fetch_repository_contents(repo)
-        files = [get_files_from_content(content) for content in repo_contents]
-        result.append((repository, files))
-    return result
+
+def repositories_by_user(
+    repo: Repository,
+) -> tuple[GitHubRepository, list[GitHubFile]]:
+
+    repository = create_repository_object(repo)
+    repo_contents = fetch_repository_contents(repo)
+    files = [get_files_from_content(content) for content in repo_contents]
+    return (repository, files)
 
 
 def write_to_database(
     session_maker: sessionmaker[Session],
-    data: list[tuple[GitHubRepository, list[GitHubFile]]],
+    data: tuple[GitHubRepository, list[GitHubFile]],
 ) -> None:
     with session_maker() as session:
-        for repo, files in data:
-            repo_model = repo.to_db_object()
-            for file in files:
-                file_model = file.to_db_object(repo)
-                repo_model.files.append(file_model)
-                existing_languages = {
-                    lang.language for lang in session.query(LanguagesModel).all()
-                }
-                for language in repo.languages:
-                    if language not in existing_languages:
-                        repo_model.languages.add(LanguagesModel(language=language))
-                    else:
-                        existing_language = (
-                            session.query(LanguagesModel)
-                            .filter_by(language=language)
-                            .first()
-                        )
-                        repo_model.languages.add(existing_language)  # type: ignore
+        repo, files = data
+        repo_model = repo.to_db_object()
+        existing_languages = {
+            lang.language: lang for lang in session.query(LanguagesModel).all()
+        }
+        existing_files_stmt = (
+            select(GithubFileModel)
+            .where(GithubFileModel.repository_name == repo.name)
+            .where(GithubFileModel.repository_user == repo.user)
+        )
+        existing_files = {
+            file.name: file for file in session.scalars(existing_files_stmt).all()
+        }
 
-            session.add(repo_model)
+        for file in files:
+            if (
+                file.name in existing_files
+                and existing_files[file.name].last_modified >= file.last_modified
+            ):
+                continue
+            elif file.name in existing_files:
+                existing_file = existing_files[file.name]
+                update_file_status(session, existing_file)
+
+            process_file(repo, repo_model, existing_languages, file)
+
+        session.add(repo_model)
         session.commit()
+
+
+def update_file_status(session: Session, existing_file: GithubFileModel) -> None:
+    existing_file.latest_version = False
+    session.add(existing_file)
+
+
+def process_file(
+    repo: GitHubRepository,
+    repo_model: GitHubRepositoryModel,
+    existing_languages: dict[str, LanguagesModel],
+    file: GitHubFile,
+) -> None:
+    file_model = file.to_db_object(repo)
+    repo_model.files.append(file_model)
+    for language in repo.languages:
+        if language not in existing_languages:
+            lang_model = LanguagesModel(language=language)
+            existing_languages[language] = lang_model
+            repo_model.languages.append(lang_model)
+        else:
+            repo_model.languages.append(existing_languages[language])
 
 
 def fetch_repository_contents(repo: Repository) -> list[ContentFile]:
@@ -122,4 +159,5 @@ def get_files_from_content(content: ContentFile) -> GitHubFile:
         name=content.name,
         content_url=content.download_url,
         last_modified=content.last_modified_datetime or datetime.now(),
+        extension=content.name.split(".")[-1],
     )
