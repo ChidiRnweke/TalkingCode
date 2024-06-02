@@ -4,4 +4,4 @@ python_logs:
 storage:
   postgres:
     postgres_url:
-      env: PG_DB_CONN_STRING
+      env: DATABASE_URL
