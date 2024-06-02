@@ -85,7 +85,7 @@ class EmbeddedDocumentModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     document_id: Mapped[int] = mapped_column(Integer, ForeignKey("github_files.id"))
-    embedding: Mapped[Vector] = mapped_column(Vector(3072))
+    embedding: Mapped[list[float]] = mapped_column(Vector(3072))
 
     __table_args__ = (
         ForeignKeyConstraint(

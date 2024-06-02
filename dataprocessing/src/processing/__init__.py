@@ -19,7 +19,9 @@ class AppConfig:
 
         if conn_string is None:
             logging.warning("DATABASE_URL is not set. Using dev configuration.")
-            conn_string = "postgresql://postgres:password@localhost:5432/chatGITpt"
+            conn_string = "postgresql://postgres:postgres@localhost:5432/chatGITpt"
+        else:
+            conn_string = os.path.expandvars(conn_string)
 
         if api_key is None:
             raise ValueError("API_KEY is not set and is required to run the pipeline.")
