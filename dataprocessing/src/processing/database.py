@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     Table,
 )
+from pgvector.sqlalchemy import Vector
 
 
 class Base(DeclarativeBase):
@@ -60,6 +61,7 @@ class GithubFileModel(Base):
     repository_name: Mapped[str] = mapped_column(String(255))
     repository_user: Mapped[str] = mapped_column(String(255))
     file_extension: Mapped[str] = mapped_column(String(255))
+    path_in_repo: Mapped[str] = mapped_column(String(255))
     latest_version: Mapped[bool]
     is_embedded: Mapped[bool]
 
@@ -75,4 +77,23 @@ class GithubFileModel(Base):
 
     repository: Mapped[GitHubRepositoryModel] = relationship(
         back_populates="files", foreign_keys=[repository_name, repository_user]
+    )
+
+
+class EmbeddedDocumentModel(Base):
+    __tablename__ = "embedded_documents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document_id: Mapped[int] = mapped_column(Integer, ForeignKey("github_files.id"))
+    embedding: Mapped[Vector] = mapped_column(Vector(3072))
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["document_id"],
+            ["github_files.id"],
+        ),
+    )
+
+    document: Mapped[GithubFileModel] = relationship(
+        back_populates="embeddings", foreign_keys=[document_id]
     )

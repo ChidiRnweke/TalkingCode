@@ -8,6 +8,7 @@ from src.processing.database import GitHubRepositoryModel
 from src.processing.database import LanguagesModel
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import select
+from typing import Self
 
 
 def save_and_persist_data(session_maker: sessionmaker[Session], client: Github) -> None:
@@ -39,6 +40,17 @@ class GitHubFile:
     content_url: str
     last_modified: datetime
     extension: str
+    path_in_project: str
+
+    @classmethod
+    def from_db_object(cls, file: GithubFileModel) -> Self:
+        return cls(
+            name=file.name,
+            content_url=file.content_url,
+            last_modified=file.last_modified,
+            extension=file.file_extension,
+            path_in_project=file.path_in_repo,
+        )
 
     def to_db_object(self, repository: GitHubRepository) -> "GithubFileModel":
         return GithubFileModel(
@@ -48,6 +60,7 @@ class GitHubFile:
             repository_name=repository.name,
             repository_user=repository.user,
             file_extension=self.extension,
+            path_in_repo=self.path_in_project,
             latest_version=True,
             is_embedded=False,
         )
@@ -160,4 +173,5 @@ def get_files_from_content(content: ContentFile) -> GitHubFile:
         content_url=content.download_url,
         last_modified=content.last_modified_datetime or datetime.now(),
         extension=content.name.split(".")[-1],
+        path_in_project=content.path,
     )
