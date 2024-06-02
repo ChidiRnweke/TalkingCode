@@ -1,0 +1,7 @@
+python_logs:
+  python_log_level: INFO
+
+storage:
+  postgres:
+    postgres_url:
+      env: PG_DB_CONN_STRING

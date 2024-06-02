@@ -16,6 +16,7 @@ sqlalchemy = "^2.0.30"
 alembic = "^1.13.1"
 openai = "^1.30.5"
 pgvector = "^0.2.5"
+dagster-postgres = "^0.23.8"
 
 
 [build-system]
