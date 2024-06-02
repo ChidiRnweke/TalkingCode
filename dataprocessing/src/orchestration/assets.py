@@ -4,11 +4,10 @@ from sqlalchemy.orm import sessionmaker
 from src.processing import AppConfig, save_and_persist_data
 
 
-engine = create_engine("sqlite://", echo=True)
-Session = sessionmaker(engine)
-
-
 @asset
 def persist_data():
-    client = AppConfig.from_env().get_github_client()
+    config = AppConfig.from_env()
+    client = config.get_github_client()
+    engine = create_engine(config.db_connection_string, echo=True)
+    Session = sessionmaker(engine)
     return save_and_persist_data(Session, client)
