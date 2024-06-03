@@ -1,17 +1,17 @@
 import asyncio
 import logging
-from github import Github
-from github.ContentFile import ContentFile
 from openai import AsyncOpenAI
-from typing import Coroutine, cast, Self, Any
+from typing import Coroutine, Self, Any
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker, Session
 from src.processing.database import GithubFileModel, EmbeddedDocumentModel
 from src.processing.ingestion import GitHubFile
 from dataclasses import dataclass, asdict
 import json
+from openai import InternalServerError
+import aiohttp
 
-EMBEDDING_MAX_CHARACTERS = 8000 * 4
+EMBEDDING_MAX_CHARACTERS = 8000
 app_logger = logging.getLogger("app_logger")
 
 
@@ -36,6 +36,15 @@ class EmbeddingWithCount:
     total_tokens: int
 
 
+@dataclass(frozen=True)
+class AuthHeader:
+    Authorization: str
+    token: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self.token}"}
+
+
 def split_text_to_chunks(text: str, max_characters: int) -> list[str]:
     return [
         text[i : i + max_characters]  # noqa: E203
@@ -47,7 +56,7 @@ async def embed_and_persist_files(
     session_maker: sessionmaker[Session],
     white_list: list[str],
     api_client: AsyncOpenAI,
-    github_client: Github,
+    github_client: AuthHeader,
     model: str,
     embeddings_disk_path: str,
 ) -> None:
@@ -66,8 +75,11 @@ async def embed_and_persist_files(
 
     file_metadata_list = find_files(session_maker, white_list)
     embedding_futures: list[list[Coroutine[Any, Any, EmbeddingWithCount]]] = []
-    for metadata in file_metadata_list:
-        file_content = get_file_content(github_client, metadata)
+    file_content_futures = [
+        get_file_content(github_client, metadata) for metadata in file_metadata_list
+    ]
+    file_contents = await asyncio.gather(*file_content_futures)
+    for file_content, metadata in zip(file_contents, file_metadata_list):
         chunked_input = split_text_to_chunks(file_content, EMBEDDING_MAX_CHARACTERS)
         embeddings = [
             embed_chunk(chunk, metadata, api_client, model) for chunk in chunked_input
@@ -139,16 +151,14 @@ def find_files(
     return github_files
 
 
-def get_file_content(github_client: Github, metadata: FileMetadata) -> str:
+async def get_file_content(auth: AuthHeader, metadata: FileMetadata) -> str:
     app_logger.debug(
         f"Fetching document {metadata.document_id} from {metadata.repository_name}"
     )
-    repository_name = metadata.repository_name
-    path = metadata.file.path_in_project
-    file = github_client.get_user().get_repo(repository_name).get_contents(path)
-    file = cast(ContentFile, file)
-    file_content = file.decoded_content.decode("utf-8")
-    return file_content
+    path = metadata.file.content_url
+    async with aiohttp.ClientSession(headers=auth.to_dict()) as session:
+        async with session.get(path) as response:
+            return await response.text()
 
 
 def enrich_file_content(file_content: str, file: GitHubFile) -> str:
@@ -161,7 +171,25 @@ def enrich_file_content(file_content: str, file: GitHubFile) -> str:
 async def embed_document(
     openai_client: AsyncOpenAI, text: str, model: str
 ) -> EmbeddingWithCount:
-    embeddings = await openai_client.embeddings.create(input=[text], model=model)
-    embedding = embeddings.data[0].embedding
-    total_tokens = embeddings.usage.total_tokens
-    return EmbeddingWithCount(embedding, total_tokens)
+    return await embed_documents_with_retry(openai_client, text, model, 3)
+
+
+async def embed_documents_with_retry(
+    openai_client: AsyncOpenAI,
+    text: str,
+    model: str,
+    max_retries: int,
+) -> EmbeddingWithCount:
+    for attempt in range(max_retries):
+        try:
+            response = await openai_client.embeddings.create(input=[text], model=model)
+            embedding = response.data[0].embedding
+            total_tokens = response.usage.total_tokens
+            return EmbeddingWithCount(embedding, total_tokens)
+        except Exception as e:
+            app_logger.error(f"Received an internal server error. {attempt}s left")
+            if attempt == max_retries - 1:
+                raise e
+            await asyncio.sleep(5 * attempt + 1)
+    else:
+        raise RuntimeError("Failed to retrieve embeddings after maximum retries.")

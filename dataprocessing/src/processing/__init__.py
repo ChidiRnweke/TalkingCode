@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from github import Auth, Github
 from .ingestion import save_and_persist_data
-from .embedding import embed_and_persist_files
+from .embedding import embed_and_persist_files, AuthHeader
 import logging
 import json
 
@@ -11,6 +11,7 @@ __all__ = [
     "save_and_persist_data",
     "embed_and_persist_files",
     "whitelist_str_as_list",
+    "AuthHeader",
 ]
 
 
