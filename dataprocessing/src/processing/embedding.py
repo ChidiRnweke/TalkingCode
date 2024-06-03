@@ -11,6 +11,8 @@ from src.processing.ingestion import GitHubFile
 from dataclasses import dataclass, asdict
 import json
 
+EMBEDDING_MAX_CHARACTERS = 8000 * 4
+
 
 @dataclass(frozen=True)
 class FileMetadata:
@@ -31,6 +33,13 @@ class FileMetadata:
 class EmbeddingWithCount:
     embedding: list[float]
     total_tokens: int
+
+
+def split_text_to_chunks(text: str, max_characters: int) -> list[str]:
+    return [
+        text[i : i + max_characters]  # noqa: E203
+        for i in range(0, len(text), max_characters)
+    ]
 
 
 async def embed_and_persist_files(
@@ -54,20 +63,34 @@ async def embed_and_persist_files(
 
     """
     file_metadata_list = find_files(session_maker, white_list)
-    embedding_futures: list[Coroutine[Any, Any, EmbeddingWithCount]] = []
+    embedding_futures: list[list[Coroutine[Any, Any, EmbeddingWithCount]]] = []
     for metadata in file_metadata_list:
+
         file_content = get_file_content(github_client, metadata)
-        enriched_content = enrich_file_content(file_content, metadata.file)
-        embeddings = embed_document(api_client, enriched_content, model)
+        chunked_input = split_text_to_chunks(file_content, EMBEDDING_MAX_CHARACTERS)
+        embeddings = [
+            embed_chunk(chunk, metadata, api_client, model) for chunk in chunked_input
+        ]
         embedding_futures.append(embeddings)
 
-    embeddings_with_count = await asyncio.gather(*embedding_futures)
+    embeddings_with_count = await asyncio.gather(
+        *(asyncio.gather(*sublist) for sublist in embedding_futures)
+    )
     for embeddings, metadata in zip(embeddings_with_count, file_metadata_list):
-        persist_embeddings_to_disk(embeddings_disk_path, embeddings, metadata)
-        try:
-            save_embeddings_to_db(session_maker, embeddings, metadata)
-        except Exception as e:
-            logging.error(f"Failed to save embeddings to database: {e}")
+        for chunk in embeddings:
+            persist_embeddings_to_disk(embeddings_disk_path, chunk, metadata)
+            try:
+                save_embeddings_to_db(session_maker, chunk, metadata)
+            except Exception as e:
+                logging.error(f"Failed to save embeddings to database: {e}")
+
+
+async def embed_chunk(
+    file_content: str, metadata: FileMetadata, api_client: AsyncOpenAI, model: str
+) -> EmbeddingWithCount:
+    enriched_content = enrich_file_content(file_content, metadata.file)
+    embeddings = embed_document(api_client, enriched_content, model)
+    return await embeddings
 
 
 def persist_embeddings_to_disk(
@@ -116,9 +139,12 @@ def find_files(
 
 
 def get_file_content(github_client: Github, metadata: FileMetadata) -> str:
+    logging.debug(
+        f"Fetching document {metadata.document_id} from {metadata.repository_name}"
+    )
     repository_name = metadata.repository_name
-    content_url = metadata.file.content_url
-    file = github_client.get_repo(repository_name).get_contents(content_url)
+    path = metadata.file.path_in_project
+    file = github_client.get_user().get_repo(repository_name).get_contents(path)
     file = cast(ContentFile, file)
     file_content = file.decoded_content.decode("utf-8")
     return file_content
