@@ -1,7 +1,9 @@
 import logging
 from dagster import Definitions, load_assets_from_modules
 from dotenv import load_dotenv
+from src.orchestration.resources import AppConfigResource
 from .orchestration import assets
+
 
 load_dotenv("config/.env.secret")
 
@@ -18,4 +20,5 @@ all_assets = load_assets_from_modules([assets])
 
 defs = Definitions(
     assets=all_assets,
+    resources={"app_config_resource": AppConfigResource.from_env()},
 )
