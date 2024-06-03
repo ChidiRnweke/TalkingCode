@@ -1,7 +1,4 @@
 python_logs:
   python_log_level: INFO
 
-storage:
-  postgres:
-    postgres_url:
-      env: DATABASE_URL
+
