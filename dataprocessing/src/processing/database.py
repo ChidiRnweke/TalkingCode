@@ -24,12 +24,19 @@ class LanguagesModel(Base):
 languages_repository_bridge = Table(
     "languages_repository_bridge",
     Base.metadata,
-    Column("language_name", ForeignKey("github_languages.language")),
+    Column("language_name", String(255)),
     Column("repository_name", String(255)),
     Column("repository_user", String(255)),
     ForeignKeyConstraint(
         ["repository_name", "repository_user"],
-        ["github_repositories.name", "github_repositories.user"],
+        [
+            "github_repositories.name",
+            "github_repositories.user",
+        ],
+    ),
+    ForeignKeyConstraint(
+        ["language_name"],
+        ["github_languages.language"],
     ),
 )
 
@@ -79,6 +86,10 @@ class GithubFileModel(Base):
         back_populates="files", foreign_keys=[repository_name, repository_user]
     )
 
+    embedding: Mapped[list["EmbeddedDocumentModel"]] = relationship(
+        back_populates="document", cascade="all, delete-orphan"
+    )
+
 
 class EmbeddedDocumentModel(Base):
     __tablename__ = "embedded_documents"
@@ -95,5 +106,5 @@ class EmbeddedDocumentModel(Base):
     )
 
     document: Mapped[GithubFileModel] = relationship(
-        back_populates="embeddings", foreign_keys=[document_id]
+        back_populates="embedding", foreign_keys=[document_id]
     )
