@@ -1,8 +1,9 @@
 import asyncio
+import logging
 from github import Github
 from github.ContentFile import ContentFile
 from openai import AsyncOpenAI
-from typing import cast, Self
+from typing import Coroutine, cast, Self, Any
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker, Session
 from src.processing.database import GithubFileModel, EmbeddedDocumentModel
@@ -26,6 +27,12 @@ class FileMetadata:
         )
 
 
+@dataclass(frozen=True)
+class EmbeddingWithCount:
+    embedding: list[float]
+    total_tokens: int
+
+
 async def embed_and_persist_files(
     session_maker: sessionmaker[Session],
     api_client: AsyncOpenAI,
@@ -46,29 +53,32 @@ async def embed_and_persist_files(
 
     """
     file_metadata_list = find_files(session_maker)
-    embedding_futures = []
+    embedding_futures: list[Coroutine[Any, Any, EmbeddingWithCount]] = []
     for metadata in file_metadata_list:
         file_content = get_file_content(github_client, metadata)
         enriched_content = enrich_file_content(file_content, metadata.file)
         embeddings = embed_document(api_client, enriched_content, model)
         embedding_futures.append(embeddings)
 
-    embeddings = await asyncio.gather(*embedding_futures)
-    for embeddings, metadata in zip(embeddings, file_metadata_list):
+    embeddings_with_count = await asyncio.gather(*embedding_futures)
+    for embeddings, metadata in zip(embeddings_with_count, file_metadata_list):
         persist_embeddings_to_disk(embeddings_disk_path, embeddings, metadata)
         try:
             save_embeddings_to_db(session_maker, embeddings, metadata)
         except Exception as e:
-            print(f"Failed to save embeddings to database: {e}")
+            logging.error(f"Failed to save embeddings to database: {e}")
 
 
 def persist_embeddings_to_disk(
     file_path: str,
-    embeddings: list[float],
+    embeddings: EmbeddingWithCount,
     metadata: FileMetadata,
 ) -> None:
     metadata_json = asdict(metadata)
-    metadata_json["embedding"] = embeddings
+    metadata_json["embedding"] = embeddings.embedding
+    metadata_json["input_token_count"] = embeddings.total_tokens
+    metadata_json["repository_name"] = metadata.repository_name
+    metadata_json["document_id"] = metadata.document_id
     write_path = file_path + f"/{metadata.repository_name}_{metadata.document_id}.json"
     with open(write_path, "w") as file:
         json.dump(metadata_json, file)
@@ -76,12 +86,13 @@ def persist_embeddings_to_disk(
 
 def save_embeddings_to_db(
     session_maker: sessionmaker[Session],
-    embeddings: list[float],
+    embeddings: EmbeddingWithCount,
     metadata: FileMetadata,
 ) -> None:
     embedded_document = EmbeddedDocumentModel(
         document_id=metadata.document_id,
-        embedding=embeddings,
+        embedding=embeddings.embedding,
+        input_token_count=embeddings.total_tokens,
     )
     with session_maker() as session:
         session.add(embedded_document)
@@ -114,6 +125,8 @@ def enrich_file_content(file_content: str, file: GitHubFile) -> str:
 
 async def embed_document(
     openai_client: AsyncOpenAI, text: str, model: str
-) -> list[float]:
+) -> EmbeddingWithCount:
     embeddings = await openai_client.embeddings.create(input=[text], model=model)
-    return embeddings.data[0].embedding
+    embedding = embeddings.data[0].embedding
+    total_tokens = embeddings.usage.total_tokens
+    return EmbeddingWithCount(embedding, total_tokens)
