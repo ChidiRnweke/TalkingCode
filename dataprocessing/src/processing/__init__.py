@@ -22,7 +22,7 @@ class AppConfig:
     whitelisted_extensions: list[str]
 
     embedding_disk_path: str = "embeddings"
-    model: str = "text-embedding-3-large"
+    embedding_model: str = "text-embedding-3-large"
 
     @staticmethod
     def from_env() -> "AppConfig":

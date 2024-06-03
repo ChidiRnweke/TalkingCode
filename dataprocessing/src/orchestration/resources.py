@@ -9,7 +9,7 @@ class AppConfigResource(ConfigurableResource):
     db_connection_string: str
     whitelisted_extensions: list[str]
     embedding_disk_path: str = "embeddings"
-    model: str = "text-embedding-3-large"
+    embedding_model: str = "text-embedding-3-large"
 
     @classmethod
     def from_env(cls) -> "AppConfigResource":
@@ -52,6 +52,6 @@ class AppConfigResource(ConfigurableResource):
             openai_api_key=self.openai_api_key,
             db_connection_string=self.db_connection_string,
             embedding_disk_path=self.embedding_disk_path,
-            model=self.model,
+            embedding_model=self.embedding_model,
             whitelisted_extensions=self.whitelisted_extensions,
         )

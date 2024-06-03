@@ -26,6 +26,6 @@ def persist_embeddings(app_config_resource: AppConfigResource):
         Session,
         openai_client,
         github_client,
-        app_config.model,
+        app_config.embedding_model,
         app_config.embedding_disk_path,
     )
