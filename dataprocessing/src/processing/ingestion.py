@@ -9,6 +9,9 @@ from src.processing.database import LanguagesModel
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import select
 from typing import Self
+import logging
+
+logger = logging.getLogger("app_logger")
 
 
 def save_and_persist_data(session_maker: sessionmaker[Session], client: Github) -> None:
@@ -68,13 +71,15 @@ class GitHubFile:
 
 def process_repositories(client: Github, session_maker: sessionmaker[Session]) -> None:
     for repo in client.get_user().get_repos():
+        logger.info(f"Processing repository {repo.name}")
         if repo.fork or repo.owner.login != client.get_user().login:
             continue
-        data = repositories_by_user(repo)
-        write_to_database(session_maker, data)
+        repo_with_files = process_single_repository(repo)
+        logger.info(f"Found {len(repo_with_files)} files in {repo_with_files[0].name}")
+        write_to_database(session_maker, repo_with_files)
 
 
-def repositories_by_user(
+def process_single_repository(
     repo: Repository,
 ) -> tuple[GitHubRepository, list[GitHubFile]]:
 
@@ -117,6 +122,7 @@ def write_to_database(
 
         session.add(repo_model)
         session.commit()
+        logger.debug(f"Saved {repo.name} to the database")
 
 
 def update_file_status(session: Session, existing_file: GithubFileModel) -> None:

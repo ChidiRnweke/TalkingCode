@@ -12,6 +12,7 @@ from dataclasses import dataclass, asdict
 import json
 
 EMBEDDING_MAX_CHARACTERS = 8000 * 4
+app_logger = logging.getLogger("app_logger")
 
 
 @dataclass(frozen=True)
@@ -62,10 +63,10 @@ async def embed_and_persist_files(
         embeddings_disk_path (str): The path to save the embeddings to disk.
 
     """
+
     file_metadata_list = find_files(session_maker, white_list)
     embedding_futures: list[list[Coroutine[Any, Any, EmbeddingWithCount]]] = []
     for metadata in file_metadata_list:
-
         file_content = get_file_content(github_client, metadata)
         chunked_input = split_text_to_chunks(file_content, EMBEDDING_MAX_CHARACTERS)
         embeddings = [
@@ -82,7 +83,7 @@ async def embed_and_persist_files(
             try:
                 save_embeddings_to_db(session_maker, chunk, metadata)
             except Exception as e:
-                logging.error(f"Failed to save embeddings to database: {e}")
+                app_logger.error(f"Failed to save embeddings to database: {e}")
 
 
 async def embed_chunk(
@@ -139,7 +140,7 @@ def find_files(
 
 
 def get_file_content(github_client: Github, metadata: FileMetadata) -> str:
-    logging.debug(
+    app_logger.debug(
         f"Fetching document {metadata.document_id} from {metadata.repository_name}"
     )
     repository_name = metadata.repository_name

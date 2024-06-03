@@ -1,4 +1,6 @@
 python_logs:
+  managed_python_loggers:
+    - app_logger
   python_log_level: INFO
 
 
