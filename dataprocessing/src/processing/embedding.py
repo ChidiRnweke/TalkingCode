@@ -2,17 +2,13 @@ import asyncio
 from github import Github
 from github.ContentFile import ContentFile
 from openai import AsyncOpenAI
-from typing import Literal, cast, Self
+from typing import cast, Self
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker, Session
 from src.processing.database import GithubFileModel, EmbeddedDocumentModel
 from src.processing.ingestion import GitHubFile
 from dataclasses import dataclass, asdict
 import json
-
-embedding_model_type = Literal[
-    "text-embedding-3-large", "text-embedding-3-small", "text-embedding-ada-002"
-]
 
 
 @dataclass(frozen=True)
@@ -30,11 +26,11 @@ class FileMetadata:
         )
 
 
-async def process_files(
+async def embed_and_persist_files(
     session_maker: sessionmaker[Session],
     api_client: AsyncOpenAI,
     github_client: Github,
-    model: embedding_model_type,
+    model: str,
     embeddings_disk_path: str,
 ) -> None:
     """
@@ -117,7 +113,7 @@ def enrich_file_content(file_content: str, file: GitHubFile) -> str:
 
 
 async def embed_document(
-    openai_client: AsyncOpenAI, text: str, model: embedding_model_type
+    openai_client: AsyncOpenAI, text: str, model: str
 ) -> list[float]:
     embeddings = await openai_client.embeddings.create(input=[text], model=model)
     return embeddings.data[0].embedding
