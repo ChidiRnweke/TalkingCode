@@ -18,6 +18,10 @@ openai = "^1.30.5"
 pgvector = "^0.2.5"
 dagster-postgres = "^0.23.8"
 
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.29.4"
+
+
 
 [build-system]
 requires = ["poetry-core"]
