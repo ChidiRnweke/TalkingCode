@@ -35,6 +35,7 @@ class EmbeddingWithCount:
 
 async def embed_and_persist_files(
     session_maker: sessionmaker[Session],
+    white_list: list[str],
     api_client: AsyncOpenAI,
     github_client: Github,
     model: str,
@@ -52,7 +53,7 @@ async def embed_and_persist_files(
         embeddings_disk_path (str): The path to save the embeddings to disk.
 
     """
-    file_metadata_list = find_files(session_maker)
+    file_metadata_list = find_files(session_maker, white_list)
     embedding_futures: list[Coroutine[Any, Any, EmbeddingWithCount]] = []
     for metadata in file_metadata_list:
         file_content = get_file_content(github_client, metadata)
@@ -99,8 +100,15 @@ def save_embeddings_to_db(
         session.commit()
 
 
-def find_files(session_maker: sessionmaker[Session]) -> list[FileMetadata]:
-    query = select(GithubFileModel).where(GithubFileModel.is_embedded.is_(False))
+def find_files(
+    session_maker: sessionmaker[Session],
+    white_list: list[str],
+) -> list[FileMetadata]:
+    query = (
+        select(GithubFileModel)
+        .where(GithubFileModel.is_embedded.is_(False))
+        .where(GithubFileModel.file_extension.in_(white_list))
+    )
     with session_maker() as session:
         files = session.scalars(query).all()
     github_files = [FileMetadata.from_db_object(file) for file in files]

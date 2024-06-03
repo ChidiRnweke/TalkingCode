@@ -24,6 +24,7 @@ def persist_embeddings(app_config_resource: AppConfigResource):
     github_client = app_config.get_github_client()
     return embed_and_persist_files(
         Session,
+        app_config.whitelisted_extensions,
         openai_client,
         github_client,
         app_config.embedding_model,
