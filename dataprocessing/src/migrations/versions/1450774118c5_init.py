@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 73b779167726
+Revision ID: 1450774118c5
 Revises:
-Create Date: 2024-06-02 21:47:47.143457
+Create Date: 2024-06-03 21:13:21.914827
 
 """
 
@@ -14,7 +14,7 @@ import pgvector.sqlalchemy
 
 
 # revision identifiers, used by Alembic.
-revision: str = "73b779167726"
+revision: str = "1450774118c5"
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -72,6 +72,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("document_id", sa.Integer(), nullable=False),
         sa.Column("embedding", pgvector.sqlalchemy.Vector(dim=3072), nullable=False),
+        sa.Column("input_token_count", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(
             ["document_id"],
             ["github_files.id"],
