@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "src"
+name = "dataprocessing"
 version = "0.1.0"
 description = "Data processing for the chatGPITpt project. The responsibilities of this subproject are downloading the git history, making the embeddings and scheduling this in a pipeline run."
 authors = ["ChidiRNweke <chidi125@gmail.com>"]
@@ -29,4 +29,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.dagster]
-module_name = "src"
+module_name = "dataprocessing"

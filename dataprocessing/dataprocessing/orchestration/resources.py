@@ -1,7 +1,7 @@
 import logging
 import os
 from dagster import ConfigurableResource, EnvVar
-from src.processing import AppConfig, whitelist_str_as_list
+from dataprocessing.processing import AppConfig, whitelist_str_as_list
 
 
 class AppConfigResource(ConfigurableResource):

@@ -2,8 +2,8 @@ from logging.config import fileConfig
 
 import pgvector.sqlalchemy
 from sqlalchemy import Connection, create_engine, text
-from src.processing import AppConfig
-from src.processing.database import Base
+from dataprocessing.processing import AppConfig
+from dataprocessing.processing.database import Base
 from alembic import context
 
 # this is the Alembic Config object, which provides

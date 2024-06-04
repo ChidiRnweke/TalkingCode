@@ -4,8 +4,8 @@ from openai import AsyncOpenAI
 from typing import Self
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker, Session
-from src.processing.database import GithubFileModel, EmbeddedDocumentModel
-from src.processing.ingestion import GitHubFile
+from dataprocessing.processing.database import GithubFileModel, EmbeddedDocumentModel
+from dataprocessing.processing.ingestion import GitHubFile
 from dataclasses import dataclass
 import aiohttp
 

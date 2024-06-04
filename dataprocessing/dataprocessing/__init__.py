@@ -1,8 +1,8 @@
 from dagster import Definitions, load_assets_from_modules
 from dotenv import load_dotenv
-from src.orchestration.resources import AppConfigResource
+from dataprocessing.orchestration.resources import AppConfigResource
 from .orchestration import assets
-from src.log import setup_custom_logger
+from dataprocessing.log import setup_custom_logger
 
 load_dotenv("config/.env.secret")
 

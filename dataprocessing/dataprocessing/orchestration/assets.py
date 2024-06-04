@@ -1,8 +1,12 @@
 from dagster import asset
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from src.orchestration.resources import AppConfigResource
-from src.processing import save_and_persist_data, embed_and_persist_files, AuthHeader
+from dataprocessing.orchestration.resources import AppConfigResource
+from dataprocessing.processing import (
+    save_and_persist_data,
+    embed_and_persist_files,
+    AuthHeader,
+)
 from openai import AsyncOpenAI
 
 
