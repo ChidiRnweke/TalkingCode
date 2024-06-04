@@ -4,7 +4,7 @@ from dataprocessing.orchestration.resources import AppConfigResource
 from .orchestration import assets
 from dataprocessing.log import setup_custom_logger
 
-load_dotenv("config/.env.secret")
+load_dotenv("../config/.env.secret")
 
 logger = setup_custom_logger("app_logger")
 

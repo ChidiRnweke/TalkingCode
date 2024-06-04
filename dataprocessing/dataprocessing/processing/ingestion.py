@@ -3,9 +3,9 @@ from github import Github
 from dataclasses import dataclass
 from github.ContentFile import ContentFile
 from github.Repository import Repository
-from dataprocessing.processing.database import GithubFileModel
-from dataprocessing.processing.database import GitHubRepositoryModel
-from dataprocessing.processing.database import LanguagesModel
+from shared.database import GithubFileModel
+from shared.database import GitHubRepositoryModel
+from shared.database import LanguagesModel
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import select
 from typing import Self

@@ -1,2 +1,3 @@
 .vscode/settings.json
-dataprocessing/config/.env.secret.prod
+.env.secret
+.env.secret.prod

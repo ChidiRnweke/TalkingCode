@@ -1,14 +1,20 @@
 from logging.config import fileConfig
+import os
 
 import pgvector.sqlalchemy
 from sqlalchemy import Connection, create_engine, text
-from dataprocessing.processing import AppConfig
-from dataprocessing.processing.database import Base
+from shared.database import Base
 from alembic import context
+from dotenv import load_dotenv
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+load_dotenv("../config/.env.secret")
+url = (
+    os.getenv("DATABASE_URL")
+    or "postgresql://postgres:postgres@localhost:5432/chatGITpt"
+)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -53,7 +59,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = AppConfig.from_env().db_connection_string
+
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -72,8 +78,6 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    url = AppConfig.from_env().db_connection_string
-    print(url)
 
     connectable = create_engine(url)
     with connectable.connect() as connection:

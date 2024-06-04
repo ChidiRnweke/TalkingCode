@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.10,<3.13"
+python = ">=3.12,<3.13"
 dagster = "^1.7.8"
 dagster-webserver = "^1.7.8"
 pygithub = "^2.3.0"
@@ -18,6 +18,7 @@ openai = "^1.30.5"
 pgvector = "^0.2.5"
 dagster-postgres = "^0.23.8"
 aiohttp = "^3.9.5"
+shared = {path = "../shared"}
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
