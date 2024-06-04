@@ -21,7 +21,9 @@ class AppConfig:
     openai_api_key: str
     db_connection_string: str
     whitelisted_extensions: list[str]
+    blacklisted_files: list[str]
 
+    max_embedding_input_length: int = 8000
     embedding_disk_path: str = "embeddings"
     embedding_model: str = "text-embedding-3-large"
 
@@ -31,6 +33,7 @@ class AppConfig:
         api_key = os.getenv("OPENAI_EMBEDDING_API_KEY")
         conn_string = os.getenv("DATABASE_URL")
         whitelisted_extensions = os.getenv("WHITELISTED_EXTENSIONS")
+        blacklisted_files = os.getenv("BLACKLISTED_FILES") or "[]"
 
         if conn_string is None:
             logging.warning("DATABASE_URL is not set. Using dev configuration.")
@@ -44,6 +47,7 @@ class AppConfig:
             )
 
         whitelisted_extensions = whitelist_str_as_list(whitelisted_extensions)
+        blacklisted_files = whitelist_str_as_list(blacklisted_files)
 
         if github_api_key is None:
             raise ValueError(
@@ -59,6 +63,7 @@ class AppConfig:
             openai_api_key=api_key,
             db_connection_string=conn_string,
             whitelisted_extensions=whitelisted_extensions,
+            blacklisted_files=blacklisted_files,
         )
 
     def get_github_client(self) -> Github:

@@ -1,17 +1,14 @@
 import asyncio
 import logging
 from openai import AsyncOpenAI
-from typing import Coroutine, Self, Any
+from typing import Self
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker, Session
 from src.processing.database import GithubFileModel, EmbeddedDocumentModel
 from src.processing.ingestion import GitHubFile
-from dataclasses import dataclass, asdict
-import json
-from openai import InternalServerError
+from dataclasses import dataclass
 import aiohttp
 
-EMBEDDING_MAX_CHARACTERS = 8000
 app_logger = logging.getLogger("app_logger")
 
 
@@ -56,42 +53,30 @@ async def embed_and_persist_files(
     session_maker: sessionmaker[Session],
     white_list: list[str],
     api_client: AsyncOpenAI,
-    github_client: AuthHeader,
+    auth_header: AuthHeader,
     model: str,
-    embeddings_disk_path: str,
+    max_characters: int,
+    blacklisted_files: list[str],
 ) -> None:
-    """
-    Process files by retrieving their content from GitHub, enriching the content,
-    embedding the documents, and persisting the embeddings to disk and database.
 
-    Args:
-        session_maker (sessionmaker[Session]): The session maker for the database.
-        api_client (AsyncOpenAI): The API client for embedding documents.
-        github_client (Github): The GitHub client for retrieving file content.
-        model (embedding_model_type): The embedding model to use for embedding documents.
-        embeddings_disk_path (str): The path to save the embeddings to disk.
-
-    """
-
-    file_metadata_list = find_files(session_maker, white_list)
-    embedding_futures: list[list[Coroutine[Any, Any, EmbeddingWithCount]]] = []
+    file_metadata_list = find_files(session_maker, white_list, blacklisted_files)
     file_content_futures = [
-        get_file_content(github_client, metadata) for metadata in file_metadata_list
+        get_file_content(auth_header, metadata) for metadata in file_metadata_list
     ]
     file_contents = await asyncio.gather(*file_content_futures)
-    for file_content, metadata in zip(file_contents, file_metadata_list):
-        chunked_input = split_text_to_chunks(file_content, EMBEDDING_MAX_CHARACTERS)
-        embeddings = [
-            embed_chunk(chunk, metadata, api_client, model) for chunk in chunked_input
-        ]
-        embedding_futures.append(embeddings)
+    embedding_futures = [
+        embed_chunk(
+            split_text_to_chunks(file_content, max_characters),
+            metadata,
+            api_client,
+            model,
+        )
+        for file_content, metadata in zip(file_contents, file_metadata_list)
+    ]
 
-    embeddings_with_count = await asyncio.gather(
-        *(asyncio.gather(*sublist) for sublist in embedding_futures)
-    )
-    for embeddings, metadata in zip(embeddings_with_count, file_metadata_list):
-        for chunk in embeddings:
-            persist_embeddings_to_disk(embeddings_disk_path, chunk, metadata)
+    embeddings_with_count = await asyncio.gather(*embedding_futures)
+    for embedded_file, metadata in zip(embeddings_with_count, file_metadata_list):
+        for chunk in embedded_file:
             try:
                 save_embeddings_to_db(session_maker, chunk, metadata)
             except Exception as e:
@@ -99,26 +84,11 @@ async def embed_and_persist_files(
 
 
 async def embed_chunk(
-    file_content: str, metadata: FileMetadata, api_client: AsyncOpenAI, model: str
-) -> EmbeddingWithCount:
-    enriched_content = enrich_file_content(file_content, metadata.file)
+    chunks: list[str], metadata: FileMetadata, api_client: AsyncOpenAI, model: str
+) -> list[EmbeddingWithCount]:
+    enriched_content = [enrich_file_content(chunk, metadata.file) for chunk in chunks]
     embeddings = embed_document(api_client, enriched_content, model)
     return await embeddings
-
-
-def persist_embeddings_to_disk(
-    file_path: str,
-    embeddings: EmbeddingWithCount,
-    metadata: FileMetadata,
-) -> None:
-    metadata_json = asdict(metadata)
-    metadata_json["embedding"] = embeddings.embedding
-    metadata_json["input_token_count"] = embeddings.total_tokens
-    metadata_json["repository_name"] = metadata.repository_name
-    metadata_json["document_id"] = metadata.document_id
-    write_path = file_path + f"/{metadata.repository_name}_{metadata.document_id}.json"
-    with open(write_path, "w") as file:
-        json.dump(metadata_json, file)
 
 
 def save_embeddings_to_db(
@@ -139,11 +109,13 @@ def save_embeddings_to_db(
 def find_files(
     session_maker: sessionmaker[Session],
     white_list: list[str],
+    blacklisted_files: list[str],
 ) -> list[FileMetadata]:
     query = (
         select(GithubFileModel)
         .where(GithubFileModel.is_embedded.is_(False))
         .where(GithubFileModel.file_extension.in_(white_list))
+        .where(GithubFileModel.name.not_in(blacklisted_files))
     )
     with session_maker() as session:
         files = session.scalars(query).all()
@@ -169,23 +141,25 @@ def enrich_file_content(file_content: str, file: GitHubFile) -> str:
 
 
 async def embed_document(
-    openai_client: AsyncOpenAI, text: str, model: str
-) -> EmbeddingWithCount:
+    openai_client: AsyncOpenAI, text: list[str], model: str
+) -> list[EmbeddingWithCount]:
     return await embed_documents_with_retry(openai_client, text, model, 3)
 
 
 async def embed_documents_with_retry(
     openai_client: AsyncOpenAI,
-    text: str,
+    text: list[str],
     model: str,
     max_retries: int,
-) -> EmbeddingWithCount:
+) -> list[EmbeddingWithCount]:
     for attempt in range(max_retries):
         try:
-            response = await openai_client.embeddings.create(input=[text], model=model)
-            embedding = response.data[0].embedding
-            total_tokens = response.usage.total_tokens
-            return EmbeddingWithCount(embedding, total_tokens)
+            response = await openai_client.embeddings.create(input=text, model=model)
+            embeddings = [
+                EmbeddingWithCount(embedding.embedding, response.usage.total_tokens)
+                for embedding in response.data
+            ]
+            return embeddings
         except Exception as e:
             app_logger.error(f"Received an internal server error. {attempt}s left")
             if attempt == max_retries - 1:

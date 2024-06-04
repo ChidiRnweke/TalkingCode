@@ -24,10 +24,11 @@ async def persist_embeddings(app_config_resource: AppConfigResource) -> None:
     github_token = app_config.github_token
     auth_header = AuthHeader(Authorization="Authorization", token=github_token)
     await embed_and_persist_files(
-        Session,
-        app_config.whitelisted_extensions,
-        openai_client,
-        auth_header,
-        app_config.embedding_model,
-        app_config.embedding_disk_path,
+        session_maker=Session,
+        white_list=app_config.whitelisted_extensions,
+        api_client=openai_client,
+        auth_header=auth_header,
+        model=app_config.embedding_model,
+        max_characters=app_config.max_embedding_input_length,
+        blacklisted_files=app_config.blacklisted_files,
     )
