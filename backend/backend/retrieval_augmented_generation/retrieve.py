@@ -12,15 +12,55 @@ import uuid
 
 
 @dataclass(frozen=True)
-class EmbeddedResponse:
-    embedding: list[float]
-    token_count: int
+class RetrievalAugmentedGeneration:
+    embedding_service: "EmbeddingService"
+    retrieval_service: "RetrievalService"
+    generation_service: "GenerationService"
+
+    async def retrieval_augmented_generation(
+        self, input: "InputQuery", k: int
+    ) -> "RAGResponse":
+        session_id = input.session_id or str(uuid.uuid4())
+        retrieved, tokens_spent = await self.retrieve_top_k(input, k)
+        store_task = self.retrieval_service.store_token_spent(
+            session_id,
+            tokens_spent,
+            self.embedding_service.get_embed_model_name(),
+        )
+        generation_task = self.generation_service.augmented_generation(input, retrieved)
+        _, response = await asyncio.gather(store_task, generation_task)
+
+        return RAGResponse(response=response, session_id=session_id)
+
+    async def retrieve_top_k(
+        self, input: "InputQuery", k: int
+    ) -> tuple[list["RetrievedContext"], int]:
+        result = await self.embedding_service.embed(input.query)
+        tokens_spent = result.token_count
+        return (await self.retrieval_service.retrieve_top_k(result, k), tokens_spent)
 
 
-@dataclass(frozen=True)
-class RAGResponse:
-    response: str
-    session_id: str
+class RetrievalService(Protocol):
+    async def retrieve_top_k(
+        self, embedded_query: "EmbeddedResponse", k: int
+    ) -> list["RetrievedContext"]: ...
+
+    async def store_token_spent(
+        self, session_id: str, token_count: int, model_name: str
+    ): ...
+
+
+class GenerationService(Protocol):
+    async def augmented_generation(
+        self, query: "InputQuery", context: list["RetrievedContext"]
+    ) -> str: ...
+
+
+class EmbeddingService(Protocol):
+
+    async def embed(self, text: str) -> "EmbeddedResponse": ...
+
+    def get_embed_model_name(self) -> str: ...
 
 
 class PreviousQAs(BaseModel):
@@ -52,6 +92,12 @@ class InputQuery(BaseModel):
                 "Session ID must be provided if previous context is present."
             )
         return self
+
+
+@dataclass(frozen=True)
+class RAGResponse:
+    response: str
+    session_id: str
 
 
 @dataclass(frozen=True)
@@ -89,27 +135,10 @@ class RetrievedContext:
         return file_content + file_name + file_place_in_project + file_extension
 
 
-class RetrievalService(Protocol):
-    async def retrieve_top_k(
-        self, embedded_query: EmbeddedResponse, k: int
-    ) -> list[RetrievedContext]: ...
-
-    async def store_token_spent(
-        self, session_id: str, token_count: int, model_name: str
-    ): ...
-
-
-class GenerationService(Protocol):
-    async def augmented_generation(
-        self, query: InputQuery, context: list[RetrievedContext]
-    ) -> str: ...
-
-
-class EmbeddingService(Protocol):
-
-    async def embed(self, text: str) -> EmbeddedResponse: ...
-
-    def get_embed_model_name(self) -> str: ...
+@dataclass(frozen=True)
+class EmbeddedResponse:
+    embedding: list[float]
+    token_count: int
 
 
 @dataclass(frozen=True)
@@ -194,32 +223,3 @@ class SQLRetrievalService:
         async with self.async_session.begin():
             token_spend = TokenSpendModel(token_count=token_count, model=model_name)
             self.async_session.add(token_spend)
-
-
-@dataclass(frozen=True)
-class RetrievalAugmentedGeneration:
-    embedding_service: EmbeddingService
-    retrieval_service: RetrievalService
-    generation_service: GenerationService
-
-    async def retrieval_augmented_generation(
-        self, input: InputQuery, k: int
-    ) -> RAGResponse:
-        session_id = input.session_id or str(uuid.uuid4())
-        retrieved, tokens_spent = await self.retrieve_top_k(input, k)
-        store_task = self.retrieval_service.store_token_spent(
-            session_id,
-            tokens_spent,
-            self.embedding_service.get_embed_model_name(),
-        )
-        generation_task = self.generation_service.augmented_generation(input, retrieved)
-        _, response = await asyncio.gather(store_task, generation_task)
-
-        return RAGResponse(response=response, session_id=session_id)
-
-    async def retrieve_top_k(
-        self, input: InputQuery, k: int
-    ) -> tuple[list[RetrievedContext], int]:
-        result = await self.embedding_service.embed(input.query)
-        tokens_spent = result.token_count
-        return (await self.retrieval_service.retrieve_top_k(result, k), tokens_spent)
