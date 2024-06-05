@@ -2,6 +2,7 @@ from datetime import datetime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import (
     Column,
+    DateTime,
     ForeignKeyConstraint,
     String,
     Integer,
@@ -111,3 +112,13 @@ class EmbeddedDocumentModel(Base):
         foreign_keys=[document_id],
         lazy="joined",
     )
+
+
+class TokenSpendModel(Base):
+    __tablename__ = "tokens_spent"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(255))
+    token_count: Mapped[int] = mapped_column(Integer)
+    model: Mapped[str] = mapped_column(String(255))
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
