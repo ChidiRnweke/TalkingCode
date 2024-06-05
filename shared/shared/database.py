@@ -107,5 +107,7 @@ class EmbeddedDocumentModel(Base):
     )
 
     document: Mapped[GithubFileModel] = relationship(
-        back_populates="embedding", foreign_keys=[document_id]
+        back_populates="embedding",
+        foreign_keys=[document_id],
+        lazy="joined",
     )
