@@ -2,6 +2,9 @@ import logging
 import os
 from dagster import ConfigurableResource, EnvVar
 from dataprocessing.processing import AppConfig, whitelist_str_as_list
+from shared.env import env_var_or_default
+
+log = logging.getLogger("app_logger")
 
 
 class AppConfigResource(ConfigurableResource):
@@ -12,24 +15,19 @@ class AppConfigResource(ConfigurableResource):
     blacklisted_files: list[str]
     embedding_disk_path: str = "embeddings"
     embedding_model: str = "text-embedding-3-large"
-    max_embedding_input_length: int = 16000
+    max_embedding_input_length: int = 8000
 
     @classmethod
     def from_env(cls) -> "AppConfigResource":
         openai_key = EnvVar("OPENAI_EMBEDDING_API_KEY")
         github_key = EnvVar("GITHUB_API_TOKEN")
         conn_str = EnvVar("DATABASE_URL")
-        whitelist = os.getenv("WHITELISTED_EXTENSIONS")
-        blacklist = os.getenv("BLACKLISTED_FILES") or "[]"
+        whitelist = env_var_or_default("WHITELISTED_EXTENSIONS", "'[\"py\"]'", log)
+        blacklist = env_var_or_default("BLACKLISTED_FILES", "[]", log)
 
         if os.getenv("DATABASE_URL") is None:
             logging.warning("DATABASE_URL is not set. Using dev configuration.")
             conn_str = "postgresql://postgres:postgres@localhost:5432/chatGITpt"
-
-        if whitelist is None:
-            raise ValueError(
-                "WHITELISTED_EXTENSIONS is not set and is required to run the pipeline."
-            )
 
         whitelist = whitelist_str_as_list(whitelist)
         blacklist = whitelist_str_as_list(blacklist)
