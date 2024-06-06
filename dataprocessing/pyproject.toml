@@ -19,6 +19,7 @@ pgvector = "^0.2.5"
 dagster-postgres = "^0.23.8"
 aiohttp = "^3.9.5"
 shared = {path = "../shared"}
+tiktoken = "^0.7.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"

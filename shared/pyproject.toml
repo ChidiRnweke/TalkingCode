@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "shared"
-version = "0.1.1"
+version = "0.1.2"
 description = "A package containing utilities shared between the dataprocessing and the backend side of the project"
 authors = ["ChidiRNweke <chidi125@gmail.com>"]
 readme = "README.md"
