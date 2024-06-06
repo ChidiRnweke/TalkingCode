@@ -8,6 +8,7 @@ from shared.database import GithubFileModel, EmbeddedDocumentModel
 from dataprocessing.processing.ingestion import GitHubFile
 from dataclasses import dataclass
 import aiohttp
+import tiktoken
 
 app_logger = logging.getLogger("app_logger")
 
@@ -42,10 +43,22 @@ class AuthHeader:
         return {"Authorization": f"Bearer {self.token}"}
 
 
-def split_text_to_chunks(text: str, max_characters: int) -> list[str]:
+def count_tokens(text: str) -> int:
+    encoding = tiktoken.get_encoding("cl100k_base")
+    num_tokens = len(encoding.encode(text))
+    return num_tokens
+
+
+def split_text_to_chunks(text: str, name: str) -> list[str]:
+    tokens = count_tokens(text)
+    num_chunks = (tokens // 7000) + 1
+    char_per_chunk = len(text) // num_chunks
+    app_logger.info(
+        f"Splitting {name} into {num_chunks} chunks of {char_per_chunk} characters."
+    )
     return [
-        text[i : i + max_characters]  # noqa: E203
-        for i in range(0, len(text), max_characters)
+        text[i : i + char_per_chunk]  # noqa E203
+        for i in range(0, len(text), char_per_chunk + 1)  # + 1 is added for empty files
     ]
 
 
@@ -63,10 +76,12 @@ async def embed_and_persist_files(
     file_content_futures = [
         get_file_content(auth_header, metadata) for metadata in file_metadata_list
     ]
+
     file_contents = await asyncio.gather(*file_content_futures)
+    app_logger.info("Fetched all files. Starting to embed.")
     embedding_futures = [
         embed_chunk(
-            split_text_to_chunks(file_content, max_characters),
+            split_text_to_chunks(file_content, metadata.file.name),
             metadata,
             api_client,
             model,
@@ -119,6 +134,7 @@ def find_files(
     )
     with session_maker() as session:
         files = session.scalars(query).all()
+    app_logger.info(f"Found {len(files)} files to embed.")
     github_files = [FileMetadata.from_db_object(file) for file in files]
     return github_files
 
@@ -154,10 +170,17 @@ async def embed_documents_with_retry(
 ) -> list[EmbeddingWithCount]:
     for attempt in range(max_retries):
         try:
-            response = await openai_client.embeddings.create(input=text, model=model)
+            responses = await asyncio.gather(
+                *[
+                    openai_client.embeddings.create(model=model, input=chunk)
+                    for chunk in text
+                ]
+            )
             embeddings = [
-                EmbeddingWithCount(embedding.embedding, response.usage.total_tokens)
-                for embedding in response.data
+                EmbeddingWithCount(
+                    response.data[0].embedding, response.usage.total_tokens
+                )
+                for response in responses
             ]
             return embeddings
         except Exception as e:
