@@ -29,7 +29,7 @@ class RetrievalAugmentedGeneration:
         generation_task = self.generation_service.augmented_generation(input, retrieved)
         _, response = await asyncio.gather(store_task, generation_task)
 
-        return RAGResponse(response=response[0], session_id=session_id)
+        return RAGResponse(response=response, session_id=session_id)
 
     async def _retrieve_top_k(
         self, input: "InputQuery", k: int
@@ -229,7 +229,6 @@ class SQLRetrievalService:
         async with self.async_session.begin():
             result = await self.async_session.execute(stmt)
             documents = result.all()
-            print(documents)
 
         return [
             RetrievedContext.from_document(doc[0], doc[1].document) for doc in documents
