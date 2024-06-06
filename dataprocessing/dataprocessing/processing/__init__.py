@@ -1,18 +1,23 @@
 from dataclasses import dataclass
 from github import Auth, Github
+from openai import AsyncOpenAI
+from sqlalchemy import create_engine
 from .ingestion import IngestionService, DatabaseService
-from .embedding import embed_and_persist_files, AuthHeader
+from .embedding import AuthHeader, EmbeddingService, EmbeddingPersistance, TextEmbedder
 import logging
 import json
 from shared.env import env_var_or_default, env_var_or_throw
+from sqlalchemy.orm import sessionmaker, Session
 
 __all__ = [
     "AppConfig",
     "IngestionService",
     "DatabaseService",
-    "embed_and_persist_files",
+    "EmbeddingService",
     "whitelist_str_as_list",
     "AuthHeader",
+    "EmbeddingPersistance",
+    "TextEmbedder",
 ]
 
 log = logging.getLogger("app_logger")
@@ -58,6 +63,14 @@ class AppConfig:
     def get_github_client(self) -> Github:
         auth = Auth.Token(self.github_token)
         return Github(auth=auth)
+
+    def get_session_maker(self) -> sessionmaker[Session]:
+        engine = create_engine(self.db_connection_string, echo=True)
+        Session = sessionmaker(engine)
+        return Session
+
+    def get_openai_client(self) -> AsyncOpenAI:
+        return AsyncOpenAI(api_key=self.openai_api_key)
 
 
 def whitelist_str_as_list(whitelisted_extensions: str) -> list[str]:

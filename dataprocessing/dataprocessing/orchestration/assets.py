@@ -1,22 +1,29 @@
 from dagster import asset
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from dataprocessing.orchestration.resources import AppConfigResource
 from dataprocessing.processing import (
+    AppConfig,
     IngestionService,
     DatabaseService,
     AuthHeader,
-    embed_and_persist_files,
+    EmbeddingService,
+    TextEmbedder,
+    EmbeddingPersistance,
 )
-from openai import AsyncOpenAI
+
+
+def get_session(app: AppConfig) -> sessionmaker[Session]:
+    engine = create_engine(app.db_connection_string, echo=True)
+    Session = sessionmaker(engine)
+    return Session
 
 
 @asset
 def persist_data(app_config_resource: AppConfigResource) -> None:
     app_config = app_config_resource.get_app_config()
     client = app_config.get_github_client()
-    engine = create_engine(app_config.db_connection_string, echo=True)
-    Session = sessionmaker(engine)
+    Session = get_session(app_config)
     db_service = DatabaseService(Session)
     ingestion_service = IngestionService(db_service, client)
     ingestion_service.fetch_and_persist_data()
@@ -25,17 +32,18 @@ def persist_data(app_config_resource: AppConfigResource) -> None:
 @asset(deps=[persist_data])
 async def persist_embeddings(app_config_resource: AppConfigResource) -> None:
     app_config = app_config_resource.get_app_config()
-    engine = create_engine(app_config.db_connection_string, echo=True)
-    Session = sessionmaker(engine)
-    openai_client = AsyncOpenAI(api_key=app_config.openai_api_key)
+    openai_client = app_config.get_openai_client()
+    Session = get_session(app_config)
     github_token = app_config.github_token
     auth_header = AuthHeader(Authorization="Authorization", token=github_token)
-    await embed_and_persist_files(
-        session_maker=Session,
-        white_list=app_config.whitelisted_extensions,
-        api_client=openai_client,
-        auth_header=auth_header,
-        model=app_config.embedding_model,
-        max_characters=app_config.max_embedding_input_length,
-        blacklisted_files=app_config.blacklisted_files,
+    persistance = EmbeddingPersistance(Session)
+    embedder = TextEmbedder(openai_client, app_config.embedding_model)
+    embedding_service = EmbeddingService(
+        persistance,
+        embedder,
+        auth_header,
+        app_config.blacklisted_files,
+        app_config.whitelisted_extensions,
     )
+
+    await embedding_service.embed_and_persist_files()
