@@ -84,7 +84,7 @@ class EmbeddingService:
         file_contents = await asyncio.gather(*file_futures)
         app_logger.info("Fetched all files. Starting to embed.")
         embedding_futures = [
-            embed_and_store(self.db, self.embedder, self.splitter, metadata, text)
+            self.process_and_save(text, metadata)
             for metadata, text in zip(metadata, file_contents)
         ]
 
@@ -98,6 +98,16 @@ class EmbeddingService:
         async with aiohttp.ClientSession(headers=self.auth_header.to_dict()) as session:
             async with session.get(path) as response:
                 return await response.text()
+
+    async def process_and_save(
+        self,
+        text: str,
+        metadata: FileMetadata,
+    ) -> None:
+        chunks = self.splitter.split_text_to_chunks(text, "test")
+        embeddings = await self.embedder.embed_chunk(chunks, metadata)
+        for embedding in embeddings:
+            self.db.save_embeddings(embedding, metadata)
 
 
 @dataclass(frozen=True)
@@ -159,19 +169,6 @@ class TextEmbedder:
             embedding = EmbeddingWithCount(embedding_vec, tokens)
             embeddings.append(embedding)
         return embeddings
-
-
-async def embed_and_store(
-    db: "EmbeddingPersistance",
-    service: "TextEmbedder",
-    splitter: TextSplitter,
-    metadata: FileMetadata,
-    text: str,
-) -> None:
-    chunks = splitter.split_text_to_chunks(text, "test")
-    embeddings = await service.embed_chunk(chunks, metadata)
-    for embedding in embeddings:
-        db.save_embeddings(embedding, metadata)
 
 
 @dataclass(frozen=True)
