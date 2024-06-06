@@ -71,9 +71,9 @@ class GitHubFile:
 
 def process_repositories(client: Github, session_maker: sessionmaker[Session]) -> None:
     for repo in client.get_user().get_repos():
-        logger.info(f"Processing repository {repo.name}")
         if repo.fork or repo.owner.login != client.get_user().login:
             continue
+        logger.info(f"Processing repository {repo.name}")
         repo_with_files = process_single_repository(repo)
         logger.info(f"Found {len(repo_with_files)} files in {repo_with_files[0].name}")
         write_to_database(session_maker, repo_with_files)
