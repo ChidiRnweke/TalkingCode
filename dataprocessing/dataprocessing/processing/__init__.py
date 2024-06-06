@@ -1,10 +1,10 @@
-import os
 from dataclasses import dataclass
 from github import Auth, Github
 from .ingestion import save_and_persist_data
 from .embedding import embed_and_persist_files, AuthHeader
 import logging
 import json
+from shared.env import env_var_or_default, env_var_or_throw
 
 __all__ = [
     "AppConfig",
@@ -13,6 +13,8 @@ __all__ = [
     "whitelist_str_as_list",
     "AuthHeader",
 ]
+
+log = logging.getLogger("app_logger")
 
 
 @dataclass(frozen=True)
@@ -29,34 +31,20 @@ class AppConfig:
 
     @staticmethod
     def from_env() -> "AppConfig":
-        github_api_key = os.getenv("GITHUB_API_TOKEN")
-        api_key = os.getenv("OPENAI_EMBEDDING_API_KEY")
-        conn_string = os.getenv("DATABASE_URL")
-        whitelisted_extensions = os.getenv("WHITELISTED_EXTENSIONS")
-        blacklisted_files = os.getenv("BLACKLISTED_FILES") or "[]"
-
-        if conn_string is None:
-            logging.warning("DATABASE_URL is not set. Using dev configuration.")
-            conn_string = "postgresql://postgres:postgres@localhost:5432/chatGITpt"
-        else:
-            conn_string = os.path.expandvars(conn_string)
-
-        if whitelisted_extensions is None:
-            raise ValueError(
-                "WHITELISTED_EXTENSIONS is not set and is required to run the pipeline."
-            )
+        github_api_key = env_var_or_throw("GITHUB_API_TOKEN", log)
+        api_key = env_var_or_throw("OPENAI_EMBEDDING_API_KEY", log)
+        conn_string = env_var_or_default(
+            "DATABASE_URL",
+            "postgresql://postgres:postgres@localhost:5432/chatGITpt",
+            log,
+        )
+        whitelisted_extensions = env_var_or_default(
+            "WHITELISTED_EXTENSIONS", "'[\"py\"]'", log
+        )
+        blacklisted_files = env_var_or_default("BLACKLISTED_FILES", "[]", log)
 
         whitelisted_extensions = whitelist_str_as_list(whitelisted_extensions)
         blacklisted_files = whitelist_str_as_list(blacklisted_files)
-
-        if github_api_key is None:
-            raise ValueError(
-                "GITHUB_API_TOKEN is not set and is required to run the pipeline."
-            )
-        if api_key is None:
-            raise ValueError(
-                "OPENAI_EMBEDDING_API_KEY is not set and is required to run the pipeline."
-            )
 
         return AppConfig(
             github_token=github_api_key,
