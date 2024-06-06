@@ -2,11 +2,10 @@ import asyncio
 from shared.database import EmbeddedDocumentModel, GithubFileModel, TokenSpendModel
 from openai import AsyncOpenAI
 from dataclasses import dataclass
-from typing import Protocol, Self
+from typing import Optional, Protocol, Self
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import Label, select
+from sqlalchemy import select
 from pydantic import BaseModel, model_validator
-from typing import Union
 import aiohttp
 import uuid
 
@@ -21,7 +20,7 @@ class RetrievalAugmentedGeneration:
         self, input: "InputQuery", k: int
     ) -> "RAGResponse":
         session_id = input.session_id or str(uuid.uuid4())
-        retrieved, tokens_spent = await self.retrieve_top_k(input, k)
+        retrieved, tokens_spent = await self._retrieve_top_k(input, k)
         store_task = self.retrieval_service.store_token_spent(
             session_id,
             tokens_spent,
@@ -30,14 +29,21 @@ class RetrievalAugmentedGeneration:
         generation_task = self.generation_service.augmented_generation(input, retrieved)
         _, response = await asyncio.gather(store_task, generation_task)
 
-        return RAGResponse(response=response, session_id=session_id)
+        return RAGResponse(response=response[0], session_id=session_id)
 
-    async def retrieve_top_k(
+    async def _retrieve_top_k(
         self, input: "InputQuery", k: int
     ) -> tuple[list["RetrievedContext"], int]:
         result = await self.embedding_service.embed(input.query)
         tokens_spent = result.token_count
         return (await self.retrieval_service.retrieve_top_k(result, k), tokens_spent)
+
+
+class RAG(Protocol):
+
+    async def retrieval_augmented_generation(
+        self, input: "InputQuery", k: int
+    ) -> "RAGResponse": ...
 
 
 class RetrievalService(Protocol):
@@ -70,8 +76,8 @@ class PreviousQAs(BaseModel):
 
 class InputQuery(BaseModel):
     query: str
-    previous_context: Union[list[PreviousQAs], None]
-    session_id: Union[str, None]
+    previous_context: Optional[list[PreviousQAs]] = None
+    session_id: Optional[str] = None
 
     def previous_context_to_dict(self) -> list[dict[str, str]]:
         res = []
@@ -155,6 +161,9 @@ class OpenAIEmbeddingService:
             token_count=response.usage.total_tokens,
         )
 
+    def get_embed_model_name(self) -> str:
+        return self.embedding_model
+
 
 @dataclass(frozen=True)
 class OpenAIGenerationService:
@@ -163,10 +172,10 @@ class OpenAIGenerationService:
     system_prompt: str
 
     async def augmented_generation(
-        self, input: InputQuery, context: list[RetrievedContext]
+        self, query: InputQuery, context: list[RetrievedContext]
     ) -> str:
         ctx = await asyncio.gather(*[c.to_context() for c in context])
-        model_input = self._create_model_input(input, ctx)
+        model_input = self._create_model_input(query, ctx)
         response = await self.client.chat.completions.create(
             model=self.chat_model,
             messages=model_input,  # type: ignore
@@ -202,24 +211,37 @@ class SQLRetrievalService:
     async def retrieve_top_k(
         self, embedded_query: EmbeddedResponse, k: int
     ) -> list[RetrievedContext]:
-        distance: Label[float] = EmbeddedDocumentModel.embedding.l2_distance(
-            embedded_query.embedding
-        ).label("distance")
 
         stmt = (
-            select(distance, EmbeddedDocumentModel.document).order_by(distance).limit(k)
+            select(
+                EmbeddedDocumentModel.embedding.cosine_distance(
+                    embedded_query.embedding
+                ).label("distance"),
+                EmbeddedDocumentModel,
+            )
+            .join(
+                GithubFileModel, EmbeddedDocumentModel.document_id == GithubFileModel.id
+            )
+            .order_by("distance")
+            .limit(k)
         )
 
         async with self.async_session.begin():
             result = await self.async_session.execute(stmt)
             documents = result.all()
+            print(documents)
 
         return [
-            RetrievedContext.from_document(doc.document, doc.distance)
-            for doc in documents
+            RetrievedContext.from_document(doc[0], doc[1].document) for doc in documents
         ]
 
-    async def store_token_spent(self, token_count: int, model_name: str) -> None:
+    async def store_token_spent(
+        self, session_id: str, token_count: int, model_name: str
+    ) -> None:
         async with self.async_session.begin():
-            token_spend = TokenSpendModel(token_count=token_count, model=model_name)
+            token_spend = TokenSpendModel(
+                session_id=session_id,
+                token_count=token_count,
+                model=model_name,
+            )
             self.async_session.add(token_spend)
