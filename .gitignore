@@ -1,3 +1,4 @@
 .vscode/settings.json
 .env.secret
 .env.secret.prod
+__pycache__/    
