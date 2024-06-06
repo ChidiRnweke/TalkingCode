@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from github import Auth, Github
-from .ingestion import save_and_persist_data
+from .ingestion import IngestionService, DatabaseService
 from .embedding import embed_and_persist_files, AuthHeader
 import logging
 import json
@@ -8,7 +8,8 @@ from shared.env import env_var_or_default, env_var_or_throw
 
 __all__ = [
     "AppConfig",
-    "save_and_persist_data",
+    "IngestionService",
+    "DatabaseService",
     "embed_and_persist_files",
     "whitelist_str_as_list",
     "AuthHeader",

@@ -3,9 +3,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from dataprocessing.orchestration.resources import AppConfigResource
 from dataprocessing.processing import (
-    save_and_persist_data,
-    embed_and_persist_files,
+    IngestionService,
+    DatabaseService,
     AuthHeader,
+    embed_and_persist_files,
 )
 from openai import AsyncOpenAI
 
@@ -16,7 +17,9 @@ def persist_data(app_config_resource: AppConfigResource) -> None:
     client = app_config.get_github_client()
     engine = create_engine(app_config.db_connection_string, echo=True)
     Session = sessionmaker(engine)
-    save_and_persist_data(Session, client)
+    db_service = DatabaseService(Session)
+    ingestion_service = IngestionService(db_service, client)
+    ingestion_service.fetch_and_persist_data()
 
 
 @asset(deps=[persist_data])
