@@ -8,6 +8,7 @@ from sqlalchemy import select
 from pydantic import BaseModel, model_validator
 import aiohttp
 import uuid
+from backend.errors import InputError
 
 
 @dataclass(frozen=True)
@@ -19,7 +20,12 @@ class RetrievalAugmentedGeneration:
     async def retrieval_augmented_generation(
         self, input: "InputQuery", k: int
     ) -> "RAGResponse":
-        session_id = input.session_id or str(uuid.uuid4())
+        if input.session_id:
+            await self.retrieval_service.validate_session_id(input.session_id)
+            session_id = input.session_id
+        else:
+            session_id = str(uuid.uuid4())
+
         retrieved, tokens_spent = await self._retrieve_top_k(input, k)
         store_task = self.retrieval_service.store_token_spent(
             session_id,
@@ -54,6 +60,8 @@ class RetrievalService(Protocol):
     async def store_token_spent(
         self, session_id: str, token_count: int, model_name: str
     ): ...
+
+    async def validate_session_id(self, session_id: str) -> None: ...
 
 
 class GenerationService(Protocol):
@@ -244,3 +252,10 @@ class SQLRetrievalService:
                 model=model_name,
             )
             self.async_session.add(token_spend)
+
+    async def validate_session_id(self, session_id: str) -> None:
+        stmt = select(TokenSpendModel).where(TokenSpendModel.session_id == session_id)
+        async with self.async_session.begin():
+            result = await self.async_session.execute(stmt)
+            if not result.scalar():
+                raise InputError("If a Session ID is provided, it must already exist.")

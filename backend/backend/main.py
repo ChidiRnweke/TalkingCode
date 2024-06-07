@@ -1,5 +1,6 @@
 import logging
-from fastapi import FastAPI, Depends
+from backend.errors import InputError, MaximumSpendError, InfraError
+from fastapi import FastAPI, Depends, Request
 from backend.retrieval_augmented_generation import (
     InputQuery,
     RAGResponse,
@@ -8,6 +9,7 @@ from backend.retrieval_augmented_generation import (
     OpenAIGenerationService,
     SQLRetrievalService,
 )
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Literal
@@ -74,6 +76,30 @@ def get_openai_generation_service() -> OpenAIGenerationService:
         chat_model=chat_model,
         system_prompt=system_prompt,
     )
+
+
+@app.exception_handler(InputError)
+async def Input_error_exception_handler(
+    request: Request, exc: InputError
+) -> JSONResponse:
+    log.debug(f"InputError: {exc}")
+    return JSONResponse(str(exc), status_code=400)
+
+
+@app.exception_handler(InfraError)
+async def Infra_error_exception_handler(
+    request: Request, exc: InfraError
+) -> JSONResponse:
+    log.error(f"InfraError: {exc}")
+    return JSONResponse(str(exc), status_code=500)
+
+
+@app.exception_handler(MaximumSpendError)
+async def max_spend_exception_handler(
+    request: Request, exc: MaximumSpendError
+) -> JSONResponse:
+    log.warning(f"MaximumSpendError: {exc}")
+    return JSONResponse(str(exc), status_code=400)
 
 
 @app.post("/")
