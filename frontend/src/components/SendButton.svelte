@@ -2,9 +2,9 @@
 	import Label from 'flowbite-svelte/Label.svelte';
 	import Textarea from 'flowbite-svelte/Textarea.svelte';
 	import PaperPlaneOutline from 'flowbite-svelte-icons/PaperPlaneOutline.svelte';
-	import P from 'flowbite-svelte/P.svelte';
-
-	let text = '';
+	import Button from 'flowbite-svelte/Button.svelte';
+	export let input = '';
+	export let action: () => void;
 
 	function handleInput(event: Event) {
 		const textarea = event.target as HTMLTextAreaElement;
@@ -15,8 +15,21 @@
 			textarea.style.overflowY = 'hidden';
 		}
 		textarea.style.height = textarea.scrollHeight + 'px';
-		text = textarea.value;
+		input = textarea.value;
 	}
+
+	const handleKeydown = (event: KeyboardEvent): void => {
+		const { key, shiftKey } = event;
+
+		if (key === 'Enter') {
+			if (shiftKey) {
+				input += '\n';
+			} else {
+				event.preventDefault();
+				action();
+			}
+		}
+	};
 </script>
 
 <div class="sticky bottom-0 bg-white pb-8">
@@ -31,10 +44,11 @@
 			tabindex="0"
 			dir="auto"
 			on:input={handleInput}
-			bind:value={text}
+			bind:value={input}
+			on:keydown={handleKeydown}
 		/>
-		<PaperPlaneOutline
-			class=" h-8 w-8 text-primary-100 bg-primary-900 rounded-full box-border my-0.5 p-2 align-bottom ml-4 mr-1"
-		/>
+		<Button class=" bg-primary-900 rounded-md" on:click={action}>
+			<PaperPlaneOutline class=" text-primary-100 " />
+		</Button>
 	</div>
 </div>
