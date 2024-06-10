@@ -8,9 +8,12 @@
 	import Heading from 'flowbite-svelte/Heading.svelte';
 	import { setContext } from 'svelte';
 	import { writable } from 'svelte/store';
+	import Button from 'flowbite-svelte/Button.svelte';
+	import Undo from 'flowbite-svelte-icons/UndoOutline.svelte';
 
 	let input = writable('');
 	setContext('input', input); // set the context for the input. This is used for the Suggestions component
+	$: question = $input;
 
 	let previousContext: PreviousContext[] = [];
 	let sessionID: string | undefined = undefined;
@@ -27,9 +30,14 @@
 		previousContext = [...previousContext, { question: question, answer: answer.response }];
 		return answer;
 	};
-	$: question = $input;
 	let sendQuestion = async () => {
 		const answer = await getAnswer(question);
+	};
+
+	const reset = () => {
+		previousContext = [];
+		sessionID = undefined;
+		input.set('');
 	};
 </script>
 
@@ -40,15 +48,20 @@
 		<Suggestions />
 	</section>
 {:else}
-	<section class="xl:mx-52 md:mx-20 grid grid-cols-1 gap-32 pb-10">
-		{#each previousContext as ctx}
-			<div class="flex flex-col justify-between gap-y-10">
-				<Question>{ctx.question}</Question>
-				<Hr />
-				<Answer>{@html ctx.answer}</Answer>
-			</div>
-		{/each}
-	</section>
+	<div class="grid grid-col">
+		<Button on:click={reset} class="mb-8 justify-self-end">
+			Start a new conversation <span class="ml-1"> <Undo /></span>
+		</Button>
+		<section class="xl:mx-52 md:mx-20 grid grid-cols-1 gap-32 pb-10">
+			{#each previousContext as ctx}
+				<div class="flex flex-col justify-between gap-y-10">
+					<Question>{ctx.question}</Question>
+					<Hr />
+					<Answer>{@html ctx.answer}</Answer>
+				</div>
+			{/each}
+		</section>
+	</div>
 {/if}
 
 <SendButton bind:input={$input} bind:action={sendQuestion} />
