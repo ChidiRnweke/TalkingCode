@@ -6,12 +6,17 @@
 	import { ragClient, type PreviousContext, type RAGResponse, type inputQuery } from '$lib/client';
 	import Suggestions from '../components/Suggestions.svelte';
 	import Heading from 'flowbite-svelte/Heading.svelte';
-	let input = '';
+	import { setContext } from 'svelte';
+	import { writable } from 'svelte/store';
+
+	let input = writable('');
+	setContext('input', input); // set the context for the input. This is used for the Suggestions component
+
 	let previousContext: PreviousContext[] = [];
 	let sessionID: string | undefined = undefined;
 	$: inConversation = previousContext.length == 0 ? false : true;
 
-	export const getAnswer = async (question: string): Promise<RAGResponse> => {
+	const getAnswer = async (question: string): Promise<RAGResponse> => {
 		const inputQuery: inputQuery = {
 			query: question,
 			session_id: sessionID,
@@ -20,12 +25,10 @@
 		const answer = await ragClient.getAnswer(inputQuery);
 		sessionID = answer.session_id;
 		previousContext = [...previousContext, { question: question, answer: answer.response }];
-		console.log(previousContext);
 		return answer;
 	};
-
-	export let sendQuestion = async () => {
-		const question = input;
+	$: question = $input;
+	let sendQuestion = async () => {
 		const answer = await getAnswer(question);
 	};
 </script>
@@ -48,4 +51,4 @@
 	</section>
 {/if}
 
-<SendButton bind:input bind:action={sendQuestion} />
+<SendButton bind:input={$input} bind:action={sendQuestion} />
