@@ -3,9 +3,14 @@
 	import Avatar from 'flowbite-svelte/Avatar.svelte';
 </script>
 
-<section class="flex flex-row mr-auto ml-0 gap-x-10">
+<section class="flex flex-row mr-auto ml-0 lg:gap-x-10 gap-x-4">
 	<div>
-		<Avatar src="/portrait.jpg" rounded border size="xl" class="max-w-fit" />
+		<Avatar
+			src="/portrait.jpg"
+			rounded
+			border
+			class="md:w-24 md:h-24 lg:w-36 lg:h-36 w-16 h-16 max-w-fit p-2 text-lg font-bold"
+		/>
 		<P class="mt-2 text-center font-semibold text-primary-900">Chidi</P>
 	</div>
 	<P class="text-lg leading-10">

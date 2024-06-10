@@ -34,7 +34,7 @@
 </script>
 
 <div class="sticky bottom-0 bg-white pb-4 pt-4 box-content">
-	<div class=" mx-80 flex flex-row bg-primary-300 place-items-end rounded-md">
+	<div class="lg:mx-40 flex flex-row bg-primary-300 place-items-end rounded-md">
 		<Label for="textarea-id" class="sr-only ">Your message</Label>
 		<Textarea
 			class="bg-transparent border-none placeholder:pl-4 resize-none max-h-52 py-2 focus:border-none focus:ring-0 dark:focus:ring-0 dark:focus:border-none text-lg placeholder:text-primary-900"

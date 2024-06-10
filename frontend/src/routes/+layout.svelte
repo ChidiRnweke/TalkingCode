@@ -4,6 +4,6 @@
 </script>
 
 <Navbar />
-<main class="mx-40 mt-20">
+<main class="lg:mx-40 lg:mt-20 mx-10 mt-10">
 	<slot />
 </main>
