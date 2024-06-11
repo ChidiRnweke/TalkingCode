@@ -32,11 +32,13 @@
 		error = false;
 		return answer;
 	};
-	let sendQuestion = async () => {
+
+	const sendQuestion = async () => {
+		const inputQuestion = question;
 		try {
 			const answer = await getAnswer(question);
 		} catch (error) {
-			handleError();
+			handleError(inputQuestion);
 		}
 	};
 
@@ -46,9 +48,12 @@
 		input.set('');
 		error = false;
 	};
+
 	let error: boolean = false;
 
-	const handleError = (): void => {
+	const handleError = (inputQuestion: string): void => {
+		question = inputQuestion;
+		inConversation = true;
 		error = true;
 	};
 </script>
@@ -68,15 +73,17 @@
 			{#each previousContext as ctx}
 				<div class="flex flex-col justify-between gap-y-10">
 					<Question>{ctx.question}</Question>
-					<Hr />
+					<hr />
 					<Answer>{@html ctx.answer}</Answer>
 				</div>
 			{/each}
 			{#if error}
+				<Question>{question}</Question>
+				<hr />
 				<ErrorMessage />
 			{/if}
 		</section>
 	</div>
 {/if}
 
-<SendButton bind:input={$input} bind:action={sendQuestion} />
+<SendButton bind:input={$input} action={sendQuestion} />
