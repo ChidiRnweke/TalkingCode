@@ -14,10 +14,10 @@
 
 	let input = writable('');
 	setContext('input', input); // set the context for the input. This is used for the Suggestions component
-	$: question = $input;
 
 	let previousContext: PreviousContext[] = [];
 	let sessionID: string | undefined = undefined;
+	let latestQuestion: string = '';
 	$: inConversation = previousContext.length == 0 ? false : true;
 
 	const getAnswer = async (question: string): Promise<RAGResponse> => {
@@ -34,11 +34,11 @@
 	};
 
 	const sendQuestion = async () => {
-		const inputQuestion = question;
+		latestQuestion = $input;
 		try {
-			const answer = await getAnswer(question);
+			const answer = await getAnswer(latestQuestion);
 		} catch (error) {
-			handleError(inputQuestion);
+			handleError();
 		}
 	};
 
@@ -51,8 +51,7 @@
 
 	let error: boolean = false;
 
-	const handleError = (inputQuestion: string): void => {
-		question = inputQuestion;
+	const handleError = (): void => {
 		inConversation = true;
 		error = true;
 	};
@@ -78,7 +77,7 @@
 				</div>
 			{/each}
 			{#if error}
-				<Question>{question}</Question>
+				<Question>{latestQuestion}</Question>
 				<hr />
 				<ErrorMessage />
 			{/if}
