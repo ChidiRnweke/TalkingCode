@@ -4,7 +4,7 @@
 </script>
 
 <div class="flex flex-row ml-auto mr-0 lg:gap-x-10 gap-x-4">
-	<section class=" bg-primary-50 box-border md:p-8 p-4">
+	<section class=" bg-primary-50 box-border md:p-8 p-4 dark:bg-primary-500 rounded-md">
 		<P class="text-lg leading-10">
 			<slot />
 		</P>
