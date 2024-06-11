@@ -10,6 +10,7 @@
 	import { writable } from 'svelte/store';
 	import Button from 'flowbite-svelte/Button.svelte';
 	import Undo from 'flowbite-svelte-icons/UndoOutline.svelte';
+	import ErrorMessage from '../components/ErrorMessage.svelte';
 
 	let input = writable('');
 	setContext('input', input); // set the context for the input. This is used for the Suggestions component
@@ -28,22 +29,33 @@
 		const answer = await ragClient.getAnswer(inputQuery);
 		sessionID = answer.session_id;
 		previousContext = [...previousContext, { question: question, answer: answer.response }];
+		error = false;
 		return answer;
 	};
 	let sendQuestion = async () => {
-		const answer = await getAnswer(question);
+		try {
+			const answer = await getAnswer(question);
+		} catch (error) {
+			handleError();
+		}
 	};
 
 	const reset = () => {
 		previousContext = [];
 		sessionID = undefined;
 		input.set('');
+		error = false;
+	};
+	let error: boolean = false;
+
+	const handleError = (): void => {
+		error = true;
 	};
 </script>
 
 {#if inConversation === false}
 	<section>
-		<Heading class="text-primary-900 text-xl mb-8">Ask me a question about my projects...</Heading>
+		<Heading class="text-primary-700 text-xl mb-8">Ask me a question about my projects...</Heading>
 
 		<Suggestions />
 	</section>
@@ -60,6 +72,9 @@
 					<Answer>{@html ctx.answer}</Answer>
 				</div>
 			{/each}
+			{#if error}
+				<ErrorMessage />
+			{/if}
 		</section>
 	</div>
 {/if}
