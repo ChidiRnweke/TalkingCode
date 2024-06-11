@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Hr from 'flowbite-svelte/Hr.svelte';
 	import Question from '../components/Question.svelte';
 	import Answer from '../components/Answer.svelte';
 	import SendButton from '../components/SendButton.svelte';
@@ -20,7 +19,7 @@
 	let latestQuestion: string = '';
 	$: inConversation = previousContext.length == 0 ? false : true;
 
-	const getAnswer = async (question: string): Promise<RAGResponse> => {
+	const generateAnswer = async (question: string): Promise<RAGResponse> => {
 		const inputQuery: inputQuery = {
 			query: question,
 			session_id: sessionID,
@@ -33,16 +32,16 @@
 		return answer;
 	};
 
-	const sendQuestion = async () => {
+	const submitQuestion = async (): Promise<void> => {
 		latestQuestion = $input;
 		try {
-			const answer = await getAnswer(latestQuestion);
+			await generateAnswer(latestQuestion);
 		} catch (error) {
 			handleError();
 		}
 	};
 
-	const reset = () => {
+	const reset = (): void => {
 		previousContext = [];
 		sessionID = undefined;
 		input.set('');
@@ -85,4 +84,4 @@
 	</div>
 {/if}
 
-<SendButton bind:input={$input} action={sendQuestion} />
+<SendButton bind:input={$input} action={submitQuestion} />

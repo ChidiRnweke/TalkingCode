@@ -5,7 +5,7 @@
 	import Button from 'flowbite-svelte/Button.svelte';
 
 	export let input = '';
-	export let action: () => void;
+	export let action: () => Promise<void>;
 
 	function handleInput(event: Event) {
 		const textarea = event.target as HTMLTextAreaElement;
@@ -19,7 +19,7 @@
 		input = textarea.value;
 	}
 
-	const handleKeydown = (event: KeyboardEvent): void => {
+	const handleKeydown = async (event: KeyboardEvent): Promise<void> => {
 		const { key, shiftKey } = event;
 
 		if (key === 'Enter') {
@@ -27,7 +27,7 @@
 				input += '\n';
 			} else {
 				event.preventDefault();
-				action();
+				await action();
 				input = '';
 			}
 		}
