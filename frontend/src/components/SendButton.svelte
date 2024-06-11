@@ -3,7 +3,7 @@
 	import Textarea from 'flowbite-svelte/Textarea.svelte';
 	import PaperPlaneOutline from 'flowbite-svelte-icons/PaperPlaneOutline.svelte';
 	import Button from 'flowbite-svelte/Button.svelte';
-	import P from 'flowbite-svelte/P.svelte';
+
 	export let input = '';
 	export let action: () => void;
 
@@ -53,5 +53,4 @@
 			<PaperPlaneOutline class=" text-primary-100 " />
 		</Button>
 	</div>
-	<footer><P class="text-center mt-5">With ❤️ by Chidi Nweke</P></footer>
 </div>
