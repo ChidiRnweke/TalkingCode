@@ -1,4 +1,3 @@
-import { getContext } from 'svelte';
 import type { paths } from './schema';
 import createClient from 'openapi-fetch';
 
