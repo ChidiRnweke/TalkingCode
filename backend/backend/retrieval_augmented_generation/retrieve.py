@@ -8,7 +8,7 @@ from sqlalchemy import select
 from pydantic import BaseModel, model_validator
 import aiohttp
 import uuid
-from backend.errors import InputError
+from backend.errors import InputError, map_errors
 
 
 @dataclass(frozen=True)
@@ -139,7 +139,8 @@ class RetrievedContext:
     async def to_context(self) -> str:
         async with aiohttp.ClientSession() as session:
             async with session.get(self.url) as response:
-                file_content = await response.text()
+                with map_errors():
+                    file_content = await response.text()
         return self._enrich_file_content(file_content)
 
     def _enrich_file_content(self, file_content: str) -> str:
@@ -161,9 +162,10 @@ class OpenAIEmbeddingService:
     embedding_model: str
 
     async def embed(self, text: str) -> EmbeddedResponse:
-        response = await self.client.embeddings.create(
-            input=[text], model=self.embedding_model
-        )
+        with map_errors():
+            response = await self.client.embeddings.create(
+                input=[text], model=self.embedding_model
+            )
         return EmbeddedResponse(
             embedding=response.data[0].embedding,
             token_count=response.usage.total_tokens,
@@ -184,10 +186,11 @@ class OpenAIGenerationService:
     ) -> str:
         ctx = await asyncio.gather(*[c.to_context() for c in context])
         model_input = self._create_model_input(query, ctx)
-        response = await self.client.chat.completions.create(
-            model=self.chat_model,
-            messages=model_input,  # type: ignore
-        )
+        with map_errors():
+            response = await self.client.chat.completions.create(
+                model=self.chat_model,
+                messages=model_input,  # type: ignore
+            )
         response = response.choices[0].message.content or ""
         return self.__add_sources(response, context)
 
@@ -235,8 +238,10 @@ class SQLRetrievalService:
         )
 
         async with self.async_session.begin():
-            result = await self.async_session.execute(stmt)
-            documents = result.all()
+            with map_errors():
+
+                result = await self.async_session.execute(stmt)
+                documents = result.all()
 
         return [
             RetrievedContext.from_document(doc[0], doc[1].document) for doc in documents
@@ -245,17 +250,19 @@ class SQLRetrievalService:
     async def store_token_spent(
         self, session_id: str, token_count: int, model_name: str
     ) -> None:
+        token_spend = TokenSpendModel(
+            session_id=session_id,
+            token_count=token_count,
+            model=model_name,
+        )
         async with self.async_session.begin():
-            token_spend = TokenSpendModel(
-                session_id=session_id,
-                token_count=token_count,
-                model=model_name,
-            )
-            self.async_session.add(token_spend)
+            with map_errors():
+                self.async_session.add(token_spend)
 
     async def validate_session_id(self, session_id: str) -> None:
         stmt = select(TokenSpendModel).where(TokenSpendModel.session_id == session_id)
         async with self.async_session.begin():
-            result = await self.async_session.execute(stmt)
+            with map_errors():
+                result = await self.async_session.execute(stmt)
             if not result.scalar():
                 raise InputError("If a Session ID is provided, it must already exist.")

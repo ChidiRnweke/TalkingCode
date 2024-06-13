@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from typing import Callable, Generic, ParamSpec, TypeVar, Type
 from logging import getLogger
 from functools import update_wrapper
@@ -49,7 +50,7 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
-class map_errors(Generic[P, T]):
+class MapErrors(Generic[P, T]):
     def __init__(self, func: Callable[P, T], map_to: Type[AppError] = InfraError):
         self._func = func
         self._map_to = map_to
@@ -61,3 +62,12 @@ class map_errors(Generic[P, T]):
         except Exception as e:
             log.error(f"Error in {self._func.__qualname__}: {e}", exc_info=True)
             raise self._map_to(err=e) from e
+
+
+@contextmanager
+def map_errors(map_to: Type[AppError] = InfraError):
+    try:
+        yield
+    except Exception as e:
+        log.error(f"Error in: {e}", exc_info=True)
+        raise map_to(err=e) from e

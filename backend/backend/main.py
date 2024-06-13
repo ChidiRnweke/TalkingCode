@@ -95,10 +95,10 @@ async def Infra_error_exception_handler(
 
 
 @app.exception_handler(MaximumSpendError)
-async def max_spend_exception_handler(
+async def max_spend_exception_hand(
     request: Request, exc: MaximumSpendError
 ) -> JSONResponse:
-    log.warning(f"MaximumSpendError: {exc}")
+    log.error(f"MaximumSpendError: {exc}")
     return JSONResponse(str(exc), status_code=400)
 
 
