@@ -15,6 +15,7 @@ class AppConfig:
     async_session: async_sessionmaker[AsyncSession]
     system_prompt: str
     openAI_client: AsyncOpenAI
+    max_spend: float
 
     @classmethod
     def from_env(cls, log: Logger | None = None) -> Self:
@@ -25,6 +26,7 @@ class AppConfig:
         chat_model = env_var_or_default("CHAT_MODEL", "gpt-4o", log)
         open_ai_key = env_var_or_throw("OPENAI_EMBEDDING_API_KEY", log)
         top_k = int(env_var_or_default("TOP_K", "5", log))
+        max_spend = float(env_var_or_default("MAX_SPEND", "1.5", log))
         openAI_client = AsyncOpenAI(api_key=open_ai_key)
         system_prompt = env_var_or_default(
             "SYSTEM_PROMPT",
@@ -39,6 +41,7 @@ class AppConfig:
             openAI_client=openAI_client,
             top_k=top_k,
             system_prompt=system_prompt,
+            max_spend=max_spend,
         )
         return config
 
