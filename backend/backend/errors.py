@@ -24,8 +24,8 @@ class InfraError(AppError):
 
 
 class MaximumSpendError(AppError):
-    def __init__(self, err: Exception) -> None:
-        super().__init__(err)
+    def __init__(self) -> None:
+        super().__init__(None)
         self.msg = "The maximum spend for the day has been reached"
 
     def __str__(self) -> str:

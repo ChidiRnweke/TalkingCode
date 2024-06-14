@@ -1,5 +1,5 @@
 import logging
-from backend.errors import InputError, MaximumSpendError, InfraError
+from backend.errors import AppError, InputError, MaximumSpendError, InfraError
 from fastapi import FastAPI, Depends, Request
 from backend.retrieval_augmented_generation import (
     InputQuery,
@@ -60,6 +60,10 @@ def get_system_prompt() -> str:
     return app_config["config"].system_prompt
 
 
+def get_max_spend() -> float:
+    return app_config["config"].max_spend
+
+
 def get_openai_embedding_service() -> OpenAIEmbeddingService:
     openAI_client = get_openAI_client()
     embedding_model = get_embedding_model()
@@ -78,37 +82,30 @@ def get_openai_generation_service() -> OpenAIGenerationService:
     )
 
 
-@app.exception_handler(InputError)
-async def Input_error_exception_handler(
-    request: Request, exc: InputError
-) -> JSONResponse:
-    log.debug(f"InputError: {exc}")
-    return JSONResponse(str(exc), status_code=400)
+@app.exception_handler(AppError)
+async def handle_app_errors(request: Request, exc: AppError) -> JSONResponse:
+    match exc:
+        case InputError(message=message):
+            return JSONResponse(message, status_code=400)
+        case InfraError():
+            return JSONResponse(str(exc), status_code=500)
+        case MaximumSpendError():
+            return JSONResponse(str(exc), status_code=402)
+        case _:
+            log.error(f"An unhandled app error occurred: {exc}")
+            return JSONResponse(str(exc), status_code=500)
 
 
 @app.exception_handler(InfraError)
-async def Infra_error_exception_handler(
-    request: Request, exc: InfraError
-) -> JSONResponse:
-    log.error(f"InfraError: {exc}")
-    return JSONResponse(str(exc), status_code=500)
-
-
-@app.exception_handler(MaximumSpendError)
-async def max_spend_exception_hand(
-    request: Request, exc: MaximumSpendError
-) -> JSONResponse:
-    log.error(f"MaximumSpendError: {exc}")
-    return JSONResponse(str(exc), status_code=400)
-
-
 @app.post("/")
 async def chat(
     question: InputQuery, session: AsyncSession = Depends(get_session)
 ) -> RAGResponse:
+    max_spend = get_max_spend()
     rag = RetrievalAugmentedGeneration(
         embedding_service=get_openai_embedding_service(),
         generation_service=get_openai_generation_service(),
         retrieval_service=SQLRetrievalService(session),
+        max_spend=max_spend,
     )
     return await rag.retrieval_augmented_generation(question, get_top_k())
