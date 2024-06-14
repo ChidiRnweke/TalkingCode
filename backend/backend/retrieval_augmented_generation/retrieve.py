@@ -1,14 +1,15 @@
 import asyncio
+from datetime import date
 from shared.database import EmbeddedDocumentModel, GithubFileModel, TokenSpendModel
 from openai import AsyncOpenAI
 from dataclasses import dataclass
 from typing import Optional, Protocol, Self
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import Date, select, cast
 from pydantic import BaseModel, model_validator
 import aiohttp
 import uuid
-from backend.errors import InputError, map_errors
+from backend.errors import InputError, MaximumSpendError, map_errors
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,7 @@ class RetrievalAugmentedGeneration:
     embedding_service: "EmbeddingService"
     retrieval_service: "RetrievalService"
     generation_service: "GenerationService"
+    max_spend: float
 
     async def retrieval_augmented_generation(
         self, input: "InputQuery", k: int
@@ -25,6 +27,10 @@ class RetrievalAugmentedGeneration:
             session_id = input.session_id
         else:
             session_id = str(uuid.uuid4())
+
+        current_spend = await self.retrieval_service.get_current_spend(date.today())
+        if current_spend >= self.max_spend:
+            raise MaximumSpendError()
 
         retrieved, tokens_spent = await self._retrieve_top_k(input, k)
         store_task = self.retrieval_service.store_token_spent(
@@ -62,6 +68,8 @@ class RetrievalService(Protocol):
     ): ...
 
     async def validate_session_id(self, session_id: str) -> None: ...
+
+    async def get_current_spend(self, date: date) -> float: ...
 
 
 class GenerationService(Protocol):
@@ -258,6 +266,15 @@ class SQLRetrievalService:
         async with self.async_session.begin():
             with map_errors():
                 self.async_session.add(token_spend)
+
+    async def get_current_spend(self, date: date) -> float:
+        stmt = select(TokenSpendModel).where(
+            cast(TokenSpendModel.timestamp, Date) == date
+        )
+        async with self.async_session.begin():
+            with map_errors():
+                result = await self.async_session.execute(stmt)
+            return sum([r.token_count for r in result.scalars()]) * 0.00001
 
     async def validate_session_id(self, session_id: str) -> None:
         stmt = select(TokenSpendModel).where(TokenSpendModel.session_id == session_id)
