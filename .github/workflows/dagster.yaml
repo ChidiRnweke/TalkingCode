@@ -21,7 +21,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Push Docker image to Docker Hub
-        run: docker compose -f docker-compose.dataprocessing.yml -f docker-compose.dataprocessing.override.yml build --push
+        run: docker compose -f compose.dataprocessing.yml -f -compose.dataprocessing.override.yml build --push
 
   deploy:
     needs: build-and-push
@@ -37,7 +37,7 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: copy compose files
-        run: scp -o StrictHostKeyChecking=no docker-compose.dataprocessing.yml ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/chatgitpt
+        run: scp -o StrictHostKeyChecking=no compose.dataprocessing.yml ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/chatgitpt
 
       - name: Deploy to server
-        run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/chatgitpt && docker-compose -f docker-compose.dataprocessing.yml up -d'
+        run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/chatgitpt && docker compose -f compose.dataprocessing.yml up -d'
