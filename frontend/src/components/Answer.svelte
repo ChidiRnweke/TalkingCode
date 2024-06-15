@@ -25,6 +25,39 @@
 		list-style-type: disc;
 	}
 
+	.generated :global(pre) {
+		background-color: rgb(248 250 252 / var(--tw-bg-opacity));
+		box-sizing: border-box;
+		padding: 1rem;
+		border-radius: 0.375rem;
+		margin-top: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	:global(.dark) .generated :global(pre) {
+		background-color: rgb(15 23 42 / var(--tw-bg-opacity));
+	}
+
+	:global(.dark) .generated :global(a) {
+		color: lightblue;
+	}
+
+	.generated :global(a) {
+		color: blue;
+	}
+
+	.generated :global(code) {
+		background-color: lightgray;
+		padding-left: 0.5rem;
+		padding-right: 0.5rem;
+		color: orangered;
+	}
+
+	:global(.dark) .generated :global(code) {
+		background-color: rgb(15 23 42 / var(--tw-bg-opacity));
+		color: rgb(250 202 21 / var(--tw-text-opacity));
+	}
+
 	.generated :global(h3) {
 		font-size: 1.5rem;
 		font-weight: 600;
