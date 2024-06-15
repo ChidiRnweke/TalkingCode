@@ -28,7 +28,7 @@ services:
       - WHITELISTED_EXTENSIONS=${WHITELISTED_EXTENSIONS}
       - BLACKLISTED_FILES=${BLACKLISTED_FILES}
     volumes:
-      - dagster_data:/dagster
+      - dagster_data:/opt/dagster/dagster_home
     ports:
       - "3000:3000"
     depends_on:
