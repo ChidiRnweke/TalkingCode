@@ -10,6 +10,7 @@ from pydantic import BaseModel, model_validator
 import aiohttp
 import uuid
 from backend.errors import InputError, MaximumSpendError, map_errors
+from html import escape
 
 
 @dataclass(frozen=True)
@@ -217,10 +218,11 @@ class OpenAIGenerationService:
 
     def __add_sources(self, answer: str, retrieved: list[RetrievedContext]) -> str:
         sources = [
-            f"* {r.file_name} in {r.repository_name}, {r.url} path is: \n"
+            f"<li>{escape(r.file_name)} in {escape(r.repository_name)}, <a href={escape(r.url)}>source.</a></li>"
             for r in retrieved
         ]
-        return f"{answer}\n To answer this question, I used the following sources: \n {''.join(sources)}"
+        return f"""{answer}\n <section id="sources", To answer this question, I used the following sources:
+        <ul>{''.join(sources)}</ul></section>"""
 
 
 @dataclass(frozen=True)
