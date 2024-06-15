@@ -200,6 +200,12 @@ class EmbeddingPersistance:
             embedding=embeddings.embedding,
             input_token_count=embeddings.total_tokens,
         )
+        original_file = select(GithubFileModel).where(
+            GithubFileModel.id == metadata.document_id
+        )
         with self.session_maker() as session:
+            orig = session.execute(original_file).scalar()
+            if orig:
+                orig.is_embedded = True
             session.add(embedded_document)
             session.commit()
