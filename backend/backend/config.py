@@ -50,7 +50,7 @@ def configure_async_session_maker(
     log: Logger | None = None,
 ) -> async_sessionmaker[AsyncSession]:
     conn_string = env_var_or_default(
-        "DATABASE_URL",
+        "ASYNC_DATABASE_URL",
         "postgresql+asyncpg://postgres:postgres@localhost/chatGITpt",
         log,
     )
