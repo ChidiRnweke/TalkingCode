@@ -7,9 +7,11 @@ from dotenv import load_dotenv
 
 def setup_env(logger_name: str) -> None:
     logger = setup_custom_logger(logger_name)
-    found = load_dotenv("../config/.env.secret")
-    if not found:
-        logger.warning("No .env file found")
+    if not os.getenv("PRODUCTION"):
+        logger.warning("Running in development mode")
+        found = load_dotenv("../config/.env.secret.dev")
+        if not found:
+            logger.warning("No .env file found")
 
 
 def env_var_or_default(var_name: str, default: str, log: Logger | None = None) -> str:
