@@ -92,3 +92,4 @@ venv/
 .metals
 
 config.env
+config/
