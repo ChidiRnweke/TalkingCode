@@ -157,6 +157,7 @@ class DatabaseService:
                 )
             if repo.name not in existing_repos:
                 session.add(repo_model)
+
             session.commit()
             logger.debug(f"Saved {repo.name} to the database")
 
@@ -171,16 +172,16 @@ class DatabaseService:
         already_exists = file.name in existing_files
 
         if already_exists:
-            is_new = (
+            needs_update = (
                 existing_files[file.name].last_modified.timestamp()
                 < file.last_modified.timestamp()
             )
-            if is_new:
-                return None
-
-            else:
+            if needs_update:
                 existing_file = existing_files[file.name]
                 existing_file.latest_version = False
+                self._add_file_to_repository(repo, repo_model, existing_languages, file)
+            else:
+                return None
         else:
             self._add_file_to_repository(repo, repo_model, existing_languages, file)
 
