@@ -40,4 +40,4 @@ jobs:
         run: scp -o StrictHostKeyChecking=no compose.dataprocessing.yml ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/chatgitpt
 
       - name: Deploy to server
-        run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/chatgitpt && docker compose -f compose.dataprocessing.yml up -d'
+        run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/chatgitpt && docker compose -f compose.dataprocessing.yml --env-file .env up -d && rm compose.dataprocessing.yml'
