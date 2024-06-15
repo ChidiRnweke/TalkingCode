@@ -17,7 +17,7 @@ services:
       - chatGITpt_dataprocessing
 
   dagster:
-    container_name: chatGIPT_dataprocessing
+    container_name: chatGITpt_dataprocessing
     image: ghcr.io/chidirnweke/chatgitpt-dagster:latest
     environment:
       - OPENAI_EMBEDDING_API_KEY=${OPENAI_EMBEDDING_API_KEY}
