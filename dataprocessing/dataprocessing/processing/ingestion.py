@@ -157,6 +157,8 @@ class DatabaseService:
                 )
             if repo.name not in existing_repos:
                 session.add(repo_model)
+            else:
+                session.merge(repo_model)
 
             session.commit()
             logger.debug(f"Saved {repo.name} to the database")
@@ -169,15 +171,15 @@ class DatabaseService:
         existing_languages: dict[str, LanguagesModel],
         existing_files: dict[str, GithubFileModel],
     ) -> None:
-        already_exists = file.name in existing_files
+        already_exists = file.path_in_project in existing_files
 
         if already_exists:
             needs_update = (
-                existing_files[file.name].last_modified.timestamp()
+                existing_files[file.path_in_project].last_modified.timestamp()
                 < file.last_modified.timestamp()
             )
             if needs_update:
-                existing_file = existing_files[file.name]
+                existing_file = existing_files[file.path_in_project]
                 existing_file.latest_version = False
                 self._add_file_to_repository(repo, repo_model, existing_languages, file)
             else:
@@ -201,7 +203,10 @@ class DatabaseService:
             .where(GithubFileModel.repository_name == repo.name)
             .where(GithubFileModel.repository_user == repo.user)
         )
-        return {file.name: file for file in session.scalars(existing_files_stmt).all()}
+        return {
+            file.path_in_repo: file
+            for file in session.scalars(existing_files_stmt).all()
+        }
 
     def _get_existing_languages(self, session: Session) -> dict[str, LanguagesModel]:
         return {lang.language: lang for lang in session.query(LanguagesModel).all()}
