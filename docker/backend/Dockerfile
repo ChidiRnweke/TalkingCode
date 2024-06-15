@@ -10,7 +10,7 @@ RUN apt-get update && \
 FROM poetry_base as base
 RUN mkdir -p /app
 
-
+ENV PRODUCTION=true
 
 WORKDIR /app
 COPY backend/ /app
