@@ -25,15 +25,16 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
       - WHITELISTED_EXTENSIONS=${WHITELISTED_EXTENSIONS}
       - BLACKLISTED_FILES=${BLACKLISTED_FILES}
+      - DAGSTER_PORT=${DAGSTER_PORT:-3000}
     volumes:
       - dagster_data:/opt/dagster/dagster_home
     ports:
-      - "3000:3000"
+      - "${DAGSTER_PORT}:3000"
     depends_on:
       - postgres
     networks:
       - chatGITpt_dataprocessing
-      - app_network
+      - app_network;
 
 volumes:
   postgres_data:
