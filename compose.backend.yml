@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+  rag_backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    container_name: rag_backend
+    environment:
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
+      - CHAT_MODEL=${CHAT_MODEL}
+      - OPENAI_EMBEDDING_API_KEY=${OPENAI_EMBEDDING_API_KEY}
+      - GITHUB_API_TOKEN=${GITHUB_API_TOKEN}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
+      - TOP_K=${TOP_K:-5}
+      - MAX_SPEND=${MAX_TOKENS:-1.5}
+      - SYSTEM_PROMPT=${SYSTEM_PROMPT}
+    ports:
+      - "8010:8000"
+    networks:
+      - chatGITpt_network
+
+networks:
+  chatGITpt_network:
+    driver: bridge
+    name: chatGITpt_network

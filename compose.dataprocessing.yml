@@ -1,0 +1,47 @@
+version: "3.8"
+services:
+  postgres:
+    image: pgvector/pgvector:0.7.0-pg16
+    container_name: chatGITpt_postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORDcPOSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    networks:
+      - chatGITpt_network
+      - chatGITpt_dataprocessing
+
+  dagster:
+    build:
+      context: .
+      dockerfile: docker/dagster/Dockerfile
+    container_name: chatGIPT_dataprocessing
+    environment:
+      - OPENAI_EMBEDDING_API_KEY=${OPENAI_EMBEDDING_API_KEY}
+      - GITHUB_API_TOKEN=${GITHUB_API_TOKEN}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
+      - WHITELISTED_EXTENSIONS=${WHITELISTED_EXTENSIONS}
+      - BLACKLISTED_FILES=${BLACKLISTED_FILES}
+    volumes:
+      - dagster_data:/dagster
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - chatGITpt_dataprocessing
+
+volumes:
+  postgres_data:
+  dagster_data:
+
+networks:
+  chatGITpt_dataprocessing:
+    driver: bridge
+  chatGITpt_network:
+    external: true
