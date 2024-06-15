@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-load_dotenv("../config/.env.secret")
+if not os.getenv("PRODUCTION"):
+    load_dotenv("../config/.env.secret.dev")
 url = (
     os.getenv("DATABASE_URL")
     or "postgresql://postgres:postgres@localhost:5432/chatGITpt"
