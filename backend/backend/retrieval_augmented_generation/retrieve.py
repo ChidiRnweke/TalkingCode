@@ -221,7 +221,7 @@ class OpenAIGenerationService:
             f"<li>{escape(r.file_name)} in {escape(r.repository_name)}, <a href={escape(r.url)}>source.</a></li>"
             for r in retrieved
         ]
-        return f"""{answer}\n <section id="sources", To answer this question, I used the following sources:
+        return f"""{answer}\n <section id="sources">To answer this question, I used the following sources:
         <ul>{''.join(sources)}</ul></section>"""
 
 
