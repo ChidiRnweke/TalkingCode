@@ -40,4 +40,4 @@ jobs:
         run: scp -o StrictHostKeyChecking=no compose.backend.yml ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/chatgitpt
 
       - name: Deploy to server
-        run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/chatgitpt && docker compose -f compose.backend.yml --env-file .env up -d --pull && rm compose.backend.yml'
+        run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/chatgitpt && docker compose -f compose.backend.yml --env-file .env up -d --pull always && rm compose.backend.yml'

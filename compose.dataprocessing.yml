@@ -34,7 +34,7 @@ services:
       - postgres
     networks:
       - chatGITpt_dataprocessing
-      - app_network;
+      - app_network
 
 volumes:
   postgres_data:
