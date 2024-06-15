@@ -3,3 +3,4 @@
 .env.secret.prod
 __pycache__/    
 dataprocessing/.vscode/settings.json
+config/
