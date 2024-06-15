@@ -9,16 +9,25 @@ RUN apt-get update && \
 
 FROM poetry_base as dagster
 
-RUN mkdir -p /app
-WORKDIR /app
-COPY dataprocessing/ /app
-COPY shared/ /shared
+RUN mkdir -p /opt/dagster/dagster_home /opt/dagster/app
+ENV PRODUCTION=true
+
+COPY dataprocessing/dagster.yaml  /opt/dagster/dagster_home/
+
+ENV DAGSTER_HOME=/opt/dagster/dagster_home/
+
+COPY dataprocessing/ /opt/dagster/app/
+
+COPY shared/ /opt/dagster/shared
+
+WORKDIR /opt/dagster/app
+
+RUN rm dagster.yaml
+
 RUN poetry install --only main --no-root
 
-ENV DAGSTER_HOME=/app
+WORKDIR /opt/dagster/app
 
-COPY . /app
+EXPOSE 3000
 
-WORKDIR /app
-
-ENTRYPOINT ["poetry", "run", "dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
+ENTRYPOINT ["poetry", "run", "dagster", "dev", "-h", "0.0.0.0", "-p", "3000"]
