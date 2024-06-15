@@ -11,6 +11,9 @@
 
 # Docker
 docker-compose.yml
+**/compose-*.yml
+**/Dockerfile
+compose-*.yml
 Dockerfile
 .docker
 .dockerignore
@@ -71,9 +74,9 @@ docs/_build/
 target/
 
 # Virtual environment
-.env
-.venv/
-venv/
+**/.env
+**/.venv/
+**/venv/
 
 # PyCharm
 .idea
@@ -86,7 +89,7 @@ venv/
 **/*.swp
 
 # VS Code
-.vscode/
+**/.vscode/
 
 .metals/
 .metals
