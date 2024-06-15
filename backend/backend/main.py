@@ -96,7 +96,6 @@ async def handle_app_errors(request: Request, exc: AppError) -> JSONResponse:
             return JSONResponse(str(exc), status_code=500)
 
 
-@app.exception_handler(InfraError)
 @app.post("/")
 async def chat(
     question: InputQuery, session: AsyncSession = Depends(get_session)
