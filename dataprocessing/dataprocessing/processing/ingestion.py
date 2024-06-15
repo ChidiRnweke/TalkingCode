@@ -23,15 +23,17 @@ class IngestionService:
         self._process_repositories()
 
     def _process_repositories(self) -> None:
+        existing_repos = self.db._get_existing_repositories()
         for repo in self.client.get_user().get_repos():
             if repo.fork or repo.owner.login != self.client.get_user().login:
                 continue
             logger.info(f"Processing repository {repo.name}")
             repo_with_files = self._process_single_repository(repo)
             logger.info(
-                f"Found {len(repo_with_files)} files in {repo_with_files[0].name}"
+                f"Found {len(repo_with_files[1])} files in {repo_with_files[0].name}"
             )
-            self.db.write_to_database(repo_with_files)
+
+            self.db.write_to_database(repo_with_files, existing_repos)
 
     def _process_single_repository(
         self, repo: Repository
@@ -134,7 +136,9 @@ class DatabaseService:
     session_maker: sessionmaker[Session]
 
     def write_to_database(
-        self, data: tuple[GitHubRepository, list[GitHubFile]]
+        self,
+        data: tuple[GitHubRepository, list[GitHubFile]],
+        existing_repos: dict[str, GitHubRepositoryModel],
     ) -> None:
         repo, files = data
         repo_model = repo.to_db_object()
@@ -143,7 +147,6 @@ class DatabaseService:
 
             existing_languages = self._get_existing_languages(session)
             existing_files = self._get_existing_files(session, repo)
-
             for file in files:
                 self._process_if_new(
                     file,
@@ -151,10 +154,9 @@ class DatabaseService:
                     repo_model,
                     existing_languages,
                     existing_files,
-                    session,
                 )
-
-            session.add(repo_model)
+            if repo.name not in existing_repos:
+                session.add(repo_model)
             session.commit()
             logger.debug(f"Saved {repo.name} to the database")
 
@@ -165,17 +167,30 @@ class DatabaseService:
         repo_model: GitHubRepositoryModel,
         existing_languages: dict[str, LanguagesModel],
         existing_files: dict[str, GithubFileModel],
-        session: Session,
     ) -> None:
         already_exists = file.name in existing_files
-        already_latest = existing_files[file.name].last_modified >= file.last_modified
 
-        if already_exists and already_latest:
-            return None
-        elif file.name in existing_files:
-            existing_file = existing_files[file.name]
-            self._update_file_status(session, existing_file)
+        if already_exists:
+            is_new = (
+                existing_files[file.name].last_modified.timestamp()
+                < file.last_modified.timestamp()
+            )
+            if is_new:
+                return None
+
+            else:
+                existing_file = existing_files[file.name]
+                existing_file.latest_version = False
+        else:
             self._add_file_to_repository(repo, repo_model, existing_languages, file)
+
+    def _get_existing_repositories(
+        self,
+    ) -> dict[str, GitHubRepositoryModel]:
+        with self.session_maker() as session:
+            return {
+                repo.name: repo for repo in session.query(GitHubRepositoryModel).all()
+            }
 
     def _get_existing_files(
         self, session: Session, repo: GitHubRepository
@@ -189,12 +204,6 @@ class DatabaseService:
 
     def _get_existing_languages(self, session: Session) -> dict[str, LanguagesModel]:
         return {lang.language: lang for lang in session.query(LanguagesModel).all()}
-
-    def _update_file_status(
-        self, session: Session, existing_file: GithubFileModel
-    ) -> None:
-        existing_file.latest_version = False
-        session.add(existing_file)
 
     def _add_file_to_repository(
         self,
