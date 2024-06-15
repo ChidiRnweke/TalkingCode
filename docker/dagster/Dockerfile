@@ -30,4 +30,6 @@ WORKDIR /opt/dagster/app
 
 EXPOSE 3000
 
+LABEL org.opencontainers.image.source https://github.com/chidirnweke/chatGITpt
+
 ENTRYPOINT ["poetry", "run", "dagster", "dev", "-h", "0.0.0.0", "-p", "3000"]

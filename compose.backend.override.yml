@@ -1,0 +1,6 @@
+version: "3.8"
+services:
+  rag_backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile

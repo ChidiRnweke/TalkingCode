@@ -16,6 +16,6 @@ WORKDIR /app
 COPY backend/ /app
 COPY shared/ /shared
 RUN poetry install --only main --no-root
-
+LABEL org.opencontainers.image.source https://github.com/chidirnweke/chatGITpt
 
 CMD ["poetry", "run", "fastapi", "run", "backend/main.py", "--port", "8000"]

@@ -17,10 +17,8 @@ services:
       - chatGITpt_dataprocessing
 
   dagster:
-    build:
-      context: .
-      dockerfile: docker/dagster/Dockerfile
     container_name: chatGIPT_dataprocessing
+    image: ghcr.io/chidirnweke/chatgitpt-dagster:latest
     environment:
       - OPENAI_EMBEDDING_API_KEY=${OPENAI_EMBEDDING_API_KEY}
       - GITHUB_API_TOKEN=${GITHUB_API_TOKEN}
@@ -35,6 +33,7 @@ services:
       - postgres
     networks:
       - chatGITpt_dataprocessing
+      - app_network
 
 volumes:
   postgres_data:
@@ -44,4 +43,6 @@ networks:
   chatGITpt_dataprocessing:
     driver: bridge
   chatGITpt_network:
+    external: true
+  app_network:
     external: true
