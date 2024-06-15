@@ -3,4 +3,7 @@ python_logs:
     - app_logger
   python_log_level: INFO
 
+telemetry:
+  enabled: false
+
 
