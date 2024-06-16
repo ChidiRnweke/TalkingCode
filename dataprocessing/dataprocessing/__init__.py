@@ -7,10 +7,10 @@ from dagster import (
 )
 from dotenv import load_dotenv
 from dataprocessing.orchestration.resources import AppConfigResource
+from shared.database import run_migrations
 from .orchestration import assets
 from shared.log import setup_custom_logger
-from alembic.config import Config
-from alembic import command
+
 
 logger = setup_custom_logger("app_logger")
 if not os.getenv("PRODUCTION"):
@@ -18,14 +18,7 @@ if not os.getenv("PRODUCTION"):
     load_dotenv("../config/.env.secret.dev")
 
 
-def run_migrations() -> None:
-    alembic_cfg = Config()
-    alembic_cfg.set_main_option("script_location", "../shared/shared/migrations")
-    command.upgrade(alembic_cfg, "head")
-    logger.info("Migrations run successfully")
-
-
-run_migrations()
+run_migrations("../shared/shared/migrations", logger)
 
 all_assets = load_assets_from_modules([assets])
 all_assets_job = define_asset_job(name="all_assets_job")
