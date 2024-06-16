@@ -32,10 +32,12 @@
 		border-radius: 0.375rem;
 		margin-top: 1rem;
 		margin-bottom: 1rem;
+		color: orangered;
 	}
 
 	:global(.dark) .generated :global(pre) {
 		background-color: rgb(15 23 42 / var(--tw-bg-opacity));
+		color: rgb(250 202 21 / var(--tw-text-opacity));
 	}
 
 	:global(.dark) .generated :global(a) {
@@ -47,7 +49,7 @@
 	}
 
 	.generated :global(code) {
-		background-color: lightgray;
+		background-color: rgb(15 23 42 / var(--tw-bg-opacity));
 		padding-left: 0.5rem;
 		padding-right: 0.5rem;
 		color: orangered;
