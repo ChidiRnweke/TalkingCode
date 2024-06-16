@@ -23,15 +23,8 @@ class RetrievalAugmentedGeneration:
     async def retrieval_augmented_generation(
         self, input: "InputQuery", k: int
     ) -> "RAGResponse":
-        if input.session_id:
-            await self.retrieval_service.validate_session_id(input.session_id)
-            session_id = input.session_id
-        else:
-            session_id = str(uuid.uuid4())
-
-        current_spend = await self.retrieval_service.get_current_spend(date.today())
-        if current_spend >= self.max_spend:
-            raise MaximumSpendError()
+        await self.enforce_spend_limit()
+        session_id = await self.validate_and_assign_session_id(input)
 
         retrieved, tokens_spent = await self._retrieve_top_k(input, k)
         store_task = self.retrieval_service.store_token_spent(
@@ -40,9 +33,26 @@ class RetrievalAugmentedGeneration:
             self.embedding_service.get_embed_model_name(),
         )
         generation_task = self.generation_service.augmented_generation(input, retrieved)
-        _, response = await asyncio.gather(store_task, generation_task)
+        _, response_and_tokens = await asyncio.gather(store_task, generation_task)
+        response, tokens = response_and_tokens
+        await self.retrieval_service.store_token_spent(
+            session_id, tokens, self.generation_service.get_chat_model_name()
+        )
 
         return RAGResponse(response=response, session_id=session_id)
+
+    async def enforce_spend_limit(self):
+        current_spend = await self.retrieval_service.get_current_spend(date.today())
+        if current_spend >= self.max_spend:
+            raise MaximumSpendError()
+
+    async def validate_and_assign_session_id(self, input: "InputQuery") -> str:
+        if input.session_id:
+            await self.retrieval_service.validate_session_id(input.session_id)
+            session_id = input.session_id
+        else:
+            session_id = str(uuid.uuid4())
+        return session_id
 
     async def _retrieve_top_k(
         self, input: "InputQuery", k: int
@@ -86,7 +96,9 @@ class RemainingSpend:
 class GenerationService(Protocol):
     async def augmented_generation(
         self, query: "InputQuery", context: list["RetrievedContext"]
-    ) -> str: ...
+    ) -> tuple[str, int]: ...
+
+    def get_chat_model_name(self) -> str: ...
 
 
 class EmbeddingService(Protocol):
@@ -202,7 +214,7 @@ class OpenAIGenerationService:
 
     async def augmented_generation(
         self, query: InputQuery, context: list[RetrievedContext]
-    ) -> str:
+    ) -> tuple[str, int]:
         ctx = await asyncio.gather(*[c.to_context() for c in context])
         model_input = self._create_model_input(query, ctx)
         with map_errors():
@@ -210,8 +222,12 @@ class OpenAIGenerationService:
                 model=self.chat_model,
                 messages=model_input,  # type: ignore
             )
-        response = response.choices[0].message.content or ""
-        return self.__add_sources(response, context)
+        result = response.choices[0].message.content or ""
+        tokens = response.usage.total_tokens if response.usage else 0
+        return self.__add_sources(result, context), tokens
+
+    def get_chat_model_name(self) -> str:
+        return self.chat_model
 
     def _create_model_input(
         self, input: InputQuery, ctx: list[str]
