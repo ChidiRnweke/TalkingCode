@@ -65,6 +65,7 @@
 		sessionID = undefined;
 		input.set('');
 		error = false;
+		inConversation = false;
 		status = GenerateAnswerStatus.NONE;
 	};
 
