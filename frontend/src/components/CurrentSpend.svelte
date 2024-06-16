@@ -9,7 +9,6 @@
 	class="bg-transparent dark:bg-transparent border-none shadow-none place-self-center"
 >
 	<div class="flex-row flex gap-x-2">
-		Remaining amount left to spend: <EuroOutline class="w-4 h-6" />
-		{amount}
+		{amount} left to spend today <EuroOutline class="w-4 h-6" />
 	</div>
 </Card>
