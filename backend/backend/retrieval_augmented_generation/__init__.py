@@ -5,7 +5,6 @@ from .retrieve import (
     OpenAIEmbeddingService,
     OpenAIGenerationService,
     SQLRetrievalService,
-    RAG,
 )
 
 __all__ = [
@@ -15,5 +14,4 @@ __all__ = [
     "OpenAIEmbeddingService",
     "OpenAIGenerationService",
     "SQLRetrievalService",
-    "RAG",
 ]

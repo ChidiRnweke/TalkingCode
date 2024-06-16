@@ -1,3 +1,4 @@
+from datetime import date
 import logging
 from backend.errors import AppError, InputError, MaximumSpendError, InfraError
 from backend.retrieval_augmented_generation.retrieve import RemainingSpend
@@ -107,6 +108,7 @@ async def chat(
         generation_service=get_openai_generation_service(),
         retrieval_service=SQLRetrievalService(session),
         max_spend=max_spend,
+        date=date.today(),
     )
     return await rag.retrieval_augmented_generation(question, get_top_k())
 
@@ -121,5 +123,6 @@ async def remaining_spend(
         generation_service=get_openai_generation_service(),
         retrieval_service=SQLRetrievalService(session),
         max_spend=max_spend,
+        date=date.today(),
     )
     return await rag.remaining_spend()

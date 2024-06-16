@@ -19,6 +19,7 @@ class RetrievalAugmentedGeneration:
     retrieval_service: "RetrievalService"
     generation_service: "GenerationService"
     max_spend: float
+    date: date
 
     async def retrieval_augmented_generation(
         self, input: "InputQuery", k: int
@@ -42,7 +43,7 @@ class RetrievalAugmentedGeneration:
         return RAGResponse(response=response, session_id=session_id)
 
     async def enforce_spend_limit(self):
-        current_spend = await self.retrieval_service.get_current_spend(date.today())
+        current_spend = await self.retrieval_service.get_current_spend(self.date)
         if current_spend >= self.max_spend:
             raise MaximumSpendError()
 
@@ -62,16 +63,10 @@ class RetrievalAugmentedGeneration:
         return (await self.retrieval_service.retrieve_top_k(result, k), tokens_spent)
 
     async def remaining_spend(self) -> "RemainingSpend":
-        current_spend = await self.retrieval_service.get_current_spend(date.today())
+        current_spend = await self.retrieval_service.get_current_spend(self.date)
         remaining = self.max_spend - round(current_spend, 2)
+        remaining = max(remaining, 0)
         return RemainingSpend(remaining)
-
-
-class RAG(Protocol):
-
-    async def retrieval_augmented_generation(
-        self, input: "InputQuery", k: int
-    ) -> "RAGResponse": ...
 
 
 class RetrievalService(Protocol):
