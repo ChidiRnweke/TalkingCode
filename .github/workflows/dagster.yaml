@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "dataprocessing/**"
 
 jobs:
   build-and-push:
