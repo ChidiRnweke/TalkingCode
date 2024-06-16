@@ -4,8 +4,8 @@ services:
     image: ghcr.io/chidirnweke/chatgitpt-backend:latest
     container_name: rag_backend
     environment:
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-larg}
-      - CHAT_MODEL=${CHAT_MODEL;-gpt-4o}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-large}
+      - CHAT_MODEL=${CHAT_MODEL:-gpt-4o}
       - OPENAI_EMBEDDING_API_KEY=${OPENAI_EMBEDDING_API_KEY}
       - GITHUB_API_TOKEN=${GITHUB_API_TOKEN}
       - ASYNC_DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
