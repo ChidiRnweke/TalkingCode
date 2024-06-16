@@ -41,7 +41,7 @@ class StubGenerationService(GenerationService):
     async def augmented_generation(
         self, query: InputQuery, context: list[RetrievedContext]
     ) -> tuple[str, int]:
-        return query.query + "response", 0
+        return query.query + " response", 0
 
     def get_chat_model_name(self) -> str:
         return "stub-chat-model"
@@ -69,7 +69,43 @@ def rag_service(request: pytest.FixtureRequest):
     )
 
 
+class TestInputQuery:
+
+    def test_input_query_can_have_empty_session_id(self):
+        query = InputQuery(query="query")
+        assert query.session_id is None
+
+    def test_input_query_can_have_empty_previous_context(self):
+        query = InputQuery(query="query")
+        assert query.previous_context is None
+
+    def test_input_query_can_not_have_previous_context_without_session_id(self):
+        prev_qas = [PreviousQAs(question="q", answer="a")]
+        with pytest.raises(ValueError):
+            InputQuery(query="query", previous_context=prev_qas)
+
+    def test_input_query_can_not_have_session_id_without_previous_context(self):
+        with pytest.raises(ValueError):
+            InputQuery(query="query", session_id="session")
+
+    def test_input_query_can_have_previous_context_with_session_id(self):
+        prev_qas = [PreviousQAs(question="q", answer="a")]
+        query = InputQuery(
+            query="query", previous_context=prev_qas, session_id="session"
+        )
+        assert query.previous_context == prev_qas
+
+
 class TestRAGService:
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("rag_service", [date.today()], indirect=True)
+    async def test_retrieval_augmented_generation(
+        self, rag_service: RetrievalAugmentedGeneration
+    ):
+        query = InputQuery(query="query")
+        response = await rag_service.retrieval_augmented_generation(query, 1)
+        assert response.response == "query response"
 
     @pytest.mark.parametrize("rag_service", [date.today()], indirect=True)
     @pytest.mark.asyncio
