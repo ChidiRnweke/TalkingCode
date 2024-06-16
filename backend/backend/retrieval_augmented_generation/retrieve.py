@@ -53,7 +53,7 @@ class RetrievalAugmentedGeneration:
 
     async def remaining_spend(self) -> "RemainingSpend":
         current_spend = await self.retrieval_service.get_current_spend(date.today())
-        remaining = round(self.max_spend - current_spend, 2)
+        remaining = self.max_spend - round(current_spend, 2)
         return RemainingSpend(remaining)
 
 
