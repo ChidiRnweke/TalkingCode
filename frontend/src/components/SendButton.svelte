@@ -6,7 +6,7 @@
 
 	export let input = '';
 	export let action: () => Promise<void>;
-
+	export let disabled = false;
 	function handleInput(event: Event) {
 		const textarea = event.target as HTMLTextAreaElement;
 		if (textarea.scrollHeight > 280) {
@@ -34,7 +34,7 @@
 	};
 </script>
 
-<div class="sticky bottom-0 bg-white dark:bg-gray-800 pb-4 pt-4 box-content">
+<div class="sticky bottom-0 bg-white dark:bg-gray-800 pb-4 box-content">
 	<div class="lg:mx-40 flex flex-row bg-primary-300 dark:bg-gray-700 place-items-center rounded-md">
 		<Label for="textarea-id" class="sr-only ">Your message</Label>
 		<Textarea
@@ -49,7 +49,11 @@
 			bind:value={input}
 			on:keydown={handleKeydown}
 		/>
-		<Button class=" bg-primary-900 rounded-md mr-2 my-2 dark:bg-gray-950" on:click={action}>
+		<Button
+			{disabled}
+			class=" bg-primary-900 rounded-md mr-2 my-2 dark:bg-gray-950"
+			on:click={action}
+		>
 			<PaperPlaneOutline class=" text-primary-100 " />
 		</Button>
 	</div>
