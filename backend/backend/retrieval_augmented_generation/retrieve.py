@@ -51,6 +51,11 @@ class RetrievalAugmentedGeneration:
         tokens_spent = result.token_count
         return (await self.retrieval_service.retrieve_top_k(result, k), tokens_spent)
 
+    async def remaining_spend(self) -> "RemainingSpend":
+        current_spend = await self.retrieval_service.get_current_spend(date.today())
+        remaining = round(self.max_spend - current_spend, 2)
+        return RemainingSpend(remaining)
+
 
 class RAG(Protocol):
 
@@ -71,6 +76,11 @@ class RetrievalService(Protocol):
     async def validate_session_id(self, session_id: str) -> None: ...
 
     async def get_current_spend(self, date: date) -> float: ...
+
+
+@dataclass(frozen=True, slots=True)
+class RemainingSpend:
+    remaining_spend: float
 
 
 class GenerationService(Protocol):

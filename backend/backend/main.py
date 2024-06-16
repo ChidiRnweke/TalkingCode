@@ -1,5 +1,6 @@
 import logging
 from backend.errors import AppError, InputError, MaximumSpendError, InfraError
+from backend.retrieval_augmented_generation.retrieve import RemainingSpend
 from fastapi import FastAPI, Depends, Request
 from backend.retrieval_augmented_generation import (
     InputQuery,
@@ -108,3 +109,17 @@ async def chat(
         max_spend=max_spend,
     )
     return await rag.retrieval_augmented_generation(question, get_top_k())
+
+
+@app.get("/remaining_spend")
+async def remaining_spend(
+    session: AsyncSession = Depends(get_session),
+) -> RemainingSpend:
+    max_spend = get_max_spend()
+    rag = RetrievalAugmentedGeneration(
+        embedding_service=get_openai_embedding_service(),
+        generation_service=get_openai_generation_service(),
+        retrieval_service=SQLRetrievalService(session),
+        max_spend=max_spend,
+    )
+    return await rag.remaining_spend()
