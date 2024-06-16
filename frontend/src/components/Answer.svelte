@@ -32,6 +32,8 @@
 		border-radius: 0.375rem;
 		margin-top: 1rem;
 		margin-bottom: 1rem;
+		margin-left: 1rem;
+		margin-right: 1rem;
 		color: orangered;
 	}
 
@@ -49,7 +51,7 @@
 	}
 
 	.generated :global(code) {
-		background-color: rgb(15 23 42 / var(--tw-bg-opacity));
+		background-color: rgb(248 250 252 / var(--tw-bg-opacity));
 		padding-left: 0.5rem;
 		padding-right: 0.5rem;
 		color: orangered;

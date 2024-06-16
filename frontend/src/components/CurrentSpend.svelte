@@ -2,6 +2,7 @@
 	import EuroOutline from 'flowbite-svelte-icons/EuroOutline.svelte';
 	import Card from 'flowbite-svelte/Card.svelte';
 	export let amount: number;
+	$: rounded = amount.toFixed(2);
 </script>
 
 <Card
@@ -10,6 +11,6 @@
 >
 	<div class="flex-row flex gap-x-0.5">
 		<EuroOutline class="w-4 h-6" />
-		{amount} left to spend today.
+		{rounded} left to spend today.
 	</div>
 </Card>
