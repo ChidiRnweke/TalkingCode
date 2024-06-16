@@ -14,7 +14,7 @@ jobs:
       - name: Build static files
         run: cd frontend && npm install && npm run build
       - name: Compress static files
-        run: tar -czvf build.tar.gz -C dist/ .
+        run: tar -czvf build.tar.gz -C frontend/dist/ .
 
       - name: Secure copy tar file to server
         uses: appleboy/scp-action@master
