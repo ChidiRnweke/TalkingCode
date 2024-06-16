@@ -278,6 +278,7 @@ class SQLRetrievalService:
         async with self.async_session.begin():
             with map_errors():
                 self.async_session.add(token_spend)
+                await self.async_session.commit()
 
     async def get_current_spend(self, date: date) -> float:
         stmt = select(TokenSpendModel).where(

@@ -8,7 +8,7 @@
 	size="xs"
 	class="bg-transparent dark:bg-transparent border-none shadow-none place-self-center"
 >
-	<div class="flex-row flex gap-x-2">
+	<div class="flex-row flex gap-x-0.5">
 		<EuroOutline class="w-4 h-6" />
 		{amount} left to spend today.
 	</div>
