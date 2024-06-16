@@ -2,15 +2,22 @@
 	import Question from '../components/Question.svelte';
 	import Answer from '../components/Answer.svelte';
 	import SendButton from '../components/SendButton.svelte';
-	import { ragClient, type PreviousContext, type RAGResponse, type inputQuery } from '$lib/client';
+	import {
+		ragClient,
+		remainingSpace,
+		type PreviousContext,
+		type RAGResponse,
+		type inputQuery
+	} from '$lib/client';
 	import Suggestions from '../components/Suggestions.svelte';
 	import Heading from 'flowbite-svelte/Heading.svelte';
-	import { setContext } from 'svelte';
+	import { setContext, onMount } from 'svelte';
 	import { writable } from 'svelte/store';
 	import Button from 'flowbite-svelte/Button.svelte';
 	import Undo from 'flowbite-svelte-icons/UndoOutline.svelte';
 	import ErrorMessage from '../components/ErrorMessage.svelte';
 	import TextPlaceholder from 'flowbite-svelte/TextPlaceholder.svelte';
+	import CurrentSpend from '../components/CurrentSpend.svelte';
 
 	let input = writable('');
 	setContext('input', input); // set the context for the input. This is used for the Suggestions component
@@ -25,6 +32,7 @@
 	}
 
 	let status = GenerateAnswerStatus.NONE;
+	$: disabled = status === GenerateAnswerStatus.LOADING;
 
 	const generateAnswer = async (question: string): Promise<RAGResponse> => {
 		const inputQuery: inputQuery = {
@@ -46,6 +54,7 @@
 		latestQuestion = $input;
 		try {
 			await generateAnswer(latestQuestion);
+			await ragClient.refreshRemainingSpend();
 		} catch (error) {
 			handleError();
 		}
@@ -66,6 +75,10 @@
 		error = true;
 		status = GenerateAnswerStatus.NONE;
 	};
+
+	onMount(async () => {
+		await ragClient.refreshRemainingSpend();
+	});
 </script>
 
 {#if inConversation === false}
@@ -105,4 +118,7 @@
 	</div>
 {/if}
 
-<SendButton bind:input={$input} action={submitQuestion} />
+<div class="flex flex-col">
+	<CurrentSpend amount={$remainingSpace} />
+	<SendButton {disabled} bind:input={$input} action={submitQuestion} />
+</div>
