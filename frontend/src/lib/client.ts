@@ -5,6 +5,12 @@ const baseUrl = import.meta.env.VITE_API_URL;
 const client = createClient<paths>({ baseUrl: '/api/v1' });
 export type inputQuery = paths['/']['post']['requestBody']['content']['application/json'];
 export type RAGResponse = paths['/']['post']['responses']['200']['content']['application/json'];
+export type RemainingSpend =
+	paths['/remaining_spend']['get']['responses']['200']['content']['application/json'];
+
+import { writable } from 'svelte/store';
+
+export const remainingSpace = writable(2);
 export interface PreviousContext {
 	question: string;
 	answer: string;
@@ -29,13 +35,20 @@ class RAGClient {
 			);
 		}
 	};
+
+	refreshRemainingSpend = async () => {
+		const remainingSpend = await this.getCurrentSpend();
+		remainingSpace.set(remainingSpend);
+	};
+
+	getCurrentSpend = async (): Promise<number> => {
+		const { data } = await this.client.GET('/remaining_spend');
+		if (data) {
+			return data.remaining_spend;
+		} else {
+			throw new APIError('An error ocurred. Please try again later.');
+		}
+	};
 }
 
 export let ragClient = new RAGClient();
-
-export const OQuestionState = {
-	Fetching: 1,
-	Fetched: 2
-} as const;
-
-export type QuestionState = (typeof OQuestionState)[keyof typeof OQuestionState];
