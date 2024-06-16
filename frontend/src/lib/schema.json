@@ -1,202 +1,188 @@
 {
-  "openapi": "3.1.0",
-  "info": {
-    "title": "FastAPI",
-    "version": "0.1.0"
-  },
-  "paths": {
-    "/": {
-      "post": {
-        "summary": "Chat",
-        "operationId": "chat__post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InputQuery"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RAGResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/remaining_spend": {
-      "get": {
-        "summary": "Remaining Spend",
-        "operationId": "remaining_spend_remaining_spend_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RemainingSpend"
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  },
-  "components": {
-    "schemas": {
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
-      },
-      "InputQuery": {
-        "properties": {
-          "query": {
-            "type": "string",
-            "title": "Query"
-          },
-          "previous_context": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/PreviousQAs"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Previous Context"
-          },
-          "session_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Session Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "query"
-        ],
-        "title": "InputQuery"
-      },
-      "PreviousQAs": {
-        "properties": {
-          "question": {
-            "type": "string",
-            "title": "Question"
-          },
-          "answer": {
-            "type": "string",
-            "title": "Answer"
-          }
-        },
-        "type": "object",
-        "required": [
-          "question",
-          "answer"
-        ],
-        "title": "PreviousQAs"
-      },
-      "RAGResponse": {
-        "properties": {
-          "response": {
-            "type": "string",
-            "title": "Response"
-          },
-          "session_id": {
-            "type": "string",
-            "title": "Session Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "response",
-          "session_id"
-        ],
-        "title": "RAGResponse"
-      },
-      "RemainingSpend": {
-        "properties": {
-          "remaining_spend": {
-            "type": "number",
-            "title": "Remaining Spend"
-          }
-        },
-        "type": "object",
-        "required": [
-          "remaining_spend"
-        ],
-        "title": "RemainingSpend"
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
-          },
-          "type": {
-            "type": "string",
-            "title": "Error Type"
-          }
-        },
-        "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "title": "ValidationError"
-      }
-    }
-  }
+	"openapi": "3.1.0",
+	"info": {
+		"title": "FastAPI",
+		"version": "0.1.0"
+	},
+	"paths": {
+		"/": {
+			"post": {
+				"summary": "Chat",
+				"operationId": "chat__post",
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/InputQuery"
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "Successful Response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RAGResponse"
+								}
+							}
+						}
+					},
+					"422": {
+						"description": "Validation Error",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/HTTPValidationError"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/remaining_spend": {
+			"get": {
+				"summary": "Remaining Spend",
+				"operationId": "remaining_spend_remaining_spend_get",
+				"responses": {
+					"200": {
+						"description": "Successful Response",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RemainingSpend"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"schemas": {
+			"HTTPValidationError": {
+				"properties": {
+					"detail": {
+						"items": {
+							"$ref": "#/components/schemas/ValidationError"
+						},
+						"type": "array",
+						"title": "Detail"
+					}
+				},
+				"type": "object",
+				"title": "HTTPValidationError"
+			},
+			"InputQuery": {
+				"properties": {
+					"query": {
+						"type": "string",
+						"title": "Query"
+					},
+					"previous_context": {
+						"anyOf": [
+							{
+								"items": {
+									"$ref": "#/components/schemas/PreviousQAs"
+								},
+								"type": "array"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Previous Context"
+					},
+					"session_id": {
+						"anyOf": [
+							{
+								"type": "string"
+							},
+							{
+								"type": "null"
+							}
+						],
+						"title": "Session Id"
+					}
+				},
+				"type": "object",
+				"required": ["query"],
+				"title": "InputQuery"
+			},
+			"PreviousQAs": {
+				"properties": {
+					"question": {
+						"type": "string",
+						"title": "Question"
+					},
+					"answer": {
+						"type": "string",
+						"title": "Answer"
+					}
+				},
+				"type": "object",
+				"required": ["question", "answer"],
+				"title": "PreviousQAs"
+			},
+			"RAGResponse": {
+				"properties": {
+					"response": {
+						"type": "string",
+						"title": "Response"
+					},
+					"session_id": {
+						"type": "string",
+						"title": "Session Id"
+					}
+				},
+				"type": "object",
+				"required": ["response", "session_id"],
+				"title": "RAGResponse"
+			},
+			"RemainingSpend": {
+				"properties": {
+					"remaining_spend": {
+						"type": "number",
+						"title": "Remaining Spend"
+					}
+				},
+				"type": "object",
+				"required": ["remaining_spend"],
+				"title": "RemainingSpend"
+			},
+			"ValidationError": {
+				"properties": {
+					"loc": {
+						"items": {
+							"anyOf": [
+								{
+									"type": "string"
+								},
+								{
+									"type": "integer"
+								}
+							]
+						},
+						"type": "array",
+						"title": "Location"
+					},
+					"msg": {
+						"type": "string",
+						"title": "Message"
+					},
+					"type": {
+						"type": "string",
+						"title": "Error Type"
+					}
+				},
+				"type": "object",
+				"required": ["loc", "msg", "type"],
+				"title": "ValidationError"
+			}
+		}
+	}
 }
