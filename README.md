@@ -1,4 +1,4 @@
-* chatGITpt
+# chatGITpt
 
 The idea behind this project is to create a retrieval augmented generation (RAG) based chatbot that has access to all of your public GitHub code. The project exists of three main components:
 
