@@ -1,5 +1,5 @@
 from datetime import date
-from .retrieve import (
+from backend.retrieval_augmented_generation.retrieve import (
     PreviousQAs,
     RetrievalAugmentedGeneration,
     EmbeddingService,
