@@ -42,7 +42,7 @@ class RetrievalAugmentedGeneration:
 
         return RAGResponse(response=response, session_id=session_id)
 
-    async def enforce_spend_limit(self):
+    async def enforce_spend_limit(self) -> None:
         current_spend = await self.retrieval_service.get_current_spend(self.date)
         if current_spend >= self.max_spend:
             raise MaximumSpendError()
@@ -279,7 +279,10 @@ class SQLRetrievalService:
         ]
 
     async def store_token_spent(
-        self, session_id: str, token_count: int, model_name: str
+        self,
+        session_id: str,
+        token_count: int,
+        model_name: str,
     ) -> None:
         token_spend = TokenSpendModel(
             session_id=session_id,
