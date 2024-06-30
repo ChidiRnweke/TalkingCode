@@ -14,7 +14,7 @@ from logging import Logger
 logger = Logger("backend_logger")
 
 
-@pytest.mark.asyncio(scope="class")
+@pytest.mark.asyncio(scope="session")
 class TestInfrastructure:
 
     async def test_storing_tokens(self, retrieval_service: SQLRetrievalService):

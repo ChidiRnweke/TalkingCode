@@ -24,8 +24,8 @@ class RetrievalAugmentedGeneration:
     async def retrieval_augmented_generation(
         self, input: "InputQuery", k: int
     ) -> "RAGResponse":
-        await self.enforce_spend_limit()
-        session_id = await self.validate_and_assign_session_id(input)
+        await self._enforce_spend_limit()
+        session_id = await self._validate_and_assign_session_id(input)
 
         retrieved, tokens_spent = await self._retrieve_top_k(input, k)
         store_task = self.retrieval_service.store_token_spent(
@@ -42,12 +42,18 @@ class RetrievalAugmentedGeneration:
 
         return RAGResponse(response=response, session_id=session_id)
 
-    async def enforce_spend_limit(self) -> None:
+    async def remaining_spend(self) -> "RemainingSpend":
+        current_spend = await self.retrieval_service.get_current_spend(self.date)
+        remaining = round(self.max_spend - current_spend, 2)
+        remaining = max(remaining, 0)
+        return RemainingSpend(remaining)
+
+    async def _enforce_spend_limit(self) -> None:
         current_spend = await self.retrieval_service.get_current_spend(self.date)
         if current_spend >= self.max_spend:
             raise MaximumSpendError()
 
-    async def validate_and_assign_session_id(self, input: "InputQuery") -> str:
+    async def _validate_and_assign_session_id(self, input: "InputQuery") -> str:
         if input.session_id:
             await self.retrieval_service.validate_session_id(input.session_id)
             session_id = input.session_id
@@ -61,12 +67,6 @@ class RetrievalAugmentedGeneration:
         result = await self.embedding_service.embed(input.query)
         tokens_spent = result.token_count
         return (await self.retrieval_service.retrieve_top_k(result, k), tokens_spent)
-
-    async def remaining_spend(self) -> "RemainingSpend":
-        current_spend = await self.retrieval_service.get_current_spend(self.date)
-        remaining = self.max_spend - round(current_spend, 2)
-        remaining = max(remaining, 0)
-        return RemainingSpend(remaining)
 
 
 class RetrievalService(Protocol):
@@ -219,7 +219,7 @@ class OpenAIGenerationService:
             )
         result = response.choices[0].message.content or ""
         tokens = response.usage.total_tokens if response.usage else 0
-        return self.__add_sources(result, context), tokens
+        return add_sources(result, context), tokens
 
     def get_chat_model_name(self) -> str:
         return self.chat_model
@@ -237,12 +237,13 @@ class OpenAIGenerationService:
         model_input.append({"role": "user", "content": query_with_ctx})
         return model_input
 
-    def __add_sources(self, answer: str, retrieved: list[RetrievedContext]) -> str:
-        sources = [
-            f"<li>{escape(r.file_name)} in {escape(r.repository_name)}, <a href={escape(r.url)}>source.</a></li>"
-            for r in retrieved
-        ]
-        return f"""{answer}\n <section id="sources">To answer this question, I used the following sources:
+
+def add_sources(answer: str, retrieved: list[RetrievedContext]) -> str:
+    sources = [
+        f"<li>{escape(r.file_name)} in {escape(r.repository_name)}, <a href={escape(r.url)}>source.</a></li>"
+        for r in retrieved
+    ]
+    return f"""{answer}\n <section id="sources">To answer this question, I used the following sources:
         <ul>{''.join(sources)}</ul></section>"""
 
 
