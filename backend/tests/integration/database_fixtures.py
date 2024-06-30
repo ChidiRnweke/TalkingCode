@@ -38,7 +38,7 @@ def databaseSession() -> Generator[async_sessionmaker, None, None]:
         yield Session
 
 
-@pytest_asyncio.fixture(scope="class")
+@pytest_asyncio.fixture(scope="session")
 async def add_fake_data(databaseSession: async_sessionmaker[AsyncSession]) -> None:
     repository = GitHubRepositoryModel(
         name="repo1",
@@ -85,7 +85,7 @@ async def add_fake_data(databaseSession: async_sessionmaker[AsyncSession]) -> No
         await session.commit()
 
 
-@pytest_asyncio.fixture(scope="class")
+@pytest_asyncio.fixture(scope="session")
 async def retrieval_service(
     databaseSession: async_sessionmaker[AsyncSession],
     add_fake_data: None,
