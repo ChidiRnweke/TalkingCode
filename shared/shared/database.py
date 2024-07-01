@@ -133,4 +133,4 @@ class TokenSpendModel(Base):
     session_id: Mapped[str] = mapped_column(String(255))
     token_count: Mapped[int] = mapped_column(Integer)
     model: Mapped[str] = mapped_column(String(255))
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
