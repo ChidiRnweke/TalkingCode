@@ -292,7 +292,7 @@ class PreviousQAs(BaseModel):
     additional context from previous interactions. It is a pydantic model because it is client
     facing and is used to validate the input query. This model is used in the `InputQuery` model.
 
-    Args:
+    Fields:
         question (str): A previously asked question asked by the user.
         answer (str): A previously received answer provided by the assistant.
     """
