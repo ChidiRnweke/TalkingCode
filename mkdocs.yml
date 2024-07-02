@@ -15,3 +15,5 @@ plugins:
             docstring_style: google
           import:
             - https://docs.python.org/3/objects.inv
+          paths:
+            ["backend/", "shared/"]

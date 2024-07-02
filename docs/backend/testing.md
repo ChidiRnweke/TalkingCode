@@ -18,7 +18,7 @@ The general strategy for integration tests is to test the interaction between di
 
 The tests are run using `pytest`. The test files are located in the `tests/integration` directory. The tests are run using the `pytest` command. 
 
-`Testcontainers` is used to spin up a PostgreSQL database for the tests. The database is created and destroyed for each test run. The database is seeded with test data using the `database_fixtures` [fixture](/reference/tests/fixtures/#tests.integration.database_fixtures.database_session).
+`Testcontainers` is used to spin up a PostgreSQL database for the tests. The database is created and destroyed for each test run. The database is seeded with test data using the `database_fixtures` [fixture](reference/tests/fixtures.md/#tests.integration.database_fixtures.database_session).
 
 ### Test structure
 

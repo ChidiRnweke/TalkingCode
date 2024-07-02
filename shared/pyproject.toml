@@ -13,6 +13,11 @@ alembic = "^1.13.1"
 python-dotenv = "^1.0.1"
 psycopg2 = "^2.9.9"
 
+[tool.poetry.dev-dependencies]
+mkdocs = "^1.6.0"
+mkdocstrings = {extras = ["python"], version = "^0.25.1"}
+mkdocs-material = "^9.5.27"
+mkdocs-render-swagger-plugin = "^0.1.2"
 
 [build-system]
 requires = ["poetry-core"]
