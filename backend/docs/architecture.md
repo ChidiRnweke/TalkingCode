@@ -1,6 +1,6 @@
 # Architecture
 
-The architecture of the backend isn't following any specific pattern but is rather a loose collection of what I consider to be best practices for any backend system. 
+The architecture of the backend isn't following any specific pattern but is rather a loose collection of what I consider to be best practices for any backend. 
 
 ## API layer
 
