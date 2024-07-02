@@ -9,6 +9,35 @@ from logging import Logger
 
 @dataclass(frozen=True)
 class AppConfig:
+    """
+    This class is used to store the configuration for the application. It is obtained
+    from the environment variables and passed to the application components that need
+    it.
+
+    You can instantiate it directly or use the `from_env` method to create an instance
+    from the environment variables. The latter is the recommended way to create an
+    instance. When certain environment variables are not set, it will log a warning if the
+    application can still run without them, or raise an exception if the application
+    cannot run without them.
+
+    Attributes:
+        embedding_model (str): The name of the text embedding model to use.
+            Can be set with the `EMBEDDING_MODEL` environment variable.
+        top_k (int): The number of top candidates to return from the model.
+            Can be set with the `TOP_K` environment variable.
+        chat_model (str): The name of the chat model to use.
+            Can be set with the `CHAT_MODEL` environment variable.
+        async_session (async_sessionmaker[AsyncSession]): The async session maker for the
+            database.
+            Can be set with the `ASYNC_DATABASE_URL` environment variable.
+        system_prompt (str): The system prompt to use for the chat model.
+            Can be set with the `SYSTEM_PROMPT` environment variable.
+        openAI_client (AsyncOpenAI): The OpenAI client to use for making requests.
+            Can be set with the `OPENAI_EMBEDDING_API_KEY` environment variable.
+        max_spend (float): The maximum amount of money that can be spent in a day.
+            Can be set with the `MAX_SPEND` environment variable.
+    """
+
     embedding_model: str
     top_k: int
     chat_model: str
@@ -19,6 +48,15 @@ class AppConfig:
 
     @classmethod
     def from_env(cls, log: Logger | None = None) -> Self:
+        """Create an instance of AppConfig from the environment variables.
+
+        Args:
+            log (Logger | None, optional): If provided, it logs whether or not the
+                environment variables were found. Defaults to None.
+
+        Returns:
+           (AppConfig): The configuration object with the values from the environment
+        """
         Session = configure_async_session_maker(log)
         embedding_model = env_var_or_default(
             "EMBEDDING_MODEL", "text-embedding-3-large", log
@@ -49,6 +87,17 @@ class AppConfig:
 def configure_async_session_maker(
     log: Logger | None = None,
 ) -> async_sessionmaker[AsyncSession]:
+    """Create an async session maker for the database.
+    It uses the `ASYNC_DATABASE_URL` environment variable to connect to the database.
+
+
+    Args:
+        log (Logger | None, optional): If provided, it logs whether or not the
+            connection string was found. Defaults to None.
+
+    Returns:
+        async_sessionmaker[AsyncSession]: The async session maker for the database.
+    """
     conn_string = env_var_or_default(
         "ASYNC_DATABASE_URL",
         "postgresql+asyncpg://postgres:postgres@localhost/chatGITpt",
