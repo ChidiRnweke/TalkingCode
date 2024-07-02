@@ -56,7 +56,7 @@ async def add_fake_data(database_session: async_sessionmaker[AsyncSession]) -> N
 
 
     Args:
-        databaseSession (async_sessionmaker[AsyncSession]): This is the fixture that
+        database_session (async_sessionmaker[AsyncSession]): This is the fixture that
             provides the database session. It spins up a Postgres container and creates
             a session for testing.
     """
@@ -117,7 +117,7 @@ async def retrieval_service(
     is created once for all tests and the fake data is added once for all tests.
 
     Args:
-        databaseSession (async_sessionmaker[AsyncSession]): This is the fixture that
+        database_session (async_sessionmaker[AsyncSession]): This is the fixture that
             provides the database session. It spins up a Postgres container and creates
             a session for testing.
         add_fake_data (None): This is the fixture that adds fake data to the database

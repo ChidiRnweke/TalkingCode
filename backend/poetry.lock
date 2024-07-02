@@ -1386,6 +1386,22 @@ files = [
 ]
 
 [[package]]
+name = "mkdocs-render-swagger-plugin"
+version = "0.1.2"
+description = "MKDocs plugin for rendering swagger & openapi files."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "mkdocs_render_swagger_plugin-0.1.2-py3-none-any.whl", hash = "sha256:0340d45e12a0f1633a4b8af2eb99ea75469006ddf418ef0f1acd51ed1e4969e4"},
+]
+
+[package.dependencies]
+mkdocs = ">=1.4"
+
+[package.extras]
+dev = ["coverage", "flake8", "mypy", "pyyaml"]
+
+[[package]]
 name = "mkdocstrings"
 version = "0.25.1"
 description = "Automatic documentation from sources, for MkDocs."
@@ -3294,4 +3310,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "8296293e6b6f869bca41e15b86990b572e2ca7194413efa94208962b031c2a62"
+content-hash = "36dcd2614cb5822ed185652d513a15ca6cac47b3c4daa22366a6a27146e78eb3"

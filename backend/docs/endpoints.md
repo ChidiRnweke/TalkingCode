@@ -1,0 +1,3 @@
+# Endpoints
+
+!!swagger openapi.json!!
