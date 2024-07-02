@@ -1,0 +1,16 @@
+site_name: ChatGITpt backend docs
+
+theme:
+  name: "material"
+
+plugins: 
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          rendering:
+            show_source: true
+          options:
+            docstring_style: google
+          import:
+            - https://docs.python.org/3/objects.inv
