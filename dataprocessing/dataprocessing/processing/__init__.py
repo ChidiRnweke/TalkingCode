@@ -3,7 +3,7 @@ from github import Auth, Github
 from openai import AsyncOpenAI
 from sqlalchemy import create_engine
 from .ingestion import IngestionService, DatabaseService
-from .embedding import AuthHeader, EmbeddingService, EmbeddingPersistance, TextEmbedder
+from .embedding import AuthHeader, EmbeddingService, EmbeddingPersistence, TextEmbedder
 import logging
 import json
 from shared.env import env_var_or_default, env_var_or_throw
@@ -16,7 +16,7 @@ __all__ = [
     "EmbeddingService",
     "whitelist_str_as_list",
     "AuthHeader",
-    "EmbeddingPersistance",
+    "EmbeddingPersistence",
     "TextEmbedder",
 ]
 

@@ -69,7 +69,7 @@ class TextSplitter:
 
 @dataclass(frozen=True)
 class EmbeddingService:
-    db: "EmbeddingPersistance"
+    db: "EmbeddingPersistence"
     embedder: "TextEmbedder"
     auth_header: AuthHeader
     blacklisted_files: list[str]
@@ -172,7 +172,7 @@ class TextEmbedder:
 
 
 @dataclass(frozen=True)
-class EmbeddingPersistance:
+class EmbeddingPersistence:
     session_maker: sessionmaker[Session]
 
     def find_files(

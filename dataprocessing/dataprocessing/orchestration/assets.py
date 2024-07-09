@@ -9,7 +9,7 @@ from dataprocessing.processing import (
     AuthHeader,
     EmbeddingService,
     TextEmbedder,
-    EmbeddingPersistance,
+    EmbeddingPersistence,
 )
 
 
@@ -36,7 +36,7 @@ async def persist_embeddings(app_config_resource: AppConfigResource) -> None:
     Session = get_session(app_config)
     github_token = app_config.github_token
     auth_header = AuthHeader(Authorization="Authorization", token=github_token)
-    persistance = EmbeddingPersistance(Session)
+    persistance = EmbeddingPersistence(Session)
     embedder = TextEmbedder(openai_client, app_config.embedding_model)
     embedding_service = EmbeddingService(
         persistance,
