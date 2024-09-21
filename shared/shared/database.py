@@ -37,9 +37,9 @@ class LanguagesModel(Base):
 languages_repository_bridge = Table(
     "languages_repository_bridge",
     Base.metadata,
-    Column("language_name", String(255)),
-    Column("repository_name", String(255)),
-    Column("repository_user", String(255)),
+    Column("language_name", String(255), primary_key=True),
+    Column("repository_name", String(255), primary_key=True),
+    Column("repository_user", String(255), primary_key=True),
     ForeignKeyConstraint(
         ["repository_name", "repository_user"],
         [
