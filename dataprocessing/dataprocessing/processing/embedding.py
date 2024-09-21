@@ -11,18 +11,40 @@ import aiohttp
 import tiktoken
 from tiktoken import Encoding
 from openai.types import CreateEmbeddingResponse
+from typing import Protocol
+
 
 app_logger = logging.getLogger("app_logger")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FileMetadata:
+    """
+    This class is used to store metadata about the files that are to be embedded.
+
+    Args:
+        repository_name (str): The name of the repository that the file belongs to.
+        document_id (int): The id of the document in the database.
+        file (GitHubFile): The file object that contains metadata about the file.
+    """
+
     repository_name: str
     document_id: int
     file: GitHubFile
 
     @classmethod
     def from_db_object(cls, file: GithubFileModel) -> Self:
+        """
+        Creates a FileMetadata object from a GithubFileModel object.
+        The point is to convert the database object into a domain object.
+
+
+        Args:
+            file (GithubFileModel): The database object to convert.
+
+        Returns:
+            Self: The domain object.
+        """
         return cls(
             repository_name=file.repository_name,
             document_id=file.id,
@@ -30,26 +52,133 @@ class FileMetadata:
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class EmbeddingWithCount:
+    """
+    This class is used to store the embeddings of a file as well as the total number of tokens in the file.
+    We store the total number of tokens in the file so that we can calculate the cost of the embedding.
+
+    Args:
+        embedding (list[float]): The embeddings of the file.
+        total_tokens (int): The total number of tokens in the file.
+    """
+
     embedding: list[float]
     total_tokens: int
 
 
-@dataclass(frozen=True)
+class EmbeddingStore(Protocol):
+    """
+    This class is used to store embeddings as well as retrieve file metadata required for the embedding process.
+    """
+
+    def find_files(
+        self,
+        white_list: list[str],
+        blacklisted_files: list[str],
+    ) -> list[FileMetadata]:
+        """
+        Finds the files that are not yet embedded and are in the white list and not in the black list.
+        The reason is that we use ELT instead of ETL, all files are ingested and then filtered
+        out based on the white list and black list.
+
+        Args:
+            white_list (list[str]): The list of file extensions that are allowed to be embedded.
+            blacklisted_files (list[str]): The list of file names that are not allowed to be embedded.
+
+        Returns:
+            (list[FileMetadata]): The list of files that are allowed to be embedded.
+        """
+
+        ...
+
+    def save_embeddings(
+        self, embeddings: EmbeddingWithCount, metadata: FileMetadata
+    ) -> None:
+        """
+        Saves the embeddings to the database.
+
+        Args:
+            embeddings (EmbeddingWithCount): The embeddings to save.
+            metadata (FileMetadata): The metadata of the file that was embedded.
+        """
+        ...
+
+
+class TextEmbedder(Protocol):
+    """
+    This class is used to embed text, it takes text and metadata and returns the embedding
+    and the total number of tokens in the text.
+    """
+
+    async def embed_chunk(
+        self,
+        chunks: list[str],
+        metadata: FileMetadata,
+    ) -> list[EmbeddingWithCount]:
+        """
+        Embeds the text and returns the embeddings and the total number of tokens in the text.
+
+        Args:
+            text (str): The code to embed.
+            metadata (FileMetadata): The metadata of the file.
+
+        Returns:
+            list[EmbeddingWithCount]: The embeddings and the total number of tokens in the text.
+        """
+        ...
+
+
+@dataclass(frozen=True, slots=True)
 class AuthHeader:
+    """
+    Small dataclass to store the authorization header for the API requests.
+    Necessary for the requests to the GitHub API.
+
+    Args:
+        Authorization (str): The name of the authorization header. (for example `Authorization`)
+        token (str): The token to be used for authorization. This is the GitHub token, in this case
+            you need to request a classic GitHub token.
+    """
+
     Authorization: str
     token: str
 
     def to_dict(self) -> dict[str, str]:
+        """Returns the authorization header as a dictionary.
+        The dictionary is used to pass the authorization header to the aiohttp library. This is necessary
+        for the requests to the GitHub API.
+
+        Returns:
+            dict[str, str]: The authorization header as a dictionary.
+        """
         return {"Authorization": f"Bearer {self.token}"}
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class TextSplitter:
+    """
+    This class is used to split the text into chunks of 7000 tokens.
+    This is necessary because the OpenAI API has a limit of 8000 tokens per request.
+    We split the text into chunks of 7000 tokens to account for the tokens used by the metadata.
+
+    Args:
+        encoding (Encoding): The encoding to use for tokenization.
+    """
+
     encoding: Encoding = tiktoken.get_encoding("cl100k_base")
 
     def split_text_to_chunks(self, text: str, name: str) -> list[str]:
+        """
+        Splits the text into chunks of 7000 tokens.
+
+        Args:
+            text (str): The text to split.
+            name (str): The name of the file. Used for logging.
+
+        Returns:
+            list[str]: The list of chunks.
+        """
         tokens = self._count_tokens(text)
         num_chunks = (tokens // 7000) + 1
         char_per_chunk = len(text) // num_chunks
@@ -67,16 +196,35 @@ class TextSplitter:
         return num_tokens
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class EmbeddingService:
-    db: "EmbeddingPersistence"
-    embedder: "TextEmbedder"
+    """
+    This class is used to embed files and save the embeddings to the database.
+
+    Args:
+        db (EmbeddingStore): The database object that is used to store the embeddings.
+        embedder (TextEmbedder): The object that is used to embed the files.
+        auth_header (AuthHeader): The authorization header for the API requests.
+        blacklisted_files (list[str]): The list of file names that are not allowed to be embedded.
+        white_list (list[str]): The list of file extensions that are allowed to be embedded.
+        splitter (TextSplitter): The object that is used to split the text into chunks.
+    """
+
+    db: EmbeddingStore
+    embedder: TextEmbedder
     auth_header: AuthHeader
     blacklisted_files: list[str]
     white_list: list[str]
     splitter: TextSplitter = TextSplitter()
 
     async def embed_and_persist_files(self) -> None:
+        """
+        Embeds the files and saves the embeddings to the database.
+        We do this in two steps:
+        1. Fetch the files from the GitHub API.
+        2. Embed the files and save the embeddings to the
+        database.
+        """
 
         metadata = self.db.find_files(self.white_list, self.blacklisted_files)
         file_futures = [self.get_file_content(meta) for meta in metadata]
@@ -91,6 +239,17 @@ class EmbeddingService:
         _ = await asyncio.gather(*embedding_futures)
 
     async def get_file_content(self, metadata: FileMetadata) -> str:
+        """
+        Fetches the file content from the GitHub API.
+        The database doesn't store the content of the file,
+        so we need to fetch it from the GitHub API.
+
+        Args:
+            metadata (FileMetadata): The metadata of the file to fetch.
+
+        Returns:
+            str: The code that is stored in the file.
+        """
         app_logger.debug(
             f"Fetching document {metadata.document_id} from {metadata.repository_name}"
         )
@@ -104,14 +263,30 @@ class EmbeddingService:
         text: str,
         metadata: FileMetadata,
     ) -> None:
+        """
+        Embeds the code and saves the embeddings to the database.
+        The metadata is also added while saving the embeddings to add things
+        like the file name, extensions, path, repository and so on.
+
+        Args:
+            text (str): The code to embed.
+            metadata (FileMetadata): The metadata of the file.
+        """
         chunks = self.splitter.split_text_to_chunks(text, "test")
         embeddings = await self.embedder.embed_chunk(chunks, metadata)
         for embedding in embeddings:
             self.db.save_embeddings(embedding, metadata)
 
 
-@dataclass(frozen=True)
-class TextEmbedder:
+@dataclass(frozen=True, slots=True)
+class OpenAIEmbedder(TextEmbedder):
+    """
+    A TextEmbedder implementation that uses the OpenAI API to embed text.
+    Args:
+        api_client (AsyncOpenAI): The OpenAI API client to use.
+        embedding_model (str): The name of the embedding model to use.
+    """
+
     api_client: AsyncOpenAI
     embedding_model: str
 
@@ -171,8 +346,14 @@ class TextEmbedder:
         return embeddings
 
 
-@dataclass(frozen=True)
-class EmbeddingPersistence:
+@dataclass(frozen=True, slots=True)
+class EmbeddingPersistence(EmbeddingStore):
+    """
+    A class that implements the EmbeddingStore protocol.
+    It is used to store the embeddings in the database as well as retrieve the
+    metadata of the files that are to be embedded.
+    """
+
     session_maker: sessionmaker[Session]
 
     def find_files(
