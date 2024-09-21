@@ -2851,7 +2851,7 @@ type = ["importlib-metadata (>=7.0.2)", "jaraco.develop (>=7.21)", "mypy (==1.11
 [[package]]
 name = "shared"
 version = "0.1.4"
-description = "A package containing utilities shared between the dataprocessing and the backend side of the project"
+description = "A package containing utilities shared between the data pipelines and the backend side of the project"
 optional = false
 python-versions = "^3.12"
 files = []

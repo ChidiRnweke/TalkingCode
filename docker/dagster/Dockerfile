@@ -16,7 +16,7 @@ COPY dataprocessing/dagster.yaml  /opt/dagster/dagster_home/
 
 ENV DAGSTER_HOME=/opt/dagster/dagster_home/
 
-COPY dataprocessing/ /opt/dagster/app/
+COPY pipelines/ /opt/dagster/app/
 
 COPY shared/ /opt/dagster/shared
 
