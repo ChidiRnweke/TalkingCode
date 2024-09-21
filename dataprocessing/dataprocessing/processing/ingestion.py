@@ -23,7 +23,6 @@ class IngestionService:
         self._process_repositories()
 
     def _process_repositories(self) -> None:
-        existing_repos = self.db._get_existing_repositories()
         for repo in self.client.get_user().get_repos():
             if repo.fork or repo.owner.login != self.client.get_user().login:
                 continue
@@ -33,7 +32,7 @@ class IngestionService:
                 f"Found {len(repo_with_files[1])} files in {repo_with_files[0].name}"
             )
 
-            self.db.write_to_database(repo_with_files, existing_repos)
+            self.db.write_to_database(repo_with_files)
 
     def _process_single_repository(
         self, repo: Repository
@@ -138,27 +137,43 @@ class DatabaseService:
     def write_to_database(
         self,
         data: tuple[GitHubRepository, list[GitHubFile]],
-        existing_repos: dict[str, GitHubRepositoryModel],
     ) -> None:
         repo, files = data
         repo_model = repo.to_db_object()
 
         with self.session_maker() as session:
-
             existing_languages = self._get_existing_languages(session)
-            existing_files = self._get_existing_files(session, repo)
-            for file in files:
-                self._process_if_new(
-                    file,
-                    repo,
-                    repo_model,
-                    existing_languages,
-                    existing_files,
-                )
-            if repo.name not in existing_repos:
-                session.add(repo_model)
+            existing_repo = (
+                session.query(GitHubRepositoryModel)
+                .filter_by(name=repo.name, user=repo.user)
+                .first()
+            )
+
+            if existing_repo:
+                existing_repo.description = repo_model.description
+                existing_repo.url = repo_model.url
+
+                existing_files = self._get_existing_files(session, repo)
+                for file in files:
+                    self._process_if_new(
+                        file,
+                        repo,
+                        existing_repo,
+                        existing_languages,
+                        existing_files,
+                    )
+
+                for language in repo.languages:
+                    self._add_language_to_repo(
+                        existing_repo, existing_languages, language
+                    )
             else:
-                session.merge(repo_model)
+                session.add(repo_model)
+                for file in files:
+                    file_model = file.to_db_object(repo)
+                    repo_model.files.append(file_model)
+                for language in repo.languages:
+                    self._add_language_to_repo(repo_model, existing_languages, language)
 
             session.commit()
             logger.debug(f"Saved {repo.name} to the database")
