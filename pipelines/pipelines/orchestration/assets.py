@@ -1,8 +1,8 @@
 from dagster import asset
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from dataprocessing.orchestration.resources import AppConfigResource
-from dataprocessing.processing import (
+from pipelines.orchestration.resources import AppConfigResource
+from pipelines.processing import (
     AppConfig,
     IngestionService,
     DatabaseService,

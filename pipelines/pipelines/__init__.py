@@ -6,7 +6,7 @@ from dagster import (
     load_assets_from_modules,
 )
 from dotenv import load_dotenv
-from dataprocessing.orchestration.resources import AppConfigResource
+from pipelines.orchestration.resources import AppConfigResource
 from shared.database import run_migrations
 from .orchestration import assets
 from shared.log import setup_custom_logger

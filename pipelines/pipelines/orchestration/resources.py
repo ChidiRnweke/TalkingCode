@@ -1,7 +1,7 @@
 import logging
 import os
 from dagster import ConfigurableResource, EnvVar
-from dataprocessing.processing import AppConfig, whitelist_str_as_list
+from pipelines.processing import AppConfig, whitelist_str_as_list
 from shared.env import env_var_or_default
 
 log = logging.getLogger("app_logger")

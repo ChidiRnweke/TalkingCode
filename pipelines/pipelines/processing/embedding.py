@@ -5,7 +5,7 @@ from typing import Any, Coroutine, Self
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker, Session
 from shared.database import GithubFileModel, EmbeddedDocumentModel
-from dataprocessing.processing.ingestion import GitHubFile
+from pipelines.processing.ingestion import GitHubFile
 from dataclasses import dataclass
 import aiohttp
 import tiktoken
