@@ -5,3 +5,4 @@ __pycache__/
 dataprocessing/.vscode/settings.json
 config/
 backend/site
+site/
