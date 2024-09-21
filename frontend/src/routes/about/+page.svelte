@@ -50,7 +50,7 @@
 			<Heading tag="h3" class="mb-8">The ETL: Python</Heading>
 			<Paragraph>
 				The ETL (extract, transform, load) process is done in Python. The code is available in the
-				<InlineCode>dataprocessing</InlineCode>
+				<InlineCode>data pipelines</InlineCode>
 				folder. The code is simple and does the following:
 				<List tag="ol" class="my-2">
 					<Li>Extracts the data from the GitHub API</Li>
