@@ -234,4 +234,5 @@ class DatabaseService:
             existing_languages[language] = lang_model
             repo_model.languages.append(lang_model)
         else:
-            repo_model.languages.append(existing_languages[language])
+            if existing_languages[language] not in repo_model.languages:
+                repo_model.languages.append(existing_languages[language])
