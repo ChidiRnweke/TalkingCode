@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "dataprocessing/**"
+      - "pipelines/**"
 
 jobs:
   build-and-push:

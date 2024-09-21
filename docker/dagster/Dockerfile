@@ -12,7 +12,7 @@ FROM poetry_base as dagster
 RUN mkdir -p /opt/dagster/dagster_home /opt/dagster/app
 ENV PRODUCTION=true
 
-COPY dataprocessing/dagster.yaml  /opt/dagster/dagster_home/
+COPY pipelines/dagster.yaml  /opt/dagster/dagster_home/
 
 ENV DAGSTER_HOME=/opt/dagster/dagster_home/
 
