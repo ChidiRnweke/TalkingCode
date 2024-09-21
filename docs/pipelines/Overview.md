@@ -1,0 +1,1 @@
+The data pipelines are orchestrated with dagster. The code is set up in a way to have minimal dependencies on the framework itself. This is to ensure that the code can be easily ported to other frameworks if needed. The pipelines are defined in the `pipelines` directory.

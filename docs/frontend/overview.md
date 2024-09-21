@@ -1,0 +1,1 @@
+The frontend consists of a SvelteKit application. The actual chat application is a mostly a single page application (SPA) that. It responsible for rendering the chat interface, sending and receiving messages, and managing the user's session.  The remainder are static pages that provide information about the project.
