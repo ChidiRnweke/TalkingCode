@@ -3,7 +3,7 @@
 	import Avatar from 'flowbite-svelte/Avatar.svelte';
 </script>
 
-<section class="flex flex-row mr-auto ml-0 lg:gap-x-10 gap-x-4">
+<section class="flex flex-row mr-auto ml-0 lg:gap-x-10 gap-x-4 max-w-fit">
 	<div>
 		<Avatar
 			src="/portrait.jpg"
@@ -13,7 +13,7 @@
 		/>
 		<P class="mt-2 text-center font-semibold text-primary-900">Chidi</P>
 	</div>
-	<P class="text-lg leading-10">
+	<P class="text-lg leading-10 text-wrap">
 		<div class="generated">
 			<slot />
 		</div>
