@@ -12,7 +12,7 @@
 	<NavBrand href="/">
 		<Avatar src="/portrait.jpg" size="md" rounded border alt="Flowbite Logo" />
 		<span class="ml-2 self-center whitespace-nowrap text-xl font-semibold dark:text-white"
-			>ChatGITpt (Alpha)</span
+			>TalkingCode</span
 		>
 	</NavBrand>
 	<div class="flex flex-row">
@@ -21,7 +21,7 @@
 			<NavLi href="/about">About</NavLi>
 			<NavLi href="/host-it-yourself">Host it yourself</NavLi>
 			<NavLi
-				href="https://github.com/ChidiRnweke/chatGITpt"
+				href="https://github.com/ChidiRnweke/TalkingCode"
 				class="flex flex-row place-items-center gap-x-1"
 			>
 				Source code <ArrowLeft size="md" />

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This documentation is focused on the backend of the ChatGITpt project. The backend is a FastAPI application that serves the endpoints for the frontend. The backend is responsible for handling the requests from the frontend, processing the requests, and returning the responses. The backend is also responsible for interacting with the database and the external APIs.
+This documentation is focused on the backend of the TalkingCode project. The backend is a FastAPI application that serves the endpoints for the frontend. The backend is responsible for handling the requests from the frontend, processing the requests, and returning the responses. The backend is also responsible for interacting with the database and the external APIs.
 
 
 ## Structure
@@ -33,6 +33,6 @@ You should start by reading the [main](reference/main.md) module. The main modul
 
 Make sure to check out my personal website's [dedicated page](https://chat.chidinweke.be/host-it-yourself/) for instructions on how to host the project yourself. The instructions are detailed and should be easy to follow. If you have any questions, feel free to reach out to me.
 
-You should also check out the source code of the project on [GitHub](https://github.com/ChidiRnweke/chatGITpt).
+You should also check out the source code of the project on [GitHub](https://github.com/ChidiRnweke/TalkingCode).
 
 Enjoy the documentation!

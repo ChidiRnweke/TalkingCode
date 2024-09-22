@@ -11,16 +11,16 @@
 	<header>
 		<Heading class="mb-12">Running the app yourself</Heading>
 		<Paragraph>
-			From the beginning, I wanted to make running <em>ChatGITpt</em> as easy as possible. I wanted
-			to provide a way for people to host it themselves. This article will walk you through the
-			steps needed to host <em>chatGITpt</em> yourself.
+			From the beginning, I wanted to make running <em>TalkingCode</em> as easy as possible. I
+			wanted to provide a way for people to host it themselves. This article will walk you through
+			the steps needed to host <em>TalkingCode</em> yourself.
 		</Paragraph>
 	</header>
 
 	<section>
 		<Heading tag="h2" class="mb-8">Summary</Heading>
 		<Paragraph>
-			To host <em>chatGITpt</em> yourself you will need to have the following:
+			To host <em>TalkingCode</em> yourself you will need to have the following:
 			<List tag="ol">
 				<Li>Install Docker and Docker compose</Li>
 				<Li>Get an OpenAI and GitHub API key</Li>
@@ -37,7 +37,7 @@
 	<section>
 		<Heading tag="h2" class="mb-8">Requirements</Heading>
 		<Paragraph>
-			To host <bold>chatGITpt</bold> yourself you will need to have the following:
+			To host <bold>TalkingCode</bold> yourself you will need to have the following:
 			<List tag="ul">
 				<Li>Docker and Docker Compose installed on your machine.</Li>
 				<Li
@@ -61,10 +61,10 @@
 		<Heading tag="h2" class="mb-8">Getting started</Heading>
 		<Paragraph>
 			After you have the above requirements, you can make an empty folder, for example
-			<InlineCode>ChatGITpt</InlineCode>. Afterwards you need to copy over both the
+			<InlineCode>TalkingCode</InlineCode>. Afterwards you need to copy over both the
 			<InlineCode>compose.backend.yml</InlineCode> and
 			<InlineCode>compose.dataprocessing.yml</InlineCode> files from the repository. You can find them
-			<A href="https://github.com/ChidiRnweke/chatGITpt">here.</A>
+			<A href="https://github.com/ChidiRnweke/TalkingCode">here.</A>
 			<bold>Note:</bold> The folder also contains files called
 			<InlineCode>compose.*.override.yml</InlineCode> you do not need to copy these files over. You may
 			also just clone the repository instead of copying the files over.
@@ -131,7 +131,7 @@
 					</Li>
 					<Li>
 						<InlineCode>POSTGRES_DB</InlineCode> - This is the name of the Postgres database. For example,
-						you can use <InlineCode>chatgitpt</InlineCode>.
+						you can use <InlineCode>TalkingCode</InlineCode>.
 					</Li>
 					<Li>
 						<InlineCode>POSTGRES_HOST</InlineCode> - This is the host for the Postgres database. For
@@ -234,7 +234,7 @@
 	<section>
 		<Heading tag="h2" class="mb-8">Conclusion</Heading>
 		<Paragraph>
-			That's it! You now have a fully working version of <bold>chatGITpt</bold> running on your machine.
+			That's it! You now have a fully working version of <bold>TalkingCode</bold> running on your machine.
 			You can now start asking questions and see the model generate answers. If you have any questions
 			or need help, feel free to reach out.
 		</Paragraph>

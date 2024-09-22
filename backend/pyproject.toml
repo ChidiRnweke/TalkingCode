@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "backend"
 version = "0.1.0"
-description = "The backend of the chatGITpt project"
+description = "The backend of the TalkingCode project"
 authors = ["ChidiRNweke <chidi125@gmail.com>"]
 license = "MIT"
 readme = "README.md"

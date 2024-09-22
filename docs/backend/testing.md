@@ -24,6 +24,6 @@ The tests are run using `pytest`. The test files are located in the `tests/integ
 
 The main units that have to be tested are the `SQLRetrievalService`'s public methods as well as the `RetrievalAugmentedGeneration` service. The former is tested by using the fixtures that are provided and testing its real behavior. The latter is trickier because it depends on `EmbeddingService` and `GenerationService`. The concrete implementations require calling the real API and incurring costs, which is not desirable in a test. The solution around this is making stubs for these services and testing the behavior of the `RetrievalAugmentedGeneration` service.
 
-You're encouraged to read the tests in the `tests/integration` [directory](https://github.com/ChidiRnweke/chatGITpt/tree/main/backend/tests/integration) to get a better understanding of how the tests work. I won't go into detail here because it's not the focus of this documentation. 
+You're encouraged to read the tests in the `tests/integration` [directory](https://github.com/ChidiRnweke/TalkingCode/tree/main/backend/tests/integration) to get a better understanding of how the tests work. I won't go into detail here because it's not the focus of this documentation. 
 
 
