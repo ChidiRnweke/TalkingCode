@@ -72,7 +72,5 @@
 
 	.generated :global(p) {
 		margin-top: 1rem;
-		overflow-wrap: break-word;
-		word-break: break-all;
 	}
 </style>
