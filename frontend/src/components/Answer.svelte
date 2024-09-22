@@ -13,7 +13,7 @@
 		/>
 		<P class="mt-2 text-center font-semibold text-primary-900">Chidi</P>
 	</div>
-	<P class="text-lg leading-10 break-words flex-grow">
+	<P class="text-lg leading-10 break-words flex-grow w-0 max-w-full">
 		<div class="generated">
 			<slot />
 		</div>
@@ -36,6 +36,7 @@
 		margin-right: 1rem;
 		color: orangered;
 		white-space: pre-wrap;
+		overflow: auto;
 	}
 
 	:global(.dark) .generated :global(pre) {
