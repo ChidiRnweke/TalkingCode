@@ -12,8 +12,7 @@ import { writable } from 'svelte/store';
 export const remainingSpace = writable(2);
 export const currentAnswer = writable('');
 
-const isProd = false;
-console.log('isProd', isProd);
+const isProd = import.meta.env.PROD;
 
 export interface PreviousContext {
 	question: string;
