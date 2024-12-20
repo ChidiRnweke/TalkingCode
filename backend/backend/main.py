@@ -5,7 +5,6 @@ from backend.retrieval_augmented_generation.retrieve import RemainingSpend
 from fastapi import FastAPI, Depends, Request
 from backend.retrieval_augmented_generation import (
     InputQuery,
-    RAGResponse,
     RetrievalAugmentedGeneration,
     OpenAIEmbeddingService,
     OpenAIGenerationService,
@@ -17,6 +16,7 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Literal
 from openai import AsyncOpenAI
 from .config import AppConfig
+from fastapi.responses import StreamingResponse
 
 config_key = Literal["config"]
 log = logging.getLogger("backend_logger")
@@ -190,9 +190,7 @@ async def handle_app_errors(request: Request, exc: AppError) -> JSONResponse:
 
 
 @app.post("/")
-async def chat(
-    question: InputQuery, session: AsyncSession = Depends(get_session)
-) -> RAGResponse:
+async def chat(question: InputQuery, session: AsyncSession = Depends(get_session)):
     """
     This function is used to handle the chat endpoint. It is used to handle the incoming
     chat requests and generate the response using the RAG model. The RAG model is used to
@@ -215,7 +213,18 @@ async def chat(
         max_spend=max_spend,
         date=date.today(),
     )
-    return await rag.retrieval_augmented_generation(question, get_top_k())
+    id = await rag.validate_and_assign_session_id(question)
+
+    async def event_generator():
+        chunk_stream = rag.retrieval_augmented_generation(question, get_top_k(), id)
+        async for chunk in chunk_stream:
+            yield chunk
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"X-Session-ID": id},
+    )
 
 
 @app.get("/remaining_spend")

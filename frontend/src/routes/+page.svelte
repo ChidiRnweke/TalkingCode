@@ -6,7 +6,7 @@
 		ragClient,
 		remainingSpace,
 		type PreviousContext,
-		type RAGResponse,
+		currentAnswer,
 		type inputQuery
 	} from '$lib/client';
 	import Suggestions from '../components/Suggestions.svelte';
@@ -33,8 +33,9 @@
 
 	let status = GenerateAnswerStatus.NONE;
 	$: disabled = status === GenerateAnswerStatus.LOADING;
+	$: answer = $currentAnswer;
 
-	const generateAnswer = async (question: string): Promise<RAGResponse> => {
+	const generateAnswer = async (question: string): Promise<void> => {
 		const inputQuery: inputQuery = {
 			query: question,
 			session_id: sessionID,
@@ -42,12 +43,11 @@
 		};
 		inConversation = true;
 		status = GenerateAnswerStatus.LOADING;
-		const answer = await ragClient.getAnswer(inputQuery);
-		sessionID = answer.session_id;
-		previousContext = [...previousContext, { question: question, answer: answer.response }];
+		sessionID = await ragClient.getAnswer(inputQuery);
+		console.log('sessionID', $currentAnswer);
+		previousContext = [...previousContext, { question: question, answer: answer }];
 		status = GenerateAnswerStatus.NONE;
 		error = false;
-		return answer;
 	};
 
 	const submitQuestion = async (): Promise<void> => {
@@ -103,11 +103,8 @@
 			{/each}
 			{#if status === GenerateAnswerStatus.LOADING}
 				<Question>{latestQuestion}</Question>
-				<Answer>
-					<section>
-						<Heading tag="h3" class="text-primary-700 text-xl mb-8">Loading...</Heading>
-						<TextPlaceholder size="xxl" class="mt-8" />
-					</section>
+				<Answer loading={status === GenerateAnswerStatus.LOADING}>
+					{@html $currentAnswer}
 				</Answer>
 			{/if}
 			{#if error}

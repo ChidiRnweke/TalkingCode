@@ -8,6 +8,7 @@
 		"/": {
 			"post": {
 				"summary": "Chat",
+				"description": "This function is used to handle the chat endpoint. It is used to handle the incoming\nchat requests and generate the response using the RAG model. The RAG model is used to\nretrieve the context, embed the text, and generate the response. The response is then\nreturned to the user.\n\nArgs:\n    question (InputQuery): The input query object.\n    session (AsyncSession): The async session object. This is provided by the FastAPI\n        dependency injection.\n\nReturns:\n    (RAGResponse): The response object containing the response and the session ID.",
 				"operationId": "chat__post",
 				"requestBody": {
 					"content": {
@@ -24,9 +25,7 @@
 						"description": "Successful Response",
 						"content": {
 							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/RAGResponse"
-								}
+								"schema": {}
 							}
 						}
 					},
@@ -46,6 +45,7 @@
 		"/remaining_spend": {
 			"get": {
 				"summary": "Remaining Spend",
+				"description": "This function is used to get the remaining spend for the day. It is used to get the\nremaining spend for the day by querying the database and calculating the remaining\nspend based on the maximum spend for the day.\n\nArgs:\n    session (AsyncSession): The async session object. This is provided by the FastAPI\n        dependency injection.\n\nReturns:\n    (RemainingSpend): The remaining spend object containing the remaining spend for\n        the day.",
 				"operationId": "remaining_spend_remaining_spend_get",
 				"responses": {
 					"200": {
@@ -111,7 +111,8 @@
 				},
 				"type": "object",
 				"required": ["query"],
-				"title": "InputQuery"
+				"title": "InputQuery",
+				"description": "A Pydantic model for the input query. This class is client facing and is used to validate the input query.\nThe first question in the conversation will not have any previous context and will not have a session ID.\nThe subsequent questions will have a session ID and previous context. The previous context is a list of\nquestion-answer pairs from the previous interactions. The session ID is used to track the token spend for\nthe given session.\n\nIf the session ID is provided, the previous context must also be provided otherwise a `ValueError` is raised.\n\nRaises:\n    (ValueError): If the session ID is provided but the previous context is not provided or vice versa."
 			},
 			"PreviousQAs": {
 				"properties": {
@@ -126,22 +127,8 @@
 				},
 				"type": "object",
 				"required": ["question", "answer"],
-				"title": "PreviousQAs"
-			},
-			"RAGResponse": {
-				"properties": {
-					"response": {
-						"type": "string",
-						"title": "Response"
-					},
-					"session_id": {
-						"type": "string",
-						"title": "Session Id"
-					}
-				},
-				"type": "object",
-				"required": ["response", "session_id"],
-				"title": "RAGResponse"
+				"title": "PreviousQAs",
+				"description": "A Pydantic model for the previous question-answer pairs. This is used to provide the model with\nadditional context from previous interactions. It is a pydantic model because it is client\nfacing and is used to validate the input query. This model is used in the `InputQuery` model.\n\nFields:\n    question (str): A previously asked question asked by the user.\n    answer (str): A previously received answer provided by the assistant."
 			},
 			"RemainingSpend": {
 				"properties": {

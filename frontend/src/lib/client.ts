@@ -1,7 +1,8 @@
 import type { paths } from './schema';
 import createClient from 'openapi-fetch';
 
-const client = createClient<paths>({ baseUrl: '/api/v1' });
+const baseUrl = '/api/v1';
+const client = createClient<paths>({ baseUrl });
 export type inputQuery = paths['/']['post']['requestBody']['content']['application/json'];
 export type RAGResponse = paths['/']['post']['responses']['200']['content']['application/json'];
 export type RemainingSpend =
@@ -9,7 +10,10 @@ export type RemainingSpend =
 
 import { writable } from 'svelte/store';
 export const remainingSpace = writable(2);
-const isProd = import.meta.env.PROD;
+export const currentAnswer = writable('');
+
+const isProd = false;
+console.log('isProd', isProd);
 
 export interface PreviousContext {
 	question: string;
@@ -17,7 +21,7 @@ export interface PreviousContext {
 }
 
 export interface RAGService {
-	getAnswer: (inputQuery: inputQuery) => Promise<RAGResponse>;
+	getAnswer: (inputQuery: inputQuery) => Promise<string>;
 	refreshRemainingSpend: () => Promise<void>;
 	getCurrentSpend: () => Promise<number>;
 }
@@ -29,10 +33,15 @@ class APIError extends Error {
 }
 
 class MockRagClient implements RAGService {
-	getAnswer = async (): Promise<RAGResponse> => {
+	getAnswer = async (): Promise<string> => {
 		if (!isProd) {
 			const mockData = await fetch('/mock-response.json').then((res) => res.json());
-			return mockData;
+			for (const chunk of mockData.response) {
+				currentAnswer.update((foo) => foo + chunk);
+				await new Promise((resolve) => setTimeout(resolve, 1)); // Simulate delay
+			}
+
+			return 'Mock sessionID';
 		}
 		throw new APIError('Mock data is only available in development mode.');
 	};
@@ -48,15 +57,31 @@ class MockRagClient implements RAGService {
 class RAGClient implements RAGService {
 	private client = client;
 
-	getAnswer = async (inputQuery: inputQuery): Promise<RAGResponse> => {
-		const { data } = await this.client.POST('/', { body: inputQuery });
-		if (data) {
-			return data;
-		} else {
+	getAnswer = async (inputQuery: inputQuery): Promise<string> => {
+		currentAnswer.set('');
+		const responseStream = await fetch(baseUrl, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(inputQuery)
+		});
+
+		const body = responseStream.body;
+		const sessionId = responseStream.headers.get('X-Session-ID');
+		if (!body || !sessionId) {
 			throw new APIError(
-				'An error ocurred. Please try again later. If this persists it may be that a critical service (e.g. the chatGPT server) is down.'
+				'An error occurred. Please try again later. If this persists it may be that a critical service (e.g. the chatGPT server) is down.'
 			);
 		}
+		const reader = body.getReader();
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			const text = new TextDecoder().decode(value);
+			currentAnswer.update((current) => current + text);
+		}
+		return sessionId;
 	};
 
 	refreshRemainingSpend = async () => {

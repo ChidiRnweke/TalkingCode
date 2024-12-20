@@ -4,146 +4,187 @@
  */
 
 export interface paths {
-	'/': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Chat */
-		post: operations['chat__post'];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	'/remaining_spend': {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Remaining Spend */
-		get: operations['remaining_spend_remaining_spend_get'];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
+    "/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Chat
+         * @description This function is used to handle the chat endpoint. It is used to handle the incoming
+         *     chat requests and generate the response using the RAG model. The RAG model is used to
+         *     retrieve the context, embed the text, and generate the response. The response is then
+         *     returned to the user.
+         *
+         *     Args:
+         *         question (InputQuery): The input query object.
+         *         session (AsyncSession): The async session object. This is provided by the FastAPI
+         *             dependency injection.
+         *
+         *     Returns:
+         *         (RAGResponse): The response object containing the response and the session ID.
+         */
+        post: operations["chat__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/remaining_spend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Remaining Spend
+         * @description This function is used to get the remaining spend for the day. It is used to get the
+         *     remaining spend for the day by querying the database and calculating the remaining
+         *     spend based on the maximum spend for the day.
+         *
+         *     Args:
+         *         session (AsyncSession): The async session object. This is provided by the FastAPI
+         *             dependency injection.
+         *
+         *     Returns:
+         *         (RemainingSpend): The remaining spend object containing the remaining spend for
+         *             the day.
+         */
+        get: operations["remaining_spend_remaining_spend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-	schemas: {
-		/** HTTPValidationError */
-		HTTPValidationError: {
-			/** Detail */
-			detail?: components['schemas']['ValidationError'][];
-		};
-		/** InputQuery */
-		InputQuery: {
-			/** Query */
-			query: string;
-			/** Previous Context */
-			previous_context?: components['schemas']['PreviousQAs'][] | null;
-			/** Session Id */
-			session_id?: string | null;
-		};
-		/** PreviousQAs */
-		PreviousQAs: {
-			/** Question */
-			question: string;
-			/** Answer */
-			answer: string;
-		};
-		/** RAGResponse */
-		RAGResponse: {
-			/** Response */
-			response: string;
-			/** Session Id */
-			session_id: string;
-		};
-		/** RemainingSpend */
-		RemainingSpend: {
-			/** Remaining Spend */
-			remaining_spend: number;
-		};
-		/** ValidationError */
-		ValidationError: {
-			/** Location */
-			loc: (string | number)[];
-			/** Message */
-			msg: string;
-			/** Error Type */
-			type: string;
-		};
-	};
-	responses: never;
-	parameters: never;
-	requestBodies: never;
-	headers: never;
-	pathItems: never;
+    schemas: {
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * InputQuery
+         * @description A Pydantic model for the input query. This class is client facing and is used to validate the input query.
+         *     The first question in the conversation will not have any previous context and will not have a session ID.
+         *     The subsequent questions will have a session ID and previous context. The previous context is a list of
+         *     question-answer pairs from the previous interactions. The session ID is used to track the token spend for
+         *     the given session.
+         *
+         *     If the session ID is provided, the previous context must also be provided otherwise a `ValueError` is raised.
+         *
+         *     Raises:
+         *         (ValueError): If the session ID is provided but the previous context is not provided or vice versa.
+         */
+        InputQuery: {
+            /** Query */
+            query: string;
+            /** Previous Context */
+            previous_context?: components["schemas"]["PreviousQAs"][] | null;
+            /** Session Id */
+            session_id?: string | null;
+        };
+        /**
+         * PreviousQAs
+         * @description A Pydantic model for the previous question-answer pairs. This is used to provide the model with
+         *     additional context from previous interactions. It is a pydantic model because it is client
+         *     facing and is used to validate the input query. This model is used in the `InputQuery` model.
+         *
+         *     Fields:
+         *         question (str): A previously asked question asked by the user.
+         *         answer (str): A previously received answer provided by the assistant.
+         */
+        PreviousQAs: {
+            /** Question */
+            question: string;
+            /** Answer */
+            answer: string;
+        };
+        /** RemainingSpend */
+        RemainingSpend: {
+            /** Remaining Spend */
+            remaining_spend: number;
+        };
+        /** ValidationError */
+        ValidationError: {
+            /** Location */
+            loc: (string | number)[];
+            /** Message */
+            msg: string;
+            /** Error Type */
+            type: string;
+        };
+    };
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-	chat__post: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				'application/json': components['schemas']['InputQuery'];
-			};
-		};
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['RAGResponse'];
-				};
-			};
-			/** @description Validation Error */
-			422: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['HTTPValidationError'];
-				};
-			};
-		};
-	};
-	remaining_spend_remaining_spend_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Successful Response */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					'application/json': components['schemas']['RemainingSpend'];
-				};
-			};
-		};
-	};
+    chat__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InputQuery"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remaining_spend_remaining_spend_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemainingSpend"];
+                };
+            };
+        };
+    };
 }
