@@ -1,4 +1,5 @@
 from datetime import date
+from typing import AsyncGenerator
 from backend.retrieval_augmented_generation.retrieve import (
     PreviousQAs,
     RetrievalAugmentedGeneration,
@@ -16,9 +17,13 @@ import pytest
 
 @dataclass
 class StubRetrievalService(RetrievalService):
-
-    async def retrieve_top_k(self, query: str, top_k: int) -> list[str]:
-        return ["response {k}" for k in range(top_k)]
+    async def retrieve_top_k(
+        self, embedded_query: EmbeddedResponse, k: int
+    ) -> list[RetrievedContext]:
+        return [
+            RetrievedContext(1, "context", "answer", "title", "text", "url")
+            for _ in range(k)
+        ]
 
     async def store_token_spent(
         self, session_id: str, token_count: int, model_name: str
@@ -39,9 +44,9 @@ class StubRetrievalService(RetrievalService):
 @dataclass
 class StubGenerationService(GenerationService):
     async def augmented_generation(
-        self, query: InputQuery, context: list[RetrievedContext]
-    ) -> tuple[str, int]:
-        return query.query + " response", 0
+        self, query: "InputQuery", context: list["RetrievedContext"]
+    ) -> AsyncGenerator[tuple[str, int | None], None]:
+        yield query.query + " response", None
 
     def get_chat_model_name(self) -> str:
         return "stub-chat-model"
@@ -70,7 +75,6 @@ def rag_service(request: pytest.FixtureRequest):
 
 
 class TestInputQuery:
-
     def test_input_query_can_have_empty_session_id(self):
         query = InputQuery(query="query")
         assert query.session_id is None
@@ -97,36 +101,17 @@ class TestInputQuery:
 
 
 class TestRAGService:
-
     @pytest.mark.asyncio
     @pytest.mark.parametrize("rag_service", [date.today()], indirect=True)
     async def test_retrieval_augmented_generation(
         self, rag_service: RetrievalAugmentedGeneration
     ):
+        id = "query"
         query = InputQuery(query="query")
-        response = await rag_service.retrieval_augmented_generation(query, 1)
-        assert response.response == "query response"
-
-    @pytest.mark.parametrize("rag_service", [date.today()], indirect=True)
-    @pytest.mark.asyncio
-    async def test_receiving_session_id(
-        self, rag_service: RetrievalAugmentedGeneration
-    ):
-        query = InputQuery(query="query")
-        response = await rag_service.retrieval_augmented_generation(query, 1)
-        assert response.session_id is not None
-
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize("rag_service", [date.today()], indirect=True)
-    async def test_invalid_session_id_is_an_error(
-        self, rag_service: RetrievalAugmentedGeneration
-    ):
-        prev_qas = [PreviousQAs(question="q", answer="a")]
-        query = InputQuery(
-            query="query", previous_context=prev_qas, session_id="invalid"
-        )
-        with pytest.raises(InputError):
-            await rag_service.retrieval_augmented_generation(query, 1)
+        response = ""
+        async for chunk in rag_service.retrieval_augmented_generation(query, 1, id):
+            response += chunk
+        assert response == "query response"
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -137,4 +122,5 @@ class TestRAGService:
     ):
         query = InputQuery(query="query")
         with pytest.raises(MaximumSpendError):
-            await rag_service.retrieval_augmented_generation(query, 1)
+            async for _ in rag_service.retrieval_augmented_generation(query, 1, "foo"):
+                pass

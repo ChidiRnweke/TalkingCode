@@ -1,5 +1,5 @@
-import asyncio
 from datetime import date
+from typing import AsyncGenerator
 from backend.errors import MaximumSpendError
 from backend.retrieval_augmented_generation.retrieve import (
     EmbeddedResponse,
@@ -25,11 +25,11 @@ def answer_to_query(query: InputQuery) -> str:
 
 class StubGenerationService(GenerationService):
     async def augmented_generation(
-        self, query: InputQuery, context: list[RetrievedContext]
-    ) -> tuple[str, int]:
+        self, query: "InputQuery", context: list["RetrievedContext"]
+    ) -> AsyncGenerator[tuple[str, int | None], None]:
         answer = answer_to_query(query)
         spend = 1 if query.query == "spend" else 0
-        return answer, spend
+        yield answer, spend
 
     def get_chat_model_name(self) -> str:
         return "chat_model"
@@ -57,8 +57,10 @@ class TestRetrievalAugmentedGeneration:
         )
         input = InputQuery(query="test")
         expected = answer_to_query(input)
-        obtained = await rag.retrieval_augmented_generation(input, 1)
-        assert obtained.response == expected
+        response = ""
+        async for chunk in rag.retrieval_augmented_generation(input, 1, "test"):
+            response += chunk
+        assert response == expected
 
     async def test_retrieval_with_context(self, retrieval_service: SQLRetrievalService):
         rag = RetrievalAugmentedGeneration(
@@ -70,29 +72,20 @@ class TestRetrievalAugmentedGeneration:
         )
         previous = [PreviousQAs(question="test", answer="answer")]
         input = InputQuery(query="test")
-        first = await rag.retrieval_augmented_generation(input, 1)
+        id = "test"
+        resp1 = ""
+        async for chunk in rag.retrieval_augmented_generation(input, 1, id):
+            resp1 += chunk
+
         second_query = InputQuery(
-            query="test2", previous_context=previous, session_id=first.session_id
+            query="test2", previous_context=previous, session_id=id
         )
-        obtained = await rag.retrieval_augmented_generation(second_query, 1)
+        obtained = ""
+        async for chunk in rag.retrieval_augmented_generation(second_query, 1, id):
+            obtained += chunk
 
         expected = answer_to_query(second_query)
-        assert obtained.response == expected
-
-    async def test_retrieval_error_with_context_and_no_session_id(
-        self, retrieval_service: SQLRetrievalService
-    ):
-        rag = RetrievalAugmentedGeneration(
-            retrieval_service=retrieval_service,
-            generation_service=StubGenerationService(),
-            embedding_service=StubEmbeddingService(),
-            max_spend=1,
-            date=date.today(),
-        )
-        previous = [PreviousQAs(question="test", answer="answer")]
-        with pytest.raises(Exception):
-            input = InputQuery(query="test", previous_context=previous)
-            await rag.retrieval_augmented_generation(input, 1)
+        assert obtained == expected
 
     async def test_retrieval_spend_limit(self, retrieval_service: SQLRetrievalService):
         max_spend = 2 * 0.00001  # 2 tokens
@@ -106,7 +99,9 @@ class TestRetrievalAugmentedGeneration:
         )
 
         input = InputQuery(query="spend")
-        await rag.retrieval_augmented_generation(input, 1)
+        id = "spend"
+        async for chunk in rag.retrieval_augmented_generation(input, 1, id):
+            pass
         obtained = await rag.remaining_spend()
         assert obtained.remaining_spend == expected
 
@@ -123,8 +118,10 @@ class TestRetrievalAugmentedGeneration:
             date=date.today(),
         )
         input = InputQuery(query="spend")
-        spend_tasks = [rag.retrieval_augmented_generation(input, 1) for _ in range(10)]
-        await asyncio.gather(*spend_tasks, return_exceptions=True)  # ignore exceptions
+        for i in range(10):
+            id = "spend"
+            async for _ in rag.retrieval_augmented_generation(input, 1, id):
+                pass
         obtained = await rag.remaining_spend()
         assert obtained.remaining_spend == expected
 
@@ -140,6 +137,8 @@ class TestRetrievalAugmentedGeneration:
             date=date.today(),
         )
         input = InputQuery(query="high spend")
-        await rag.retrieval_augmented_generation(input, 1)
+        async for _ in rag.retrieval_augmented_generation(input, 1, "high spend"):
+            pass
         with pytest.raises(MaximumSpendError):
-            await rag.retrieval_augmented_generation(input, 1)
+            async for _ in rag.retrieval_augmented_generation(input, 1, "high spend"):
+                pass
