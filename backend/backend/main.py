@@ -1,7 +1,6 @@
 from datetime import date
 import logging
 import os
-from backend.telemetry import configure_telemetry
 from backend.errors import AppError, InputError, MaximumSpendError, InfraError
 from fastapi import FastAPI, Depends, Request, APIRouter
 from backend.rag import (
@@ -17,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Literal
 from openai import AsyncOpenAI
-from .config import AppConfig
+from .config import AppConfig, configure_telemetry
 from fastapi.responses import StreamingResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
@@ -233,7 +232,7 @@ def create_app():
     if no_telemetry:
         logger.warning("Running app in development mode without telemetry...")
     else:
-        configure_telemetry()
+        configure_telemetry("backend_logger")
 
     app = FastAPI(lifespan=lifespan, root_path="/api/v1")
     app.include_router(router)

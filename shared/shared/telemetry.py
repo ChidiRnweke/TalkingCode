@@ -16,14 +16,12 @@ from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 import logging
-from backend.config import get_env_or_raise
 
 
-def configure_telemetry():
-    telemetry_endpoint = get_env_or_raise("TELEMETRY_ENDPOINT")
+def configure_telemetry(telemetry_endpoint: str, logger_name: str):
     resource = Resource.create({"service.name": "TalkingCode"})
     configure_metrics(telemetry_endpoint, resource)
-    configure_logs(telemetry_endpoint, resource)
+    configure_logs(telemetry_endpoint, logger_name, resource)
     configure_spans(telemetry_endpoint, resource)
 
 
@@ -41,7 +39,7 @@ def configure_metrics(endpoint: str, telemetry_resource: Resource):
     set_meter_provider(meter_provider)
 
 
-def configure_logs(endpoint: str, telemetry_resource: Resource):
+def configure_logs(endpoint: str, logger_name: str, telemetry_resource: Resource):
     log_exporter = OTLPLogExporter(endpoint=endpoint, insecure=True)
 
     logger_provider = LoggerProvider(resource=telemetry_resource)

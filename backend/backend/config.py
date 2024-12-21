@@ -11,6 +11,7 @@ from infisical_client import (
 )
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from shared.telemetry import configure_telemetry as _configure_telemetry
 
 logger = getLogger("backend_logger")
 
@@ -26,6 +27,11 @@ def get_env_or_raise(env_var: str) -> str:
         logger.error(err_msg)
         raise AppStartupError(err_msg)
     return value
+
+
+def configure_telemetry(logger_name: str):
+    telemetry_endpoint = get_env_or_raise("TELEMETRY_ENDPOINT")
+    _configure_telemetry(telemetry_endpoint, logger_name)
 
 
 @dataclass
