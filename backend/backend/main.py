@@ -1,14 +1,16 @@
 from datetime import date
 import logging
+import os
+from backend.telemetry import configure_telemetry
 from backend.errors import AppError, InputError, MaximumSpendError, InfraError
-from backend.retrieval_augmented_generation.retrieve import RemainingSpend
-from fastapi import FastAPI, Depends, Request
-from backend.retrieval_augmented_generation import (
+from fastapi import FastAPI, Depends, Request, APIRouter
+from backend.rag import (
     InputQuery,
     RetrievalAugmentedGeneration,
     OpenAIEmbeddingService,
     OpenAIGenerationService,
     SQLRetrievalService,
+    RemainingSpend,
 )
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,15 +19,16 @@ from typing import AsyncGenerator, Literal
 from openai import AsyncOpenAI
 from .config import AppConfig
 from fastapi.responses import StreamingResponse
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 config_key = Literal["config"]
-log = logging.getLogger("backend_logger")
+logger = logging.getLogger("backend_logger")
 
 
 app_config: dict[config_key, AppConfig] = {}
 
 
-app = FastAPI(root_path="/api/v1")
+router = APIRouter()
 
 
 @asynccontextmanager
@@ -39,11 +42,8 @@ async def lifespan(app: FastAPI):
     Args:
         app (FastAPI): The FastAPI application instance.
     """
-    app_config["config"] = AppConfig.from_env(log)
+    app_config["config"] = AppConfig.from_config()
     yield
-
-
-app = FastAPI(lifespan=lifespan)
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
@@ -162,34 +162,7 @@ def get_openai_generation_service() -> OpenAIGenerationService:
     )
 
 
-@app.exception_handler(AppError)
-async def handle_app_errors(request: Request, exc: AppError) -> JSONResponse:
-    """
-    This function is used to handle the application errors globally. It uses the app error
-    pattern discussed in `reference/errors` in the documentation. All the application errors
-    are caught and converted to an `AppError`. This method handles the specific instances of
-    the `AppError` and returns the appropriate JSON response.
-
-    Args:
-        request (Request): The request object.
-        exc (AppError): The application error that was raised.
-
-    Returns:
-        (JSONResponse): The JSON response with the error message and status code.
-    """
-    match exc:
-        case InputError(message=message):
-            return JSONResponse(message, status_code=400)
-        case InfraError():
-            return JSONResponse(str(exc), status_code=500)
-        case MaximumSpendError():
-            return JSONResponse(str(exc), status_code=402)
-        case _:
-            log.error(f"An unhandled app error occurred: {exc}")
-            return JSONResponse(str(exc), status_code=500)
-
-
-@app.post("/")
+@router.post("/")
 async def chat(question: InputQuery, session: AsyncSession = Depends(get_session)):
     """
     This function is used to handle the chat endpoint. It is used to handle the incoming
@@ -227,7 +200,7 @@ async def chat(question: InputQuery, session: AsyncSession = Depends(get_session
     )
 
 
-@app.get("/remaining_spend")
+@router.get("/remaining_spend")
 async def remaining_spend(
     session: AsyncSession = Depends(get_session),
 ) -> RemainingSpend:
@@ -253,3 +226,55 @@ async def remaining_spend(
         date=date.today(),
     )
     return await rag.remaining_spend()
+
+
+def create_app():
+    no_telemetry = os.getenv("TELEMETRY_DISABLED")
+    if no_telemetry:
+        logger.warning("Running app in development mode without telemetry...")
+    else:
+        configure_telemetry()
+
+    app = FastAPI(lifespan=lifespan, root_path="/api/v1")
+    app.include_router(router)
+
+    if not no_telemetry:
+        FastAPIInstrumentor.instrument_app(app)
+    logger.info("App configured")
+    return app
+
+
+app = create_app()
+
+
+@app.exception_handler(AppError)
+async def handle_app_errors(request: Request, exc: AppError) -> JSONResponse:
+    """
+    This function is used to handle the application errors globally. It uses the app error
+    pattern discussed in `reference/errors` in the documentation. All the application errors
+    are caught and converted to an `AppError`. This method handles the specific instances of
+    the `AppError` and returns the appropriate JSON response.
+
+    Args:
+        request (Request): The request object.
+        exc (AppError): The application error that was raised.
+
+    Returns:
+        (JSONResponse): The JSON response with the error message and status code.
+    """
+    match exc:
+        case InputError(message=message):
+            return JSONResponse(message, status_code=400)
+        case InfraError():
+            return JSONResponse(str(exc), status_code=500)
+        case MaximumSpendError():
+            return JSONResponse(str(exc), status_code=402)
+        case _:
+            logger.error(f"An unhandled app error occurred: {exc}")
+            return JSONResponse(str(exc), status_code=500)
+
+
+@app.exception_handler(Exception)
+async def exception_callback(request: Request, exc: Exception):
+    logger.error(str(exc))
+    return JSONResponse(status_code=500, content={"message": "Internal server error"})
