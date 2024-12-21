@@ -1,15 +1,17 @@
 from datetime import date
 from typing import AsyncGenerator
-from backend.retrieval_augmented_generation.retrieve import (
-    PreviousQAs,
-    RetrievalAugmentedGeneration,
+from backend.rag.retrieve import (
     EmbeddingService,
-    GenerationService,
     RetrievalService,
-    EmbeddedResponse,
+    EmbeddedChunk,
     RetrievedContext,
-    InputQuery,
 )
+from backend.rag.generation import (
+    InputQuery,
+    PreviousQAs,
+    GenerationService,
+)
+from backend.rag import RetrievalAugmentedGeneration
 from backend.errors import MaximumSpendError, InputError
 from dataclasses import dataclass
 import pytest
@@ -18,7 +20,7 @@ import pytest
 @dataclass
 class StubRetrievalService(RetrievalService):
     async def retrieve_top_k(
-        self, embedded_query: EmbeddedResponse, k: int
+        self, embedded_query: EmbeddedChunk, k: int
     ) -> list[RetrievedContext]:
         return [
             RetrievedContext(1, "context", "answer", "title", "text", "url")
@@ -54,10 +56,10 @@ class StubGenerationService(GenerationService):
 
 @dataclass
 class StubEmbeddingService(EmbeddingService):
-    async def embed(self, text: str) -> EmbeddedResponse:
+    async def embed(self, text: str) -> EmbeddedChunk:
         embeddings = [1.0, 2.0, 3.0]
         token_count = len(text)
-        return EmbeddedResponse(embeddings, token_count)
+        return EmbeddedChunk(embeddings, token_count)
 
     def get_embed_model_name(self) -> str:
         return "stub-embedding-model"

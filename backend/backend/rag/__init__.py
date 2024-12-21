@@ -1,11 +1,11 @@
 from .retrieve import (
-    RetrievalAugmentedGeneration,
-    InputQuery,
     RAGResponse,
     OpenAIEmbeddingService,
-    OpenAIGenerationService,
     SQLRetrievalService,
 )
+
+from .generation import OpenAIGenerationService, InputQuery
+from .rag import RetrievalAugmentedGeneration
 
 __all__ = [
     "RetrievalAugmentedGeneration",

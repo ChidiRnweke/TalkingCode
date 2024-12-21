@@ -1,16 +1,15 @@
 from datetime import date
 from typing import AsyncGenerator
 from backend.errors import MaximumSpendError
-from backend.retrieval_augmented_generation.retrieve import (
-    EmbeddedResponse,
+from backend.rag.retrieve import (
+    EmbeddedChunk,
     EmbeddingService,
-    RetrievalAugmentedGeneration,
     RetrievedContext,
     SQLRetrievalService,
-    GenerationService,
-    PreviousQAs,
 )
-from backend.retrieval_augmented_generation import InputQuery
+
+from backend.rag.generation import GenerationService, PreviousQAs
+from backend.rag import InputQuery, RetrievalAugmentedGeneration
 
 import numpy as np
 import pytest
@@ -36,10 +35,10 @@ class StubGenerationService(GenerationService):
 
 
 class StubEmbeddingService(EmbeddingService):
-    async def embed(self, text: str) -> EmbeddedResponse:
+    async def embed(self, text: str) -> EmbeddedChunk:
         tokens = 1 if text == "spend" else 0
         tokens = 10000000 if text == "high spend" else tokens
-        return EmbeddedResponse(np.random.rand(3072).tolist(), tokens)
+        return EmbeddedChunk(np.random.rand(3072).tolist(), tokens)
 
     def get_embed_model_name(self) -> str:
         return "embedding_model"
