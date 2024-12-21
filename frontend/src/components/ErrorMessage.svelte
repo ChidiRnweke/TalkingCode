@@ -15,7 +15,7 @@
 	</div>
 	<P class="text-lg leading-10">
 		<section class=" box-border md:p-8 p-4 bg-red-400 rounded-md">
-			An error ocurred. Please try again later. If this persists it may be that a critical service
+			An error occurred. Please try again later. If this persists it may be that a critical service
 			provider (e.g. OpenAI) is down.
 		</section>
 	</P>

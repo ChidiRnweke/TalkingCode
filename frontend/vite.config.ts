@@ -13,6 +13,7 @@ export default defineConfig({
 			'/openapi.json': 'http://localhost:8000'
 		}
 	},
+	//@ts-expect-error - vite-plugin-svelte is not typed
 	plugins: [sveltekit()],
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}']

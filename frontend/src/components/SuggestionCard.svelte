@@ -3,7 +3,11 @@
 	import Button from 'flowbite-svelte/Button.svelte';
 	import { getContext } from 'svelte';
 	import { type Writable } from 'svelte/store';
-	export let input = '';
+	interface Props {
+		input: string;
+	}
+
+	let { input }: Props = $props();
 	let inputString = getContext<Writable<string>>('input');
 
 	let action = () => {

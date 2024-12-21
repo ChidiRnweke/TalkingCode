@@ -3,7 +3,7 @@ import createClient from 'openapi-fetch';
 
 const baseUrl = '/api/v1';
 const client = createClient<paths>({ baseUrl });
-export type inputQuery = paths['/']['post']['requestBody']['content']['application/json'];
+export type InputQuery = paths['/']['post']['requestBody']['content']['application/json'];
 export type RAGResponse = paths['/']['post']['responses']['200']['content']['application/json'];
 export type RemainingSpend =
 	paths['/remaining_spend']['get']['responses']['200']['content']['application/json'];
@@ -20,7 +20,7 @@ export interface PreviousContext {
 }
 
 export interface RAGService {
-	getAnswer: (inputQuery: inputQuery) => Promise<string>;
+	getAnswer: (inputQuery: InputQuery) => Promise<string>;
 	refreshRemainingSpend: () => Promise<void>;
 	getCurrentSpend: () => Promise<number>;
 }
@@ -56,7 +56,7 @@ class MockRagClient implements RAGService {
 class RAGClient implements RAGService {
 	private client = client;
 
-	getAnswer = async (inputQuery: inputQuery): Promise<string> => {
+	getAnswer = async (inputQuery: InputQuery): Promise<string> => {
 		currentAnswer.set('');
 		const responseStream = await fetch(baseUrl, {
 			method: 'POST',
