@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "shared"
-version = "0.1.4"
+version = "0.1.5"
 description = "A package containing utilities shared between the data pipelines and the backend side of the project"
 authors = ["ChidiRNweke <chidi125@gmail.com>"]
 readme = "README.md"
@@ -12,6 +12,9 @@ sqlalchemy = "^2.0.30"
 alembic = "^1.13.1"
 python-dotenv = "^1.0.1"
 psycopg2 = "^2.9.9"
+infisical-python = "^2.3.5"
+opentelemetry-instrumentation-fastapi = "^0.50b0"
+opentelemetry-exporter-otlp = "^1.29.0"
 
 [tool.poetry.dev-dependencies]
 mkdocs = "^1.6.0"
