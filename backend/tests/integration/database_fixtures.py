@@ -1,6 +1,6 @@
 from datetime import datetime
 import os
-from backend.retrieval_augmented_generation.retrieve import (
+from backend.rag.retrieve import (
     SQLRetrievalService,
 )
 import numpy as np
@@ -17,7 +17,7 @@ from logging import Logger
 from typing import AsyncGenerator, Generator
 import pytest_asyncio
 
-logger = Logger("backend_logger")
+logger = Logger("app_logger")
 
 
 @pytest.fixture(scope="session")
@@ -42,7 +42,7 @@ def database_session() -> Generator[async_sessionmaker[AsyncSession], None, None
         conn_str = postgres.get_connection_url()
         sync_conn_str = conn_str.replace("asyncpg", "psycopg2")
         os.environ["DATABASE_URL"] = sync_conn_str
-        run_migrations("../shared/shared/migrations", logger)
+        run_migrations("../shared/shared/migrations")
         engine = create_async_engine(conn_str)
         Session = async_sessionmaker(engine, expire_on_commit=False)
         yield Session
@@ -128,6 +128,5 @@ async def retrieval_service(
     """
 
     async with database_session() as session:
-
         service = SQLRetrievalService(session)
         yield service

@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 from logging import Logger
 
-logger = Logger("backend_logger")
+logger = Logger("app_logger")
 
 
 def answer_to_query(query: InputQuery) -> str:

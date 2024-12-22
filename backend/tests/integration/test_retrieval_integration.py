@@ -11,7 +11,7 @@ from shared.database import (
 )
 from logging import Logger
 
-logger = Logger("backend_logger")
+logger = Logger("app_logger")
 
 
 @pytest.mark.asyncio(scope="session")
