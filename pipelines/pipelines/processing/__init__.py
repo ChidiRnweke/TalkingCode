@@ -11,7 +11,7 @@ from .embedding import (
 )
 import logging
 import json
-from shared.env import env_var_or_default, env_var_or_throw
+from shared.env import env_var_or_default, get_env_or_raise
 from sqlalchemy.orm import sessionmaker, Session
 
 __all__ = [
@@ -42,17 +42,16 @@ class AppConfig:
 
     @staticmethod
     def from_env() -> "AppConfig":
-        github_api_key = env_var_or_throw("GITHUB_API_TOKEN", log)
-        api_key = env_var_or_throw("OPENAI_EMBEDDING_API_KEY", log)
+        github_api_key = get_env_or_raise("GITHUB_API_TOKEN")
+        api_key = get_env_or_raise("OPENAI_EMBEDDING_API_KEY")
         conn_string = env_var_or_default(
             "DATABASE_URL",
             "postgresql://postgres:postgres@localhost:5432/chatGITpt",
-            log,
         )
         whitelisted_extensions = env_var_or_default(
-            "WHITELISTED_EXTENSIONS", "'[\"py\"]'", log
+            "WHITELISTED_EXTENSIONS", "'[\"py\"]'"
         )
-        blacklisted_files = env_var_or_default("BLACKLISTED_FILES", "[]", log)
+        blacklisted_files = env_var_or_default("BLACKLISTED_FILES", "[]")
 
         whitelisted_extensions = whitelist_str_as_list(whitelisted_extensions)
         blacklisted_files = whitelist_str_as_list(blacklisted_files)
