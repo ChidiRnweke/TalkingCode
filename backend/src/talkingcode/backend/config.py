@@ -1,5 +1,4 @@
 from logging import getLogger
-from dotenv import load_dotenv
 import os
 from dataclasses import dataclass
 
@@ -41,23 +40,10 @@ class AppConfig:
 
     @classmethod
     def from_config(cls) -> "AppConfig":
-        load_dotenv()
-        if os.getenv("ENV") == "LOCAL":
-            conf = cls._from_env()
-        else:
-            conf = cls._from_vault()
-        return conf
-
-    @classmethod
-    def _from_env(cls) -> "AppConfig":
-        raise NotImplementedError("This method is not implemented yet")
-
-    @classmethod
-    def _from_vault(cls) -> "AppConfig":
         reader = SecretsReader.from_env()
 
         try:
-            conn_str = reader.read_secret(secret_name="EMBEDDING_MODEL")
+            conn_str = reader.read_secret(secret_name="ASYNC_DATABASE_URL")
             embedding_model = reader.read_secret(secret_name="EMBEDDING_MODEL")
             top_k = int(reader.read_secret(secret_name="TOP_K"))
             chat_model = reader.read_secret(secret_name="CHAT_MODEL")
@@ -69,7 +55,7 @@ class AppConfig:
             session = configure_async_session_maker(conn_str)
 
         except Exception as e:
-            raise AppStartupError(f"Error reading secret from infisical: {e}") from e
+            raise AppStartupError(f"Error reading secret: {e}") from e
         return cls(
             embedding_model=embedding_model,
             top_k=top_k,

@@ -1,6 +1,6 @@
 from datetime import date, datetime
-from backend.errors import InputError
-from backend.rag.retrieve import (
+from src.talkingcode.backend.errors import InputError
+from src.talkingcode.backend.rag.retrieve import (
     SQLRetrievalService,
     EmbeddedChunk,
 )

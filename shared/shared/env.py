@@ -11,8 +11,6 @@ from infisical_client import (
 )
 from typing import Self, Protocol
 
-from shared.log import setup_custom_logger
-
 logger = getLogger("app_logger")
 
 
@@ -80,12 +78,14 @@ class SecretsReader:
 
 
 def setup_env(logger_name: str) -> None:
-    logger = setup_custom_logger(logger_name)
     if not os.getenv("PRODUCTION"):
         logger.warning("Running in development mode")
         found = load_dotenv("../config/.env.secret.dev")
         if not found:
             logger.warning("No .env file found")
+
+
+setup_env("app_logger")
 
 
 def env_var_or_default(var_name: str, default: str) -> str:

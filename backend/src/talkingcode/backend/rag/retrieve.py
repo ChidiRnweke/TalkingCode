@@ -6,7 +6,7 @@ from typing import Protocol
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Date, select, cast
 import aiohttp
-from backend.errors import InputError, map_errors
+from talkingcode.backend.errors import InputError, map_errors
 
 
 class RetrievalService(Protocol):

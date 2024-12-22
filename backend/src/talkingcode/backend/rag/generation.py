@@ -5,7 +5,7 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from pydantic import BaseModel, model_validator
 from dataclasses import dataclass
-from errors import map_errors
+from talkingcode.backend.errors import map_errors
 
 if TYPE_CHECKING:
     from rag.retrieve import RetrievedContext
@@ -136,7 +136,7 @@ class OpenAIGenerationService(GenerationService):
     system_prompt: str
 
     async def augmented_generation(
-        self, query: InputQuery, context: list[RetrievedContext]
+        self, query: InputQuery, context: list["RetrievedContext"]
     ) -> AsyncGenerator[tuple[str, int | None], None]:
         """
         Answers the user's query with the retrieved context. Requires that you already have the context
@@ -206,7 +206,7 @@ class OpenAIGenerationService(GenerationService):
         model_input = cast(list[ChatCompletionMessageParam], model_input)
         return model_input
 
-    def add_sources(self, retrieved: list[RetrievedContext]) -> str:
+    def add_sources(self, retrieved: list["RetrievedContext"]) -> str:
         """
         Adds the sources to the answer. The sources are the list of retrieved contexts.
         The sources are added as an HTML section at the end of the answer.

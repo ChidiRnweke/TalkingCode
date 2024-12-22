@@ -1,6 +1,6 @@
 from datetime import datetime
 import os
-from backend.rag.retrieve import (
+from src.talkingcode.backend.rag.retrieve import (
     SQLRetrievalService,
 )
 import numpy as np

@@ -1,8 +1,12 @@
 import uuid
-from errors import MaximumSpendError
-from rag.retrieve import EmbeddingService, RemainingSpend, RetrievedContext
-from rag.generation import GenerationService, InputQuery
-from rag.retrieve import RetrievalService
+from talkingcode.backend.errors import MaximumSpendError
+from talkingcode.backend.rag.retrieve import (
+    EmbeddingService,
+    RemainingSpend,
+    RetrievedContext,
+)
+from talkingcode.backend.rag.generation import GenerationService, InputQuery
+from talkingcode.backend.rag.retrieve import RetrievalService
 from dataclasses import dataclass
 from typing import AsyncGenerator
 from datetime import date

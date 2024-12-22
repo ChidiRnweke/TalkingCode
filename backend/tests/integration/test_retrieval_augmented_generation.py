@@ -1,15 +1,15 @@
 from datetime import date
 from typing import AsyncGenerator
-from backend.errors import MaximumSpendError
-from backend.rag.retrieve import (
+from src.talkingcode.backend.errors import MaximumSpendError
+from src.talkingcode.backend.rag.retrieve import (
     EmbeddedChunk,
     EmbeddingService,
     RetrievedContext,
     SQLRetrievalService,
 )
 
-from backend.rag.generation import GenerationService, PreviousQAs
-from backend.rag import InputQuery, RetrievalAugmentedGeneration
+from src.talkingcode.backend.rag.generation import GenerationService, PreviousQAs
+from src.talkingcode.backend.rag import InputQuery, RetrievalAugmentedGeneration
 
 import numpy as np
 import pytest
