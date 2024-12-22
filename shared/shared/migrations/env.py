@@ -1,21 +1,27 @@
 from logging.config import fileConfig
-import os
 
 import pgvector.sqlalchemy
 from sqlalchemy import Connection, create_engine, text
 from shared.database import Base
+from shared.env import SecretsReader, get_env_or_raise
 from alembic import context
+from shared.telemetry import configure_telemetry
 from dotenv import load_dotenv
+from logging import getLogger
+import os
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
+logger = getLogger("app_logger")
+
 config = context.config
-if not os.getenv("PRODUCTION"):
-    load_dotenv("../config/.env.secret.dev")
-url = (
-    os.getenv("DATABASE_URL")
-    or "postgresql://postgres:postgres@localhost:5432/chatGITpt"
-)
+
+load_dotenv("../config/.env.secret.dev")
+telemetry_disabled = os.getenv("TELEMETRY_DISABLED")
+if not telemetry_disabled:
+    telemetry_endpoint = get_env_or_raise("TELEMETRY_ENDPOINT")
+    configure_telemetry(telemetry_endpoint)
+secrets_reader = SecretsReader.from_env()
+url = secrets_reader.read_secret("MIGRATIONS_DATABASE_URL")
+
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -35,7 +41,6 @@ target_metadata = Base.metadata
 
 
 def do_run_migrations(connection: Connection) -> None:
-
     connection.dialect.ischema_names["vector"] = pgvector.sqlalchemy.Vector  # type: ignore
     connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
@@ -82,7 +87,6 @@ def run_migrations_online() -> None:
 
     connectable = create_engine(url)
     with connectable.connect() as connection:
-
         context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
@@ -90,7 +94,12 @@ def run_migrations_online() -> None:
             context.run_migrations()
 
 
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
+try:
+    if context.is_offline_mode():
+        run_migrations_offline()
+    else:
+        run_migrations_online()
+    logger.info("Migrations run successfully")
+except Exception as e:
+    logger.error(f"Error running migrations: {e}", exc_info=True)
+    raise e
