@@ -21,7 +21,7 @@ from fastapi.responses import StreamingResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 config_key = Literal["config"]
-logger = logging.getLogger("backend_logger")
+logger = logging.getLogger("app_logger")
 
 
 app_config: dict[config_key, AppConfig] = {}
@@ -232,7 +232,7 @@ def create_app():
     if no_telemetry:
         logger.warning("Running app in development mode without telemetry...")
     else:
-        configure_telemetry("backend_logger")
+        configure_telemetry()
 
     app = FastAPI(lifespan=lifespan, root_path="/api/v1")
     app.include_router(router)

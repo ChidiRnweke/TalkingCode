@@ -6,7 +6,7 @@ from functools import update_wrapper
 
 P = ParamSpec("P")
 T = TypeVar("T")
-log = getLogger("backend_logger")
+log = getLogger("app_logger")
 
 
 class AppError(Exception):
