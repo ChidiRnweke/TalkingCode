@@ -12,16 +12,12 @@ from sqlalchemy import (
 from pgvector.sqlalchemy import Vector
 from alembic.config import Config
 from alembic import command
-from logging import Logger
 
 
-def run_migrations(location: str, logger: Logger | None = None) -> None:
-
+def run_migrations(location: str) -> None:
     alembic_cfg = Config()
     alembic_cfg.set_main_option("script_location", location)
     command.upgrade(alembic_cfg, "head")
-    if logger:
-        logger.info("Migrations run successfully")
 
 
 class Base(DeclarativeBase):
