@@ -19,14 +19,13 @@ from talkingcode.backend.rag import (
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Literal, TypedDict, AsyncIterator
+from typing import AsyncGenerator, TypedDict, AsyncIterator
 from openai import AsyncOpenAI
-from .config import AppConfig, configure_telemetry
+from talkingcode.backend.config import AppConfig, configure_telemetry
 from fastapi.responses import StreamingResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from typing import cast
 
-config_key = Literal["config"]
 logger = logging.getLogger("app_logger")
 
 
