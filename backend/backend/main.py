@@ -228,7 +228,7 @@ async def remaining_spend(
 
 
 def create_app():
-    telemetry_enabled = os.getenv("TELEMETRY_ENABLED")
+    telemetry_enabled = os.getenv("TELEMETRY_ENDPOINT") is not None
     if telemetry_enabled:
         configure_telemetry()
     else:
