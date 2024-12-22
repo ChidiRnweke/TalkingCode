@@ -228,17 +228,18 @@ async def remaining_spend(
 
 
 def create_app():
-    no_telemetry = os.getenv("TELEMETRY_DISABLED")
-    if no_telemetry:
-        logger.warning("Running app in development mode without telemetry...")
-    else:
+    telemetry_enabled = os.getenv("TELEMETRY_ENABLED")
+    if telemetry_enabled:
         configure_telemetry()
+    else:
+        logger.warning("Running without telemetry...")
 
     app = FastAPI(lifespan=lifespan, root_path="/api/v1")
     app.include_router(router)
 
-    if not no_telemetry:
+    if telemetry_enabled:
         FastAPIInstrumentor.instrument_app(app)
+
     logger.info("App configured")
     return app
 
