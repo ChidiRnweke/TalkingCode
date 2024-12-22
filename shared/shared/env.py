@@ -9,15 +9,25 @@ from infisical_client import (
     AuthenticationOptions,
     UniversalAuthMethod,
 )
-from typing import Self
+from typing import Self, Protocol
 
 from shared.log import setup_custom_logger
 
 logger = getLogger("app_logger")
 
 
-@dataclass
-class SecretsReader:
+class SecretsBackend(Protocol):
+    def read_secret(self, secret_name: str) -> str: ...
+
+
+@dataclass(frozen=True, slots=True)
+class EnvSecretsBackend(SecretsBackend):
+    def read_secret(self, secret_name: str) -> str:
+        return get_env_or_raise(secret_name)
+
+
+@dataclass(frozen=True, slots=True)
+class InfisicalSecretsBackend(SecretsBackend):
     client: InfisicalClient
     project_id: str
     environment: str
@@ -49,6 +59,24 @@ class SecretsReader:
             project_id=project_id,
             environment=environment,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class SecretsReader:
+    backend: SecretsBackend
+
+    def read_secret(self, secret_name: str) -> str:
+        return self.backend.read_secret(secret_name)
+
+    @classmethod
+    def from_env(cls) -> Self:
+        infisical_enabled = os.getenv("INFISICAL_ENABLED")
+        if infisical_enabled:
+            logger.info("Using Infisical as secrets backend")
+            return cls(backend=InfisicalSecretsBackend.from_env())
+        else:
+            logger.info("Using environment variables as secrets backend")
+            return cls(backend=EnvSecretsBackend())
 
 
 def setup_env(logger_name: str) -> None:
