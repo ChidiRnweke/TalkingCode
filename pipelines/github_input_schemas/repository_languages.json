@@ -1,0 +1,8 @@
+{
+  "title": "Language",
+  "description": "Language",
+  "type": "object",
+  "additionalProperties": {
+    "type": "integer"
+  }
+}
