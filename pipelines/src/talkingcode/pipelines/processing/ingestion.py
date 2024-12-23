@@ -6,6 +6,7 @@ from typing import Protocol
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.github_models.file_content import ContentTree
 from talkingcode.pipelines.github_models.files import GitTree

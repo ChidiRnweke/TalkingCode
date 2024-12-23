@@ -21,8 +21,10 @@ tiktoken = "^0.7.0"
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
 datamodel-code-generator = "^0.26.4"
+ruff = "^0.8.4"
 
-
+[tool.ruff.lint]
+extend-select = ["I"]
 
 [build-system]
 requires = ["poetry-core"]
