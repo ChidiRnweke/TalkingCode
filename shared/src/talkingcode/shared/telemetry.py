@@ -1,4 +1,7 @@
 import logging
+import time
+from functools import wraps
+from typing import Awaitable, Callable, ParamSpec, TypeVar
 
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
@@ -6,7 +9,7 @@ from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
 )
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.metrics import set_meter_provider
+from opentelemetry.metrics import get_meter, set_meter_provider
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.metrics import MeterProvider
@@ -15,6 +18,59 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import set_tracer_provider
+
+T = TypeVar("T")
+P = ParamSpec("P")
+
+
+def log_execution_time(func: Callable[P, T]) -> Callable[P, T]:
+    meter = get_meter(__name__)
+    execution_time_histogram = meter.create_histogram(
+        name=f"{func.__name__}_execution_time",
+        description="Execution time of functions",
+        unit="seconds",
+    )
+
+    @wraps(func)
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        start_time = time.time()
+        try:
+            result = func(*args, **kwargs)
+        finally:
+            end_time = time.time()
+            execution_time = end_time - start_time
+            execution_time_histogram.record(execution_time)
+        return result
+
+    return wrapper
+
+
+def log_async_execution_time(
+    func: Callable[P, Awaitable[T]],
+) -> Callable[P, Awaitable[T]]:
+    """
+    Decorator to log execution time for asynchronous functions.
+    """
+    meter = get_meter(__name__)
+    execution_time_histogram = meter.create_histogram(
+        name=f"{func.__name__}_execution_time",
+        description="Execution time of asynchronous functions",
+        unit="seconds",
+    )
+
+    @wraps(func)
+    async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        start_time = time.time()
+        try:
+            result = await func(*args, **kwargs)
+        finally:
+            end_time = time.time()
+            execution_time = end_time - start_time
+            execution_time_histogram.record(execution_time)
+
+        return result
+
+    return wrapper
 
 
 def configure_telemetry(telemetry_endpoint: str):
