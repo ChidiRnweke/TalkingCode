@@ -1,14 +1,14 @@
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import Any, Coroutine, Protocol
+from typing import Any, Coroutine, Protocol, Self
 
 import aiohttp
 import tiktoken
 from openai import AsyncOpenAI
 from openai.types import CreateEmbeddingResponse
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from tiktoken import Encoding
 
 from talkingcode.pipelines.config import IngestionConfig
@@ -220,6 +220,19 @@ class EmbeddingService:
         ]
         await asyncio.gather(*save_embeddings)
 
+    @classmethod
+    def from_config(cls, config: IngestionConfig) -> "EmbeddingService":
+        db = EmbeddingPersistence.from_config(config)
+        embedder = OpenAIEmbedder.from_config(config)
+        auth_header = AuthHeader("Authorization", config.github_token)
+        return cls(
+            db,
+            embedder,
+            auth_header,
+            config.blacklisted_files,
+            config.whitelisted_extensions,
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class OpenAIEmbedder(TextEmbedder):
@@ -339,3 +352,9 @@ class EmbeddingPersistence(EmbeddingStore):
                 orig.is_embedded = True
             session.add(embedded_document)
             await session.commit()
+
+    @classmethod
+    def from_config(cls, config: IngestionConfig) -> Self:
+        engine = create_async_engine(config.db_connection_string)
+        Session = async_sessionmaker(engine, expire_on_commit=False)
+        return cls(session_maker=Session)
