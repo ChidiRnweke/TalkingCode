@@ -7,39 +7,24 @@ from talkingcode.pipelines.processing import (
     EmbeddingService,
     IngestionService,
 )
+from talkingcode.shared.telemetry import log_execution_time
 
-_persist_data_lock = asyncio.Lock()
-_persist_embeddings_lock = asyncio.Lock()
+_run_lock = asyncio.Lock()
 logger = getLogger(__name__)
 
 
-async def persist_data() -> None:
+@log_execution_time
+async def download_and_persist_data() -> None:
     """
-    Persist data from the GitHub API to the database.
-
-    Args:
-        app_config_resource (AppConfigResource): The application configuration.
-        It is a resource class because the dagster framework requires
-        it to be so.
+    Download and persist data from the GitHub API to the database.
+    This function is used to fetch data from the GitHub API and store it in the database.
+    After fetching the data, the files are embedded and stored in the vector store.
     """
-    async with _persist_data_lock:
+    async with _run_lock:
         app_config = IngestionConfig.from_env()
         ingestion_service = IngestionService.from_config(app_config)
-        await ingestion_service.fetch_and_persist_data()
-
-
-async def persist_embeddings() -> None:
-    """
-    Persist embeddings of the files in the database.
-    This function depends on the `persist_data` asset to run first.
-
-    Args:
-        app_config_resource (AppConfigResource): The application configuration.
-        It is a resource class because the dagster framework requires it to be so.
-    """
-    async with _persist_embeddings_lock:
-        app_config = IngestionConfig.from_env()
         embedding_service = EmbeddingService.from_config(app_config)
+        await ingestion_service.fetch_and_persist_data()
         await embedding_service.embed_and_persist_files()
 
 
@@ -55,8 +40,8 @@ async def run_pipeline_on_schedule(hour: int, minute: int) -> None:
         await _sleep_until(hour, minute)
 
         logger.info("Running scheduled pipeline...")
-        await persist_data()
-        await persist_embeddings()
+        await download_and_persist_data()
+        logger.info("Scheduled pipeline completed.")
 
 
 async def _sleep_until(hour: int, minute: int) -> None:

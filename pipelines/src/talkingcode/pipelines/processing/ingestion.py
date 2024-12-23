@@ -21,6 +21,7 @@ from talkingcode.shared.database import (
     GitHubRepositoryModel,
     LanguagesModel,
 )
+from talkingcode.shared.telemetry import log_execution_time
 
 from .models import AuthHeader, GitHubFile, GitHubRepository
 
@@ -45,6 +46,7 @@ class Storage(Protocol):
 class GithubHTTPClient(GitHubClient):
     auth_header: AuthHeader
 
+    @log_execution_time
     async def get_all_repositories(self) -> list["GitHubRepository"]:
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user/repos"
@@ -71,6 +73,7 @@ class GithubHTTPClient(GitHubClient):
             for repo, langs in zip(repos.root, languages)
         ]
 
+    @log_execution_time
     async def language_from_repo(self, repo: Repository) -> list[str]:
         header = self.auth_header.to_dict()
         path = repo.languages_url
@@ -82,6 +85,7 @@ class GithubHTTPClient(GitHubClient):
             else:
                 return []
 
+    @log_execution_time
     async def get_all_files(self, repo: GitHubRepository) -> list[GitHubFile]:
         header = self.auth_header.to_dict()
         path = f"https://api.github.com/repos/{repo.user}/{repo.name}/git/trees/{repo.default_branch}?recursive=1"
@@ -108,6 +112,7 @@ class GithubHTTPClient(GitHubClient):
             for file in responses
         ]
 
+    @log_execution_time
     async def get_user(self) -> str:
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user"
@@ -155,6 +160,7 @@ class IngestionService:
 class DatabaseService(Storage):
     session_maker: async_sessionmaker[AsyncSession]
 
+    @log_execution_time
     async def write_to_database(
         self,
         repo: GitHubRepository,

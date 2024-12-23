@@ -13,10 +13,11 @@ from tiktoken import Encoding
 
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.shared.database import EmbeddedDocumentModel, GithubFileModel
+from talkingcode.shared.telemetry import log_execution_time
 
 from .models import AuthHeader, FileMetadata, GitHubFile
 
-app_logger = logging.getLogger("app_logger")
+logger = logging.getLogger("app_logger")
 
 
 @dataclass(frozen=True, slots=True)
@@ -123,7 +124,7 @@ class TextSplitter:
         tokens = self._count_tokens(text)
         num_chunks = (tokens // 7000) + 1
         char_per_chunk = len(text) // num_chunks
-        app_logger.info(
+        logger.info(
             f"Splitting {name} into {num_chunks} chunks of {char_per_chunk} characters."
         )
         return [
@@ -171,7 +172,7 @@ class EmbeddingService:
         file_futures = [self.get_file_content(meta) for meta in metadata]
 
         file_contents = await asyncio.gather(*file_futures)
-        app_logger.info("Fetched all files. Starting to embed.")
+        logger.info("Fetched all files. Starting to embed.")
         embedding_futures = [
             self.process_and_save(text, metadata)
             for metadata, text in zip(metadata, file_contents)
@@ -179,6 +180,7 @@ class EmbeddingService:
 
         _ = await asyncio.gather(*embedding_futures)
 
+    @log_execution_time
     async def get_file_content(self, metadata: FileMetadata) -> str:
         """
         Fetches the file content from the GitHub API.
@@ -191,7 +193,7 @@ class EmbeddingService:
         Returns:
             str: The code that is stored in the file.
         """
-        app_logger.debug(
+        logger.info(
             f"Fetching document {metadata.document_id} from {metadata.repository_name}"
         )
         path = metadata.file.content_url
@@ -199,6 +201,7 @@ class EmbeddingService:
             async with session.get(path) as response:
                 return await response.text()
 
+    @log_execution_time
     async def process_and_save(
         self,
         text: str,
@@ -246,6 +249,7 @@ class OpenAIEmbedder(TextEmbedder):
     api_client: AsyncOpenAI
     embedding_model: str
 
+    @log_execution_time
     async def embed_chunk(
         self,
         chunks: list[str],
@@ -290,7 +294,7 @@ class OpenAIEmbedder(TextEmbedder):
                 return embeddings
 
             except Exception as e:
-                app_logger.error(f"Received an internal server error. {attempt}s left")
+                logger.error(f"Received an internal server error. {attempt}s left")
                 if attempt == max_retries - 1:
                     raise e
                 await asyncio.sleep(5 * attempt + 1)
@@ -317,6 +321,7 @@ class EmbeddingPersistence(EmbeddingStore):
 
     session_maker: async_sessionmaker[AsyncSession]
 
+    @log_execution_time
     async def find_files(
         self,
         white_list: list[str],
@@ -331,10 +336,11 @@ class EmbeddingPersistence(EmbeddingStore):
         async with self.session_maker() as session:
             files = await session.scalars(query)
             files = files.all()
-        app_logger.info(f"Found {len(files)} files to embed.")
+        logger.info(f"Found {len(files)} files to embed.")
         github_files = [FileMetadata.from_db_object(file) for file in files]
         return github_files
 
+    @log_execution_time
     async def save_embeddings(
         self, embeddings: EmbeddingWithCount, metadata: FileMetadata
     ) -> None:
