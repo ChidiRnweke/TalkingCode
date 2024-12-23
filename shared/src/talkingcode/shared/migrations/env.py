@@ -2,11 +2,10 @@ from logging.config import fileConfig
 
 import pgvector.sqlalchemy
 from sqlalchemy import Connection, create_engine, text
-from shared.database import Base
-from shared.env import SecretsReader, get_env_or_raise
+from talkingcode.shared.database import Base
+from talkingcode.shared.env import SecretsReader, get_env_or_raise
 from alembic import context
-from shared.telemetry import configure_telemetry
-from dotenv import load_dotenv
+from talkingcode.shared.telemetry import configure_telemetry
 from logging import getLogger
 import os
 
@@ -14,9 +13,8 @@ logger = getLogger("app_logger")
 
 config = context.config
 
-load_dotenv("../config/.env.secret.dev")
-telemetry_disabled = os.getenv("TELEMETRY_DISABLED")
-if not telemetry_disabled:
+telemetry_enabled = os.getenv("TELEMETRY_ENABLED")
+if telemetry_enabled:
     telemetry_endpoint = get_env_or_raise("TELEMETRY_ENDPOINT")
     configure_telemetry(telemetry_endpoint)
 secrets_reader = SecretsReader.from_env()

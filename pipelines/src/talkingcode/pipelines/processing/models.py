@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Self
 
 from talkingcode.shared.database import GitHubRepositoryModel, GithubFileModel
@@ -56,7 +55,7 @@ class GitHubRepository:
 class GitHubFile:
     name: str
     content_url: str
-    last_modified: datetime
+    sha: str
     extension: str
     path_in_project: str
 
@@ -65,7 +64,7 @@ class GitHubFile:
         return cls(
             name=file.name,
             content_url=file.content_url,
-            last_modified=file.last_modified,
+            sha=file.sha,
             extension=file.file_extension,
             path_in_project=file.path_in_repo,
         )
@@ -74,7 +73,7 @@ class GitHubFile:
         return GithubFileModel(
             name=self.name,
             content_url=self.content_url,
-            last_modified=self.last_modified,
+            sha=self.sha,
             repository_name=repository.name,
             repository_user=repository.user,
             file_extension=self.extension,
