@@ -5,6 +5,16 @@ from talkingcode.pipelines.config import IngestionConfig
 from .models import AuthHeader, GitHubFile, GitHubRepository
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession, create_async_engine
 
+
+from talkingcode.pipelines.github_models.repositories import (
+    RepositoriesResponse,
+    Repository,
+)
+from talkingcode.pipelines.github_models.languages import Languages
+from talkingcode.pipelines.github_models.files import GitTree
+from talkingcode.pipelines.github_models.file_content import ContentTree
+from talkingcode.pipelines.github_models.user import User
+
 from talkingcode.shared.database import GithubFileModel
 from talkingcode.shared.database import GitHubRepositoryModel
 from talkingcode.shared.database import LanguagesModel
@@ -39,32 +49,47 @@ class GithubHTTPClient(GitHubClient):
     async def get_all_repositories(self) -> list["GitHubRepository"]:
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user/repos"
+        language_result = []
         async with aiohttp.ClientSession() as session:
             async with session.get(path, headers=header) as response:
-                repos = await response.json()
-                return [
-                    GitHubRepository(
-                        name=repo["name"],
-                        user=repo["owner"]["login"],
-                        description=repo.get("description", ""),
-                        languages=[],
-                        url=repo["html_url"],
-                        owner=repo["owner"]["login"],
-                        fork=repo["fork"],
-                        default_branch=repo["default_branch"],
-                    )
-                    for repo in repos
-                ]
+                _repos = await response.json()
+                repos = RepositoriesResponse(root=_repos)
+        for repo in repos.root:
+            languages_task = self.language_from_repo(repo)
+            language_result.append(languages_task)
+        languages = await asyncio.gather(*language_result)
+        return [
+            GitHubRepository(
+                name=repo.name,
+                user=repo.owner.login,
+                description=repo.description or "",
+                languages=langs,
+                url=repo.html_url,
+                owner=repo.owner.login,
+                fork=repo.fork,
+                default_branch=repo.default_branch,
+            )
+            for repo, langs in zip(repos.root, languages)
+        ]
+
+    async def language_from_repo(self, repo: Repository) -> list[str]:
+        header = self.auth_header.to_dict()
+        path = repo.languages_url
+        async with aiohttp.ClientSession() as session:
+            async with session.get(path, headers=header) as response:
+                langs_and_usage = Languages(root=await response.json())
+                if langs := langs_and_usage.root:
+                    return list(langs.keys())
+                else:
+                    return []
 
     async def get_all_files(self, repo: GitHubRepository) -> list[GitHubFile]:
         header = self.auth_header.to_dict()
         path = f"https://api.github.com/repos/{repo.user}/{repo.name}/git/trees/{repo.default_branch}?recursive=1"
         async with aiohttp.ClientSession() as session:
             async with session.get(path, headers=header) as response:
-                files = await response.json()
-                file_paths = [
-                    file["path"] for file in files["tree"] if file["type"] == "blob"
-                ]
+                files = GitTree(**await response.json())
+                file_paths = [file.path for file in files.tree if file.type == "blob"]
             links = []
             for file_path in file_paths:
                 content_path = f"https://api.github.com/repos/{repo.user}/{repo.name}/contents/{file_path}"
@@ -72,14 +97,15 @@ class GithubHTTPClient(GitHubClient):
                     file = response.json()
                     links.append(file)
             responses = await asyncio.gather(*links)
+            responses = [ContentTree(**response) for response in responses]
 
             return [
                 GitHubFile(
-                    name=file["name"],
-                    content_url=file["download_url"],
-                    last_modified=file["last_modified"],
-                    extension=file["name"].split(".")[-1],
-                    path_in_project=file["path"],
+                    name=file.name,
+                    content_url=file.download_url or "",
+                    sha=file.sha,
+                    extension=file.name.split(".")[-1],
+                    path_in_project=file.path,
                 )
                 for file in responses
             ]
@@ -89,7 +115,7 @@ class GithubHTTPClient(GitHubClient):
         path = "https://api.github.com/user"
         async with aiohttp.ClientSession() as session:
             async with session.get(path, headers=header) as response:
-                return (await response.json())["login"]
+                return User(**await response.json()).root.login
 
     @classmethod
     def from_config(cls, config: IngestionConfig) -> "GithubHTTPClient":
@@ -109,10 +135,10 @@ class IngestionService:
         user = await self.client.get_user()
         repos = await self.client.get_all_repositories()
         (user, repos) = await asyncio.gather(*[user, repos])
-        repo_futures = [self.process_repository(user, repo) for repo in repos]
+        repo_futures = [self._process_repository(user, repo) for repo in repos]
         await asyncio.gather(*repo_futures)
 
-    async def process_repository(self, user: str, repo: "GitHubRepository") -> None:
+    async def _process_repository(self, user: str, repo: "GitHubRepository") -> None:
         if repo.fork or repo.owner != user:
             return None
         logger.info(f"Processing repository {repo.name}")
@@ -183,10 +209,7 @@ class DatabaseService(Storage):
         already_exists = file.path_in_project in existing_files
 
         if already_exists:
-            needs_update = (
-                existing_files[file.path_in_project].last_modified.timestamp()
-                < file.last_modified.timestamp()
-            )
+            needs_update = existing_files[file.path_in_project].sha != file.sha
             if needs_update:
                 existing_file = existing_files[file.path_in_project]
                 existing_file.latest_version = False
