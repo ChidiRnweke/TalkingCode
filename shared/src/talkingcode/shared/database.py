@@ -74,7 +74,7 @@ class GithubFileModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255))
     content_url: Mapped[str] = mapped_column(String(255))
-    last_modified: Mapped[datetime]
+    sha: Mapped[str] = mapped_column(String(255), default="")
     repository_name: Mapped[str] = mapped_column(String(255))
     repository_user: Mapped[str] = mapped_column(String(255))
     file_extension: Mapped[str] = mapped_column(String(255))
