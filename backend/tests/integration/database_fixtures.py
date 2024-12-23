@@ -7,12 +7,12 @@ import numpy as np
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from testcontainers.postgres import PostgresContainer
+
 from src.talkingcode.backend.rag.retrieve import (
     SQLRetrievalService,
 )
-from testcontainers.postgres import PostgresContainer
-
-from shared.database import (
+from talkingcode.shared.database import (
     EmbeddedDocumentModel,
     GithubFileModel,
     GitHubRepositoryModel,

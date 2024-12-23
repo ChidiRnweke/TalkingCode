@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 
 import numpy as np
 import pytest
+
 from src.talkingcode.backend.errors import MaximumSpendError
 from src.talkingcode.backend.rag import InputQuery, RetrievalAugmentedGeneration
 from src.talkingcode.backend.rag.generation import GenerationService, PreviousQAs
@@ -37,7 +38,7 @@ class StubEmbeddingService(EmbeddingService):
     async def embed(self, text: str) -> EmbeddedChunk:
         tokens = 1 if text == "spend" else 0
         tokens = 10000000 if text == "high spend" else tokens
-        return EmbeddedChunk(np.random.rand(3072).tolist(), tokens)
+        return EmbeddedChunk(np.random.rand(3072).tolist(), tokens)  # type: ignore
 
     def get_embed_model_name(self) -> str:
         return "embedding_model"

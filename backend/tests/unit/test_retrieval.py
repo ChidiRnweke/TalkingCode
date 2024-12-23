@@ -3,6 +3,7 @@ from datetime import date
 from typing import AsyncGenerator
 
 import pytest
+
 from src.talkingcode.backend.errors import InputError, MaximumSpendError
 from src.talkingcode.backend.rag import RetrievalAugmentedGeneration
 from src.talkingcode.backend.rag.generation import (

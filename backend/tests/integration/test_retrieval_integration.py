@@ -3,13 +3,13 @@ from logging import Logger
 
 import numpy as np
 import pytest
+
 from src.talkingcode.backend.errors import InputError
 from src.talkingcode.backend.rag.retrieve import (
     EmbeddedChunk,
     SQLRetrievalService,
 )
-
-from shared.database import (
+from talkingcode.shared.database import (
     TokenSpendModel,
 )
 
@@ -22,21 +22,21 @@ class TestInfrastructure:
         await retrieval_service.store_token_spent("session_id", 100, "embedding_model")
 
     async def test_retrieving_context(self, retrieval_service: SQLRetrievalService):
-        query = EmbeddedChunk(np.random.rand(3072).tolist(), 100)
+        query = EmbeddedChunk(np.random.rand(3072).tolist(), 100)  # type: ignore
         obtained = await retrieval_service.retrieve_top_k(query, 1)
         assert len(obtained) == 1
 
     async def test_retrieving_context_with_k_greater_than_available(
         self, retrieval_service: SQLRetrievalService
     ):
-        query = EmbeddedChunk(np.random.rand(3072).tolist(), 100)
+        query = EmbeddedChunk(np.random.rand(3072).tolist(), 100)  # type: ignore
         obtained = await retrieval_service.retrieve_top_k(query, 1000)
         assert len(obtained) == 2
 
     async def test_original_context_is_returned(
         self, retrieval_service: SQLRetrievalService
     ):
-        query = EmbeddedChunk(np.random.rand(3072).tolist(), 100)
+        query = EmbeddedChunk(np.random.rand(3072).tolist(), 100)  # type: ignore
         obtained = await retrieval_service.retrieve_top_k(query, 100)
         file_names = {file.file_name for file in obtained}
         assert {"file1", "file2"} == file_names

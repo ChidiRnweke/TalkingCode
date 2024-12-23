@@ -9,9 +9,10 @@ from openai import AsyncOpenAI
 from openai.types import CreateEmbeddingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from tiktoken import Encoding
+
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.shared.database import EmbeddedDocumentModel, GithubFileModel
-from tiktoken import Encoding
 
 from .models import AuthHeader, FileMetadata, GitHubFile
 

@@ -5,8 +5,8 @@ from logging import getLogger
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from shared.env import SecretsReader
-from shared.telemetry import configure_telemetry as _configure_telemetry
+from talkingcode.shared.env import SecretsReader
+from talkingcode.shared.telemetry import configure_telemetry as _configure_telemetry
 
 logger = getLogger("app_logger")
 

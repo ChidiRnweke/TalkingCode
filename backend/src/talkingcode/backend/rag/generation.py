@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, AsyncGenerator, Optional, Protocol, Self, cast
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionChunk, ChatCompletionMessageParam
 from pydantic import BaseModel, model_validator
+
 from talkingcode.backend.errors import map_errors
 
 if TYPE_CHECKING:

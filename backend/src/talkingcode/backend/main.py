@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from openai import AsyncOpenAI
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from talkingcode.backend.config import AppConfig, configure_telemetry
 from talkingcode.backend.errors import (
     AppError,
