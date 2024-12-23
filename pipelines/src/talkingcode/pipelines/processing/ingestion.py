@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 
-from pipelines.processing.models import AuthHeader, GitHubFile, GitHubRepository
+from talkingcode.pipelines.config import IngestionConfig
 
-from shared.database import GithubFileModel
-from shared.database import GitHubRepositoryModel
-from shared.database import LanguagesModel
-from sqlalchemy.orm import sessionmaker, Session
+from .models import AuthHeader, GitHubFile, GitHubRepository
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession, create_async_engine
+
+from talkingcode.shared.database import GithubFileModel
+from talkingcode.shared.database import GitHubRepositoryModel
+from talkingcode.shared.database import LanguagesModel
 from sqlalchemy import select
 from typing import Protocol
 import logging
@@ -89,6 +91,11 @@ class GithubHTTPClient(GitHubClient):
             async with session.get(path, headers=header) as response:
                 return (await response.json())["login"]
 
+    @classmethod
+    def from_config(cls, config: IngestionConfig) -> "GithubHTTPClient":
+        header = AuthHeader(Authorization="Authorization", token=config.github_token)
+        return cls(header)
+
 
 @dataclass(frozen=True)
 class IngestionService:
@@ -113,10 +120,16 @@ class IngestionService:
         logger.info(f"Found {len(files)} files in {repo.name}")
         await self.db.write_to_database(repo, files)
 
+    @classmethod
+    def from_config(cls, config: IngestionConfig) -> "IngestionService":
+        db = DatabaseService.from_config(config)
+        client = GithubHTTPClient.from_config(config)
+        return cls(db=db, client=client)
+
 
 @dataclass(frozen=True)
 class DatabaseService(Storage):
-    session_maker: sessionmaker[Session]
+    session_maker: async_sessionmaker[AsyncSession]
 
     async def write_to_database(
         self,
@@ -124,20 +137,17 @@ class DatabaseService(Storage):
         files: list[GitHubFile],
     ) -> None:
         repo_model = repo.to_db_object()
+        stmt = select(GitHubRepositoryModel).filter_by(name=repo.name, user=repo.user)
+        async with self.session_maker() as session:
+            existing_languages = await self._get_existing_languages(session)
 
-        with self.session_maker() as session:
-            existing_languages = self._get_existing_languages(session)
-            existing_repo = (
-                session.query(GitHubRepositoryModel)
-                .filter_by(name=repo.name, user=repo.user)
-                .first()
-            )
+            existing_repo = (await session.scalars(stmt)).first()
 
             if existing_repo:
                 existing_repo.description = repo_model.description
                 existing_repo.url = repo_model.url
 
-                existing_files = self._get_existing_files(session, repo)
+                existing_files = await self._get_existing_files(session, repo)
                 for file in files:
                     self._process_if_new(
                         file,
@@ -159,7 +169,7 @@ class DatabaseService(Storage):
                 for language in repo.languages:
                     self._add_language_to_repo(repo_model, existing_languages, language)
 
-            session.commit()
+            await session.commit()
             logger.debug(f"Saved {repo.name} to the database")
 
     def _process_if_new(
@@ -186,29 +196,31 @@ class DatabaseService(Storage):
         else:
             self._add_file_to_repository(repo, repo_model, existing_languages, file)
 
-    def _get_existing_repositories(
+    async def _get_existing_repositories(
         self,
     ) -> dict[str, GitHubRepositoryModel]:
-        with self.session_maker() as session:
-            return {
-                repo.name: repo for repo in session.query(GitHubRepositoryModel).all()
-            }
+        stmt = select(GitHubRepositoryModel)
+        async with self.session_maker() as session:
+            existing_repos = (await session.scalars(stmt)).all()
+        return {repo.name: repo for repo in existing_repos}
 
-    def _get_existing_files(
-        self, session: Session, repo: GitHubRepository
+    async def _get_existing_files(
+        self, session: AsyncSession, repo: GitHubRepository
     ) -> dict[str, GithubFileModel]:
         existing_files_stmt = (
             select(GithubFileModel)
             .where(GithubFileModel.repository_name == repo.name)
             .where(GithubFileModel.repository_user == repo.user)
         )
-        return {
-            file.path_in_repo: file
-            for file in session.scalars(existing_files_stmt).all()
-        }
+        existing_files = await session.scalars(existing_files_stmt)
+        return {file.path_in_repo: file for file in existing_files.all()}
 
-    def _get_existing_languages(self, session: Session) -> dict[str, LanguagesModel]:
-        return {lang.language: lang for lang in session.query(LanguagesModel).all()}
+    async def _get_existing_languages(
+        self, session: AsyncSession
+    ) -> dict[str, LanguagesModel]:
+        stmt = select(LanguagesModel)
+        languages = (await session.scalars(stmt)).all()
+        return {lang.language: lang for lang in languages}
 
     def _add_file_to_repository(
         self,
@@ -235,3 +247,9 @@ class DatabaseService(Storage):
         else:
             if existing_languages[language] not in repo_model.languages:
                 repo_model.languages.append(existing_languages[language])
+
+    @classmethod
+    def from_config(cls, config: IngestionConfig) -> "DatabaseService":
+        engine = create_async_engine(config.db_connection_string)
+        Session = async_sessionmaker(engine, expire_on_commit=False)
+        return cls(session_maker=Session)

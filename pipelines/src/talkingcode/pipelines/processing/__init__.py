@@ -4,10 +4,8 @@ from .embedding import (
     EmbeddingPersistence,
     OpenAIEmbedder,
 )
-from .config import IngestionConfig
 
 __all__ = [
-    "IngestionConfig",
     "IngestionService",
     "DatabaseService",
     "EmbeddingService",

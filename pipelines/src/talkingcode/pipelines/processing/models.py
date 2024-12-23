@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Self
 
-from shared.database import GitHubRepositoryModel, GithubFileModel
+from talkingcode.shared.database import GitHubRepositoryModel, GithubFileModel
 
 
 @dataclass(frozen=True, slots=True)

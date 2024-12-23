@@ -2,7 +2,9 @@ import asyncio
 import logging
 from openai import AsyncOpenAI
 from typing import Any, Coroutine
-from talkingcode.pipelines.processing.models import AuthHeader, FileMetadata, GitHubFile
+
+from talkingcode.pipelines.config import IngestionConfig
+from .models import AuthHeader, FileMetadata, GitHubFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from talkingcode.shared.database import EmbeddedDocumentModel, GithubFileModel
@@ -241,6 +243,11 @@ class OpenAIEmbedder(TextEmbedder):
         ]
         embeddings = self._embed_document(enriched_content)
         return await embeddings
+
+    @classmethod
+    def from_config(cls, config: IngestionConfig) -> "OpenAIEmbedder":
+        client = AsyncOpenAI(api_key=config.openai_api_key)
+        return cls(client, config.embedding_model)
 
     def _enrich_file_content(self, file_content: str, file: GitHubFile) -> str:
         file_name = f"\nThe file name is {file.name}.\n"
