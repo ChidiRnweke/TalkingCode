@@ -1,17 +1,18 @@
 from datetime import datetime
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+from alembic import command
+from alembic.config import Config
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Column,
     DateTime,
-    ForeignKeyConstraint,
-    String,
-    Integer,
     ForeignKey,
+    ForeignKeyConstraint,
+    Integer,
+    String,
     Table,
 )
-from pgvector.sqlalchemy import Vector
-from alembic.config import Config
-from alembic import command
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def run_migrations(location: str) -> None:

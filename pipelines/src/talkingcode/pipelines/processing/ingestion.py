@@ -1,29 +1,27 @@
+import asyncio
+import logging
 from dataclasses import dataclass
+from typing import Protocol
 
+from httpx import AsyncClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from talkingcode.pipelines.config import IngestionConfig
-
-from .models import AuthHeader, GitHubFile, GitHubRepository
-from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession, create_async_engine
-
-
+from talkingcode.pipelines.github_models.file_content import ContentTree
+from talkingcode.pipelines.github_models.files import GitTree
+from talkingcode.pipelines.github_models.languages import Languages
 from talkingcode.pipelines.github_models.repositories import (
     RepositoriesResponse,
     Repository,
 )
-from talkingcode.pipelines.github_models.languages import Languages
-from talkingcode.pipelines.github_models.files import GitTree
-from talkingcode.pipelines.github_models.file_content import ContentTree
 from talkingcode.pipelines.github_models.user import User
+from talkingcode.shared.database import (
+    GithubFileModel,
+    GitHubRepositoryModel,
+    LanguagesModel,
+)
 
-from talkingcode.shared.database import GithubFileModel
-from talkingcode.shared.database import GitHubRepositoryModel
-from talkingcode.shared.database import LanguagesModel
-from sqlalchemy import select
-from typing import Protocol
-import logging
-import asyncio
-import aiohttp
-
+from .models import AuthHeader, GitHubFile, GitHubRepository
 
 logger = logging.getLogger("app_logger")
 
@@ -50,10 +48,10 @@ class GithubHTTPClient(GitHubClient):
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user/repos"
         language_result = []
-        async with aiohttp.ClientSession() as session:
-            async with session.get(path, headers=header) as response:
-                _repos = await response.json()
-                repos = RepositoriesResponse(root=_repos)
+        async with AsyncClient() as client:
+            response = await client.get(path, headers=header)
+            _repos = response.json()
+            repos = RepositoriesResponse(root=_repos)
         for repo in repos.root:
             languages_task = self.language_from_repo(repo)
             language_result.append(languages_task)
@@ -75,47 +73,46 @@ class GithubHTTPClient(GitHubClient):
     async def language_from_repo(self, repo: Repository) -> list[str]:
         header = self.auth_header.to_dict()
         path = repo.languages_url
-        async with aiohttp.ClientSession() as session:
-            async with session.get(path, headers=header) as response:
-                langs_and_usage = Languages(root=await response.json())
-                if langs := langs_and_usage.root:
-                    return list(langs.keys())
-                else:
-                    return []
+        async with AsyncClient() as client:
+            response = await client.get(path, headers=header)
+            langs_and_usage = Languages(root=response.json())
+            if langs := langs_and_usage.root:
+                return list(langs.keys())
+            else:
+                return []
 
     async def get_all_files(self, repo: GitHubRepository) -> list[GitHubFile]:
         header = self.auth_header.to_dict()
         path = f"https://api.github.com/repos/{repo.user}/{repo.name}/git/trees/{repo.default_branch}?recursive=1"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(path, headers=header) as response:
-                files = GitTree(**await response.json())
-                file_paths = [file.path for file in files.tree if file.type == "blob"]
+        async with AsyncClient() as client:
+            response = await client.get(path, headers=header)
+            files = GitTree(**response.json())
+            file_paths = [file.path for file in files.tree if file.type == "blob"]
             links = []
             for file_path in file_paths:
                 content_path = f"https://api.github.com/repos/{repo.user}/{repo.name}/contents/{file_path}"
-                async with session.get(content_path, headers=header) as response:
-                    file = response.json()
-                    links.append(file)
+                file = client.get(content_path, headers=header)
+                links.append(file)
             responses = await asyncio.gather(*links)
-            responses = [ContentTree(**response) for response in responses]
+            responses = [ContentTree(**response.json()) for response in responses]
 
-            return [
-                GitHubFile(
-                    name=file.name,
-                    content_url=file.download_url or "",
-                    sha=file.sha,
-                    extension=file.name.split(".")[-1],
-                    path_in_project=file.path,
-                )
-                for file in responses
-            ]
+        return [
+            GitHubFile(
+                name=file.name,
+                content_url=file.download_url or "",
+                sha=file.sha,
+                extension=file.name.split(".")[-1],
+                path_in_project=file.path,
+            )
+            for file in responses
+        ]
 
     async def get_user(self) -> str:
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(path, headers=header) as response:
-                return User(**await response.json()).root.login
+        async with AsyncClient() as client:
+            response = await client.get(path, headers=header)
+            return User(**response.json()).root.login
 
     @classmethod
     def from_config(cls, config: IngestionConfig) -> "GithubHTTPClient":

@@ -1,11 +1,12 @@
-from logging import getLogger
 import os
 from dataclasses import dataclass
+from logging import getLogger
 
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from shared.telemetry import configure_telemetry as _configure_telemetry
+
 from shared.env import SecretsReader
+from shared.telemetry import configure_telemetry as _configure_telemetry
 
 logger = getLogger("app_logger")
 

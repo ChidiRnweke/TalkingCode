@@ -1,15 +1,16 @@
 import uuid
+from dataclasses import dataclass
+from datetime import date
+from typing import AsyncGenerator
+
 from talkingcode.backend.errors import MaximumSpendError
+from talkingcode.backend.rag.generation import GenerationService, InputQuery
 from talkingcode.backend.rag.retrieve import (
     EmbeddingService,
     RemainingSpend,
+    RetrievalService,
     RetrievedContext,
 )
-from talkingcode.backend.rag.generation import GenerationService, InputQuery
-from talkingcode.backend.rag.retrieve import RetrievalService
-from dataclasses import dataclass
-from typing import AsyncGenerator
-from datetime import date
 
 
 @dataclass(frozen=True)

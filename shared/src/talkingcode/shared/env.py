@@ -1,15 +1,15 @@
-from logging import getLogger
-from dotenv import load_dotenv
 import os
 from dataclasses import dataclass
+from logging import getLogger
+from typing import Protocol, Self
+
 from infisical_client import (
-    ClientSettings,
-    InfisicalClient,
-    GetSecretOptions,
     AuthenticationOptions,
+    ClientSettings,
+    GetSecretOptions,
+    InfisicalClient,
     UniversalAuthMethod,
 )
-from typing import Self, Protocol
 
 logger = getLogger("app_logger")
 
@@ -75,17 +75,6 @@ class SecretsReader:
         else:
             logger.info("Using environment variables as secrets backend")
             return cls(backend=EnvSecretsBackend())
-
-
-def setup_env(logger_name: str) -> None:
-    if not os.getenv("PRODUCTION"):
-        logger.warning("Running in development mode")
-        found = load_dotenv("../config/.env.secret.dev")
-        if not found:
-            logger.warning("No .env file found")
-
-
-setup_env("app_logger")
 
 
 def env_var_or_default(var_name: str, default: str) -> str:

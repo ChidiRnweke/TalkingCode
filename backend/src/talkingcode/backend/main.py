@@ -1,30 +1,29 @@
-from datetime import date
 import logging
 import os
+from contextlib import asynccontextmanager
+from datetime import date
+from typing import AsyncGenerator, AsyncIterator, TypedDict, cast
+
+from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi.responses import JSONResponse, StreamingResponse
+from openai import AsyncOpenAI
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from sqlalchemy.ext.asyncio import AsyncSession
+from talkingcode.backend.config import AppConfig, configure_telemetry
 from talkingcode.backend.errors import (
     AppError,
+    InfraError,
     InputError,
     MaximumSpendError,
-    InfraError,
 )
-from fastapi import FastAPI, Depends, Request, APIRouter
 from talkingcode.backend.rag import (
     InputQuery,
-    RetrievalAugmentedGeneration,
     OpenAIEmbeddingService,
     OpenAIGenerationService,
-    SQLRetrievalService,
     RemainingSpend,
+    RetrievalAugmentedGeneration,
+    SQLRetrievalService,
 )
-from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator, TypedDict, AsyncIterator
-from openai import AsyncOpenAI
-from talkingcode.backend.config import AppConfig, configure_telemetry
-from fastapi.responses import StreamingResponse
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from typing import cast
 
 logger = logging.getLogger("app_logger")
 

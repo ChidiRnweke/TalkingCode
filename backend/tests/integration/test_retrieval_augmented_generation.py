@@ -1,19 +1,18 @@
 from datetime import date
+from logging import Logger
 from typing import AsyncGenerator
+
+import numpy as np
+import pytest
 from src.talkingcode.backend.errors import MaximumSpendError
+from src.talkingcode.backend.rag import InputQuery, RetrievalAugmentedGeneration
+from src.talkingcode.backend.rag.generation import GenerationService, PreviousQAs
 from src.talkingcode.backend.rag.retrieve import (
     EmbeddedChunk,
     EmbeddingService,
     RetrievedContext,
     SQLRetrievalService,
 )
-
-from src.talkingcode.backend.rag.generation import GenerationService, PreviousQAs
-from src.talkingcode.backend.rag import InputQuery, RetrievalAugmentedGeneration
-
-import numpy as np
-import pytest
-from logging import Logger
 
 logger = Logger("app_logger")
 

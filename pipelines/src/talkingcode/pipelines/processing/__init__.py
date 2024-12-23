@@ -1,9 +1,9 @@
-from .ingestion import IngestionService, DatabaseService
 from .embedding import (
-    EmbeddingService,
     EmbeddingPersistence,
+    EmbeddingService,
     OpenAIEmbedder,
 )
+from .ingestion import DatabaseService, IngestionService
 
 __all__ = [
     "IngestionService",

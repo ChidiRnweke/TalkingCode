@@ -1,20 +1,21 @@
+from dataclasses import dataclass
 from datetime import date
 from typing import AsyncGenerator
-from src.talkingcode.backend.rag.retrieve import (
-    EmbeddingService,
-    RetrievalService,
-    EmbeddedChunk,
-    RetrievedContext,
-)
+
+import pytest
+from src.talkingcode.backend.errors import InputError, MaximumSpendError
+from src.talkingcode.backend.rag import RetrievalAugmentedGeneration
 from src.talkingcode.backend.rag.generation import (
+    GenerationService,
     InputQuery,
     PreviousQAs,
-    GenerationService,
 )
-from src.talkingcode.backend.rag import RetrievalAugmentedGeneration
-from src.talkingcode.backend.errors import MaximumSpendError, InputError
-from dataclasses import dataclass
-import pytest
+from src.talkingcode.backend.rag.retrieve import (
+    EmbeddedChunk,
+    EmbeddingService,
+    RetrievalService,
+    RetrievedContext,
+)
 
 
 @dataclass

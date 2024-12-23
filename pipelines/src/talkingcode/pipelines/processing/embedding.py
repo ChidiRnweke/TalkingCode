@@ -1,20 +1,19 @@
 import asyncio
 import logging
-from openai import AsyncOpenAI
-from typing import Any, Coroutine
-
-from talkingcode.pipelines.config import IngestionConfig
-from .models import AuthHeader, FileMetadata, GitHubFile
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
-from talkingcode.shared.database import EmbeddedDocumentModel, GithubFileModel
 from dataclasses import dataclass
+from typing import Any, Coroutine, Protocol
+
 import aiohttp
 import tiktoken
-from tiktoken import Encoding
+from openai import AsyncOpenAI
 from openai.types import CreateEmbeddingResponse
-from typing import Protocol
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from talkingcode.pipelines.config import IngestionConfig
+from talkingcode.shared.database import EmbeddedDocumentModel, GithubFileModel
+from tiktoken import Encoding
 
+from .models import AuthHeader, FileMetadata, GitHubFile
 
 app_logger = logging.getLogger("app_logger")
 

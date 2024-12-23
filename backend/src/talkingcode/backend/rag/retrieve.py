@@ -1,12 +1,14 @@
-from datetime import date
-from shared.database import EmbeddedDocumentModel, GithubFileModel, TokenSpendModel
-from openai import AsyncOpenAI
 from dataclasses import dataclass
+from datetime import date
 from typing import Protocol
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import Date, select, cast
+
 import aiohttp
+from openai import AsyncOpenAI
+from sqlalchemy import Date, cast, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from talkingcode.backend.errors import InputError, map_errors
+
+from shared.database import EmbeddedDocumentModel, GithubFileModel, TokenSpendModel
 
 
 class RetrievalService(Protocol):

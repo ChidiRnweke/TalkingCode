@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 
 from talkingcode.shared.env import env_var_or_default, get_env_or_raise
 

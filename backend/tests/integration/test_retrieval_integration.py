@@ -1,15 +1,17 @@
 from datetime import date, datetime
-from src.talkingcode.backend.errors import InputError
-from src.talkingcode.backend.rag.retrieve import (
-    SQLRetrievalService,
-    EmbeddedChunk,
-)
+from logging import Logger
+
 import numpy as np
 import pytest
+from src.talkingcode.backend.errors import InputError
+from src.talkingcode.backend.rag.retrieve import (
+    EmbeddedChunk,
+    SQLRetrievalService,
+)
+
 from shared.database import (
     TokenSpendModel,
 )
-from logging import Logger
 
 logger = Logger("app_logger")
 

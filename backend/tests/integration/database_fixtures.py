@@ -1,21 +1,23 @@
-from datetime import datetime
 import os
+from datetime import datetime
+from logging import Logger
+from typing import AsyncGenerator, Generator
+
+import numpy as np
+import pytest
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from src.talkingcode.backend.rag.retrieve import (
     SQLRetrievalService,
 )
-import numpy as np
-import pytest
 from testcontainers.postgres import PostgresContainer
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
+
 from shared.database import (
     EmbeddedDocumentModel,
-    GitHubRepositoryModel,
     GithubFileModel,
+    GitHubRepositoryModel,
     run_migrations,
 )
-from logging import Logger
-from typing import AsyncGenerator, Generator
-import pytest_asyncio
 
 logger = Logger("app_logger")
 
