@@ -1,4 +1,5 @@
 source .venv/bin/activate
+set -euxo pipefail
 input_folder="github_input_schemas"
 output_folder="src/talkingcode/pipelines/github_models"
 
