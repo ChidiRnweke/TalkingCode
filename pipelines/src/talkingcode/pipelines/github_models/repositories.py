@@ -4,16 +4,16 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class License(BaseModel):
     key: str = Field(..., examples=["mit"])
     name: str = Field(..., examples=["MIT License"])
-    url: Optional[AnyUrl] = Field(..., examples=["https://api.github.com/licenses/mit"])
+    url: Optional[str] = Field(..., examples=["https://api.github.com/licenses/mit"])
     spdx_id: Optional[str] = Field(..., examples=["MIT"])
     node_id: str = Field(..., examples=["MDc6TGljZW5zZW1pdA=="])
-    html_url: Optional[AnyUrl] = None
+    html_url: Optional[str] = None
 
 
 class Permissions(BaseModel):
@@ -30,15 +30,15 @@ class Owner(BaseModel):
     login: str = Field(..., examples=["octocat"])
     id: int = Field(..., examples=[1])
     node_id: str = Field(..., examples=["MDQ6VXNlcjE="])
-    avatar_url: AnyUrl = Field(
+    avatar_url: str = Field(
         ..., examples=["https://github.com/images/error/octocat_happy.gif"]
     )
     gravatar_id: Optional[str] = Field(
         ..., examples=["41d064eb2195891e12d0413f63227ea7"]
     )
-    url: AnyUrl = Field(..., examples=["https://api.github.com/users/octocat"])
-    html_url: AnyUrl = Field(..., examples=["https://github.com/octocat"])
-    followers_url: AnyUrl = Field(
+    url: str = Field(..., examples=["https://api.github.com/users/octocat"])
+    html_url: str = Field(..., examples=["https://github.com/octocat"])
+    followers_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/followers"]
     )
     following_url: str = Field(
@@ -50,19 +50,17 @@ class Owner(BaseModel):
     starred_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/starred{/owner}{/repo}"]
     )
-    subscriptions_url: AnyUrl = Field(
+    subscriptions_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/subscriptions"]
     )
-    organizations_url: AnyUrl = Field(
+    organizations_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/orgs"]
     )
-    repos_url: AnyUrl = Field(
-        ..., examples=["https://api.github.com/users/octocat/repos"]
-    )
+    repos_url: str = Field(..., examples=["https://api.github.com/users/octocat/repos"])
     events_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/events{/privacy}"]
     )
-    received_events_url: AnyUrl = Field(
+    received_events_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/received_events"]
     )
     type: str = Field(..., examples=["User"])
@@ -93,7 +91,7 @@ class MergeCommitMessage(Enum):
     BLANK = "BLANK"
 
 
-class ModelItem(BaseModel):
+class Repository(BaseModel):
     id: int = Field(
         ..., description="Unique identifier of the repository", examples=[42]
     )
@@ -109,12 +107,10 @@ class ModelItem(BaseModel):
     private: bool = Field(
         ..., description="Whether the repository is private or public."
     )
-    html_url: AnyUrl = Field(..., examples=["https://github.com/octocat/Hello-World"])
+    html_url: str = Field(..., examples=["https://github.com/octocat/Hello-World"])
     description: Optional[str] = Field(..., examples=["This your first repo!"])
     fork: bool
-    url: AnyUrl = Field(
-        ..., examples=["https://api.github.com/repos/octocat/Hello-World"]
-    )
+    url: str = Field(..., examples=["https://api.github.com/repos/octocat/Hello-World"])
     archive_url: str = Field(
         ...,
         examples=[
@@ -156,19 +152,19 @@ class ModelItem(BaseModel):
         ...,
         examples=["http://api.github.com/repos/octocat/Hello-World/contents/{+path}"],
     )
-    contributors_url: AnyUrl = Field(
+    contributors_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/contributors"]
     )
-    deployments_url: AnyUrl = Field(
+    deployments_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/deployments"]
     )
-    downloads_url: AnyUrl = Field(
+    downloads_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/downloads"]
     )
-    events_url: AnyUrl = Field(
+    events_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/events"]
     )
-    forks_url: AnyUrl = Field(
+    forks_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/forks"]
     )
     git_commits_url: str = Field(
@@ -204,10 +200,10 @@ class ModelItem(BaseModel):
     labels_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/labels{/name}"]
     )
-    languages_url: AnyUrl = Field(
+    languages_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/languages"]
     )
-    merges_url: AnyUrl = Field(
+    merges_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/merges"]
     )
     milestones_url: str = Field(
@@ -229,22 +225,22 @@ class ModelItem(BaseModel):
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/releases{/id}"]
     )
     ssh_url: str = Field(..., examples=["git@github.com:octocat/Hello-World.git"])
-    stargazers_url: AnyUrl = Field(
+    stargazers_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/stargazers"]
     )
     statuses_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/statuses/{sha}"]
     )
-    subscribers_url: AnyUrl = Field(
+    subscribers_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/subscribers"]
     )
-    subscription_url: AnyUrl = Field(
+    subscription_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/subscription"]
     )
-    tags_url: AnyUrl = Field(
+    tags_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/tags"]
     )
-    teams_url: AnyUrl = Field(
+    teams_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/teams"]
     )
     trees_url: str = Field(
@@ -252,16 +248,14 @@ class ModelItem(BaseModel):
         examples=["http://api.github.com/repos/octocat/Hello-World/git/trees{/sha}"],
     )
     clone_url: str = Field(..., examples=["https://github.com/octocat/Hello-World.git"])
-    mirror_url: Optional[AnyUrl] = Field(
+    mirror_url: Optional[str] = Field(
         ..., examples=["git:git.example.com/octocat/Hello-World"]
     )
-    hooks_url: AnyUrl = Field(
+    hooks_url: str = Field(
         ..., examples=["http://api.github.com/repos/octocat/Hello-World/hooks"]
     )
-    svn_url: AnyUrl = Field(
-        ..., examples=["https://svn.github.com/octocat/Hello-World"]
-    )
-    homepage: Optional[AnyUrl] = Field(..., examples=["https://github.com"])
+    svn_url: str = Field(..., examples=["https://svn.github.com/octocat/Hello-World"])
+    homepage: str | None = Field(..., examples=["https://github.com"])
     language: Optional[str]
     forks_count: int = Field(..., examples=[9])
     stargazers_count: int = Field(..., examples=[80])
@@ -374,5 +368,5 @@ class ModelItem(BaseModel):
     )
 
 
-class Model(BaseModel):
-    __root__: List[ModelItem]
+class RepositoriesResponse(RootModel):
+    root: List[Repository]

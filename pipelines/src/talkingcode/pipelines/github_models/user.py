@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional, Union
 
-from pydantic import AnyUrl, BaseModel, EmailStr, Extra, Field
+from pydantic import BaseModel, EmailStr, Field, RootModel
 
 
 class Plan(BaseModel):
@@ -18,15 +18,15 @@ class Model1(BaseModel):
     id: int = Field(..., examples=[1])
     user_view_type: Optional[str] = None
     node_id: str = Field(..., examples=["MDQ6VXNlcjE="])
-    avatar_url: AnyUrl = Field(
+    avatar_url: str = Field(
         ..., examples=["https://github.com/images/error/octocat_happy.gif"]
     )
     gravatar_id: Optional[str] = Field(
         ..., examples=["41d064eb2195891e12d0413f63227ea7"]
     )
-    url: AnyUrl = Field(..., examples=["https://api.github.com/users/octocat"])
-    html_url: AnyUrl = Field(..., examples=["https://github.com/octocat"])
-    followers_url: AnyUrl = Field(
+    url: str = Field(..., examples=["https://api.github.com/users/octocat"])
+    html_url: str = Field(..., examples=["https://github.com/octocat"])
+    followers_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/followers"]
     )
     following_url: str = Field(
@@ -38,19 +38,17 @@ class Model1(BaseModel):
     starred_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/starred{/owner}{/repo}"]
     )
-    subscriptions_url: AnyUrl = Field(
+    subscriptions_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/subscriptions"]
     )
-    organizations_url: AnyUrl = Field(
+    organizations_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/orgs"]
     )
-    repos_url: AnyUrl = Field(
-        ..., examples=["https://api.github.com/users/octocat/repos"]
-    )
+    repos_url: str = Field(..., examples=["https://api.github.com/users/octocat/repos"])
     events_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/events{/privacy}"]
     )
-    received_events_url: AnyUrl = Field(
+    received_events_url: str = Field(
         ..., examples=["https://api.github.com/users/octocat/received_events"]
     )
     type: str = Field(..., examples=["User"])
@@ -85,25 +83,25 @@ class Model1(BaseModel):
 
 class Model2(BaseModel):
     class Config:
-        extra = Extra.forbid
+        extra = "forbid"
 
     login: str
     id: int
     user_view_type: Optional[str] = None
     node_id: str
-    avatar_url: AnyUrl
+    avatar_url: str
     gravatar_id: Optional[str]
-    url: AnyUrl
-    html_url: AnyUrl
-    followers_url: AnyUrl
+    url: str
+    html_url: str
+    followers_url: str
     following_url: str
     gists_url: str
     starred_url: str
-    subscriptions_url: AnyUrl
-    organizations_url: AnyUrl
-    repos_url: AnyUrl
+    subscriptions_url: str
+    organizations_url: str
+    repos_url: str
     events_url: str
-    received_events_url: AnyUrl
+    received_events_url: str
     type: str
     site_admin: bool
     name: Optional[str]
@@ -129,5 +127,5 @@ class Model2(BaseModel):
     collaborators: Optional[int] = Field(None, examples=[3])
 
 
-class Model(BaseModel):
-    __root__: Union[Model1, Model2]
+class User(RootModel):
+    root: Union[Model1, Model2]

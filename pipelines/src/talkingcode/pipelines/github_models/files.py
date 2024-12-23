@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class TreeItem(BaseModel):
@@ -23,7 +23,7 @@ class TreeItem(BaseModel):
 
 class GitTree(BaseModel):
     sha: str
-    url: AnyUrl
+    url: str
     truncated: bool
     tree: List[TreeItem] = Field(
         ...,

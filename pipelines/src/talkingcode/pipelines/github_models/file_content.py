@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import BaseModel, Field
 
 
 class FieldLinks(BaseModel):
-    git: Optional[AnyUrl]
-    html: Optional[AnyUrl]
-    self: AnyUrl
+    git: Optional[str]
+    html: Optional[str]
+    self: str
 
 
 class Entry(BaseModel):
@@ -17,10 +17,10 @@ class Entry(BaseModel):
     name: str
     path: str
     sha: str
-    url: AnyUrl
-    git_url: Optional[AnyUrl]
-    html_url: Optional[AnyUrl]
-    download_url: Optional[AnyUrl]
+    url: str
+    git_url: Optional[str]
+    html_url: Optional[str]
+    download_url: Optional[str]
     field_links: FieldLinks = Field(..., alias="_links")
 
 
@@ -31,9 +31,9 @@ class ContentTree(BaseModel):
     path: str
     sha: str
     content: Optional[str] = None
-    url: AnyUrl
-    git_url: Optional[AnyUrl]
-    html_url: Optional[AnyUrl]
-    download_url: Optional[AnyUrl]
+    url: str
+    git_url: Optional[str]
+    html_url: Optional[str]
+    download_url: Optional[str]
     entries: Optional[List[Entry]] = None
     field_links: FieldLinks = Field(..., alias="_links")

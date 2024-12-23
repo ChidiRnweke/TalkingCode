@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
-from pydantic import BaseModel
+from pydantic import RootModel
 
 
-class Language(BaseModel):
-    __root__: Optional[Dict[str, int]] = None
+class Languages(RootModel):
+    root: Optional[Dict[str, int]] = None
