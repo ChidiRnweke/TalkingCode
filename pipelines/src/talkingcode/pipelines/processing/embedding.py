@@ -1,11 +1,11 @@
 import asyncio
 import logging
 from openai import AsyncOpenAI
-from typing import Any, Coroutine, Self
+from typing import Any, Coroutine
+from talkingcode.pipelines.processing.models import AuthHeader, FileMetadata, GitHubFile
 from sqlalchemy import select
-from sqlalchemy.orm import sessionmaker, Session
-from shared.database import GithubFileModel, EmbeddedDocumentModel
-from pipelines.processing.ingestion import GitHubFile
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
+from talkingcode.shared.database import EmbeddedDocumentModel, GithubFileModel
 from dataclasses import dataclass
 import aiohttp
 import tiktoken
@@ -15,41 +15,6 @@ from typing import Protocol
 
 
 app_logger = logging.getLogger("app_logger")
-
-
-@dataclass(frozen=True, slots=True)
-class FileMetadata:
-    """
-    This class is used to store metadata about the files that are to be embedded.
-
-    Args:
-        repository_name (str): The name of the repository that the file belongs to.
-        document_id (int): The id of the document in the database.
-        file (GitHubFile): The file object that contains metadata about the file.
-    """
-
-    repository_name: str
-    document_id: int
-    file: GitHubFile
-
-    @classmethod
-    def from_db_object(cls, file: GithubFileModel) -> Self:
-        """
-        Creates a FileMetadata object from a GithubFileModel object.
-        The point is to convert the database object into a domain object.
-
-
-        Args:
-            file (GithubFileModel): The database object to convert.
-
-        Returns:
-            Self: The domain object.
-        """
-        return cls(
-            repository_name=file.repository_name,
-            document_id=file.id,
-            file=GitHubFile.from_db_object(file),
-        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,7 +37,7 @@ class EmbeddingStore(Protocol):
     This class is used to store embeddings as well as retrieve file metadata required for the embedding process.
     """
 
-    def find_files(
+    async def find_files(
         self,
         white_list: list[str],
         blacklisted_files: list[str],
@@ -92,7 +57,7 @@ class EmbeddingStore(Protocol):
 
         ...
 
-    def save_embeddings(
+    async def save_embeddings(
         self, embeddings: EmbeddingWithCount, metadata: FileMetadata
     ) -> None:
         """
@@ -127,32 +92,6 @@ class TextEmbedder(Protocol):
             list[EmbeddingWithCount]: The embeddings and the total number of tokens in the text.
         """
         ...
-
-
-@dataclass(frozen=True, slots=True)
-class AuthHeader:
-    """
-    Small dataclass to store the authorization header for the API requests.
-    Necessary for the requests to the GitHub API.
-
-    Args:
-        Authorization (str): The name of the authorization header. (for example `Authorization`)
-        token (str): The token to be used for authorization. This is the GitHub token, in this case
-            you need to request a classic GitHub token.
-    """
-
-    Authorization: str
-    token: str
-
-    def to_dict(self) -> dict[str, str]:
-        """Returns the authorization header as a dictionary.
-        The dictionary is used to pass the authorization header to the aiohttp library. This is necessary
-        for the requests to the GitHub API.
-
-        Returns:
-            dict[str, str]: The authorization header as a dictionary.
-        """
-        return {"Authorization": f"Bearer {self.token}"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -226,7 +165,7 @@ class EmbeddingService:
         database.
         """
 
-        metadata = self.db.find_files(self.white_list, self.blacklisted_files)
+        metadata = await self.db.find_files(self.white_list, self.blacklisted_files)
         file_futures = [self.get_file_content(meta) for meta in metadata]
 
         file_contents = await asyncio.gather(*file_futures)
@@ -274,8 +213,10 @@ class EmbeddingService:
         """
         chunks = self.splitter.split_text_to_chunks(text, "test")
         embeddings = await self.embedder.embed_chunk(chunks, metadata)
-        for embedding in embeddings:
-            self.db.save_embeddings(embedding, metadata)
+        save_embeddings = [
+            self.db.save_embeddings(embedding, metadata) for embedding in embeddings
+        ]
+        await asyncio.gather(*save_embeddings)
 
 
 @dataclass(frozen=True, slots=True)
@@ -354,9 +295,9 @@ class EmbeddingPersistence(EmbeddingStore):
     metadata of the files that are to be embedded.
     """
 
-    session_maker: sessionmaker[Session]
+    session_maker: async_sessionmaker[AsyncSession]
 
-    def find_files(
+    async def find_files(
         self,
         white_list: list[str],
         blacklisted_files: list[str],
@@ -367,13 +308,14 @@ class EmbeddingPersistence(EmbeddingStore):
             .where(GithubFileModel.file_extension.in_(white_list))
             .where(GithubFileModel.name.not_in(blacklisted_files))
         )
-        with self.session_maker() as session:
-            files = session.scalars(query).all()
+        async with self.session_maker() as session:
+            files = await session.scalars(query)
+            files = files.all()
         app_logger.info(f"Found {len(files)} files to embed.")
         github_files = [FileMetadata.from_db_object(file) for file in files]
         return github_files
 
-    def save_embeddings(
+    async def save_embeddings(
         self, embeddings: EmbeddingWithCount, metadata: FileMetadata
     ) -> None:
         embedded_document = EmbeddedDocumentModel(
@@ -384,9 +326,9 @@ class EmbeddingPersistence(EmbeddingStore):
         original_file = select(GithubFileModel).where(
             GithubFileModel.id == metadata.document_id
         )
-        with self.session_maker() as session:
-            orig = session.execute(original_file).scalar()
+        async with self.session_maker() as session:
+            orig = await session.scalar(original_file)
             if orig:
                 orig.is_embedded = True
             session.add(embedded_document)
-            session.commit()
+            await session.commit()

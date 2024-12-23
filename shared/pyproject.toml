@@ -1,9 +1,12 @@
 [tool.poetry]
-name = "shared"
-version = "0.1.5"
+name = "talkingcode-shared"
+version = "0.1.6"
 description = "A package containing utilities shared between the data pipelines and the backend side of the project"
 authors = ["ChidiRNweke <chidi125@gmail.com>"]
 readme = "README.md"
+packages = [
+    { include = "*", from = "src" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -25,3 +28,4 @@ mkdocs-render-swagger-plugin = "^0.1.2"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+

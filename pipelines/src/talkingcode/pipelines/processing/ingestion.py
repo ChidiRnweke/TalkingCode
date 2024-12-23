@@ -1,144 +1,128 @@
-from datetime import datetime
-from github import Github
 from dataclasses import dataclass
-from github.ContentFile import ContentFile
-from github.Repository import Repository
+
+from pipelines.processing.models import AuthHeader, GitHubFile, GitHubRepository
+
 from shared.database import GithubFileModel
 from shared.database import GitHubRepositoryModel
 from shared.database import LanguagesModel
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import select
-from typing import Self
+from typing import Protocol
 import logging
+import asyncio
+import aiohttp
+
 
 logger = logging.getLogger("app_logger")
 
 
+class GitHubClient(Protocol):
+    async def get_all_repositories(self) -> list[GitHubRepository]: ...
+
+    async def get_all_files(self, repo: GitHubRepository) -> list[GitHubFile]: ...
+
+    async def get_user(self) -> str: ...
+
+
+class Storage(Protocol):
+    async def write_to_database(
+        self, repo: GitHubRepository, files: list[GitHubFile]
+    ) -> None: ...
+
+
+@dataclass(frozen=True, slots=True)
+class GithubHTTPClient(GitHubClient):
+    auth_header: AuthHeader
+
+    async def get_all_repositories(self) -> list["GitHubRepository"]:
+        header = self.auth_header.to_dict()
+        path = "https://api.github.com/user/repos"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(path, headers=header) as response:
+                repos = await response.json()
+                return [
+                    GitHubRepository(
+                        name=repo["name"],
+                        user=repo["owner"]["login"],
+                        description=repo.get("description", ""),
+                        languages=[],
+                        url=repo["html_url"],
+                        owner=repo["owner"]["login"],
+                        fork=repo["fork"],
+                        default_branch=repo["default_branch"],
+                    )
+                    for repo in repos
+                ]
+
+    async def get_all_files(self, repo: GitHubRepository) -> list[GitHubFile]:
+        header = self.auth_header.to_dict()
+        path = f"https://api.github.com/repos/{repo.user}/{repo.name}/git/trees/{repo.default_branch}?recursive=1"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(path, headers=header) as response:
+                files = await response.json()
+                file_paths = [
+                    file["path"] for file in files["tree"] if file["type"] == "blob"
+                ]
+            links = []
+            for file_path in file_paths:
+                content_path = f"https://api.github.com/repos/{repo.user}/{repo.name}/contents/{file_path}"
+                async with session.get(content_path, headers=header) as response:
+                    file = response.json()
+                    links.append(file)
+            responses = await asyncio.gather(*links)
+
+            return [
+                GitHubFile(
+                    name=file["name"],
+                    content_url=file["download_url"],
+                    last_modified=file["last_modified"],
+                    extension=file["name"].split(".")[-1],
+                    path_in_project=file["path"],
+                )
+                for file in responses
+            ]
+
+    async def get_user(self) -> str:
+        header = self.auth_header.to_dict()
+        path = "https://api.github.com/user"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(path, headers=header) as response:
+                return (await response.json())["login"]
+
+
 @dataclass(frozen=True)
 class IngestionService:
-    db: "DatabaseService"
-    client: Github
+    db: Storage
+    client: GitHubClient
 
-    def fetch_and_persist_data(self) -> None:
-        self._process_repositories()
+    async def fetch_and_persist_data(self) -> None:
+        await self._process_repositories()
 
-    def _process_repositories(self) -> None:
-        for repo in self.client.get_user().get_repos():
-            if repo.fork or repo.owner.login != self.client.get_user().login:
-                continue
-            logger.info(f"Processing repository {repo.name}")
-            repo_with_files = self._process_single_repository(repo)
-            logger.info(
-                f"Found {len(repo_with_files[1])} files in {repo_with_files[0].name}"
-            )
+    async def _process_repositories(self) -> None:
+        user = await self.client.get_user()
+        repos = await self.client.get_all_repositories()
+        (user, repos) = await asyncio.gather(*[user, repos])
+        repo_futures = [self.process_repository(user, repo) for repo in repos]
+        await asyncio.gather(*repo_futures)
 
-            self.db.write_to_database(repo_with_files)
-
-    def _process_single_repository(
-        self, repo: Repository
-    ) -> tuple["GitHubRepository", list["GitHubFile"]]:
-
-        repository = GitHubRepository.from_repository_object(repo)
-        files = GitHubFile.from_repository_object(repo)
-        return (repository, files)
+    async def process_repository(self, user: str, repo: "GitHubRepository") -> None:
+        if repo.fork or repo.owner != user:
+            return None
+        logger.info(f"Processing repository {repo.name}")
+        files = await self.client.get_all_files(repo)
+        logger.info(f"Found {len(files)} files in {repo.name}")
+        await self.db.write_to_database(repo, files)
 
 
 @dataclass(frozen=True)
-class GitHubRepository:
-    name: str
-    user: str
-    description: str
-    languages: list[str]
-    url: str
-
-    def to_db_object(self) -> "GitHubRepositoryModel":
-
-        return GitHubRepositoryModel(
-            name=self.name,
-            user=self.user,
-            description=self.description,
-            url=self.url,
-            languages=[],
-        )
-
-    @classmethod
-    def from_repository_object(cls, repo: Repository) -> "GitHubRepository":
-        return cls(
-            name=repo.name,
-            user=repo.owner.login,
-            description=repo.description,
-            languages=list(repo.get_languages().keys()),
-            url=repo.html_url,
-        )
-
-
-@dataclass(frozen=True)
-class GitHubFile:
-    name: str
-    content_url: str
-    last_modified: datetime
-    extension: str
-    path_in_project: str
-
-    @classmethod
-    def from_db_object(cls, file: GithubFileModel) -> Self:
-        return cls(
-            name=file.name,
-            content_url=file.content_url,
-            last_modified=file.last_modified,
-            extension=file.file_extension,
-            path_in_project=file.path_in_repo,
-        )
-
-    @classmethod
-    def from_content_file(cls, content: ContentFile) -> "GitHubFile":
-        return cls(
-            name=content.name,
-            content_url=content.download_url,
-            last_modified=content.last_modified_datetime or datetime.now(),
-            extension=content.name.split(".")[-1],
-            path_in_project=content.path,
-        )
-
-    @classmethod
-    def from_repository_object(cls, repo: Repository) -> list["GitHubFile"]:
-        repo_contents: list[ContentFile] = []
-        contents = repo.get_contents("")
-        contents = contents if isinstance(contents, list) else [contents]
-
-        while contents:
-            content = contents.pop(0)
-            if content.type == "dir":
-                children = repo.get_contents(content.path)
-                children = children if isinstance(children, list) else [children]
-                contents.extend(children)
-            else:
-                repo_contents.append(content)
-        return [cls.from_content_file(content) for content in repo_contents]
-
-    def to_db_object(self, repository: GitHubRepository) -> "GithubFileModel":
-        return GithubFileModel(
-            name=self.name,
-            content_url=self.content_url,
-            last_modified=self.last_modified,
-            repository_name=repository.name,
-            repository_user=repository.user,
-            file_extension=self.extension,
-            path_in_repo=self.path_in_project,
-            latest_version=True,
-            is_embedded=False,
-        )
-
-
-@dataclass(frozen=True)
-class DatabaseService:
+class DatabaseService(Storage):
     session_maker: sessionmaker[Session]
 
-    def write_to_database(
+    async def write_to_database(
         self,
-        data: tuple[GitHubRepository, list[GitHubFile]],
+        repo: GitHubRepository,
+        files: list[GitHubFile],
     ) -> None:
-        repo, files = data
         repo_model = repo.to_db_object()
 
         with self.session_maker() as session:
