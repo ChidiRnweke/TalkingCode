@@ -31,6 +31,8 @@ logger = logging.getLogger("app_logger")
 class GitHubClient(Protocol):
     async def get_all_repositories(self) -> list[GitHubRepository]: ...
 
+    async def get_file_content(self, file: GitHubFile) -> str: ...
+
     async def get_all_files(self, repo: GitHubRepository) -> list[GitHubFile]: ...
 
     async def get_user(self) -> str: ...
@@ -86,6 +88,13 @@ class GithubHTTPClient(GitHubClient):
             )
             for repo, langs in zip(repos.root, languages)
         ]
+
+    async def get_file_content(self, file: GitHubFile) -> str:
+        header = self.auth_header.to_dict()
+        path = file.content_url
+        async with AsyncClient() as client:
+            response = await client.get(path, headers=header)
+            return response.text
 
     async def language_from_repo(self, repo: Repository) -> list[str]:
         header = self.auth_header.to_dict()
