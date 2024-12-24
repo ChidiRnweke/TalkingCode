@@ -17,6 +17,7 @@ pgvector = "^0.2.5"
 aiohttp = "^3.9.5"
 talkingcode-shared = {path = "../shared"}
 tiktoken = "^0.7.0"
+langchain-text-splitters = "^0.3.4"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"

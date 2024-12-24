@@ -4,16 +4,15 @@ from dataclasses import dataclass
 from typing import Any, Coroutine, Protocol, Self
 
 import aiohttp
-import tiktoken
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from openai import AsyncOpenAI
 from openai.types import CreateEmbeddingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from tiktoken import Encoding
 
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.shared.database import EmbeddedDocumentModel, GithubFileModel
-from talkingcode.shared.telemetry import log_execution_time
+from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
 from .models import AuthHeader, FileMetadata, GitHubFile
 
@@ -99,45 +98,20 @@ class TextEmbedder(Protocol):
 
 @dataclass(frozen=True, slots=True)
 class TextSplitter:
-    """
-    This class is used to split the text into chunks of 7000 tokens.
-    This is necessary because the OpenAI API has a limit of 8000 tokens per request.
-    We split the text into chunks of 7000 tokens to account for the tokens used by the metadata.
-
-    Args:
-        encoding (Encoding): The encoding to use for tokenization.
-    """
-
-    encoding: Encoding = tiktoken.get_encoding("cl100k_base")
+    chunk_size: int = 7000
+    chunk_overlap: int = 500
 
     def split_text_to_chunks(self, text: str, name: str) -> list[str]:
-        """
-        Splits the text into chunks of 7000 tokens.
-
-        Args:
-            text (str): The text to split.
-            name (str): The name of the file. Used for logging.
-
-        Returns:
-            list[str]: The list of chunks.
-        """
-        tokens = self._count_tokens(text)
-        num_chunks = (tokens // 7000) + 1
-        char_per_chunk = len(text) // num_chunks
-        logger.info(
-            f"Splitting {name} into {num_chunks} chunks of {char_per_chunk} characters."
+        splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+            "cl100k_base",
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap,
         )
-        return [
-            text[i : i + char_per_chunk]  # noqa E203
-            for i in range(0, len(text), char_per_chunk + 1)
-            # + 1 is added for empty files
-        ]
-
-    def _count_tokens(self, text: str) -> int:
-        num_tokens = len(self.encoding.encode(text))
-        return num_tokens
+        chunks = splitter.split_text(text)
+        return chunks
 
 
+@instrument_all_async(log_async_execution_time)
 @dataclass(frozen=True, slots=True)
 class EmbeddingService:
     """
@@ -180,7 +154,6 @@ class EmbeddingService:
 
         _ = await asyncio.gather(*embedding_futures)
 
-    @log_execution_time
     async def get_file_content(self, metadata: FileMetadata) -> str:
         """
         Fetches the file content from the GitHub API.
@@ -201,7 +174,6 @@ class EmbeddingService:
             async with session.get(path) as response:
                 return await response.text()
 
-    @log_execution_time
     async def process_and_save(
         self,
         text: str,
@@ -237,6 +209,7 @@ class EmbeddingService:
         )
 
 
+@instrument_all_async(log_async_execution_time)
 @dataclass(frozen=True, slots=True)
 class OpenAIEmbedder(TextEmbedder):
     """
@@ -249,7 +222,6 @@ class OpenAIEmbedder(TextEmbedder):
     api_client: AsyncOpenAI
     embedding_model: str
 
-    @log_execution_time
     async def embed_chunk(
         self,
         chunks: list[str],
@@ -311,6 +283,7 @@ class OpenAIEmbedder(TextEmbedder):
         return embeddings
 
 
+@instrument_all_async(log_async_execution_time)
 @dataclass(frozen=True, slots=True)
 class EmbeddingPersistence(EmbeddingStore):
     """
@@ -321,7 +294,6 @@ class EmbeddingPersistence(EmbeddingStore):
 
     session_maker: async_sessionmaker[AsyncSession]
 
-    @log_execution_time
     async def find_files(
         self,
         white_list: list[str],
@@ -340,7 +312,6 @@ class EmbeddingPersistence(EmbeddingStore):
         github_files = [FileMetadata.from_db_object(file) for file in files]
         return github_files
 
-    @log_execution_time
     async def save_embeddings(
         self, embeddings: EmbeddingWithCount, metadata: FileMetadata
     ) -> None:

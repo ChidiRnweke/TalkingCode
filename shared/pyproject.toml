@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "talkingcode-shared"
-version = "0.1.8"
+version = "0.1.9"
 description = "A package containing utilities shared between the data pipelines and the backend side of the project"
 authors = ["ChidiRNweke <chidi125@gmail.com>"]
 readme = "README.md"

@@ -21,7 +21,7 @@ from talkingcode.shared.database import (
     GitHubRepositoryModel,
     LanguagesModel,
 )
-from talkingcode.shared.telemetry import log_execution_time
+from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
 from .models import AuthHeader, GitHubFile, GitHubRepository
 
@@ -42,12 +42,26 @@ class Storage(Protocol):
     ) -> None: ...
 
 
+@instrument_all_async(log_async_execution_time)
 @dataclass(frozen=True, slots=True)
 class GithubHTTPClient(GitHubClient):
+    """
+    The `GithubHTTPClient` class is responsible for fetching data from the GitHub API.
+
+    Args:
+        Args:
+        auth_header (AuthHeader): The authentication header to use for making requests to the GitHub API.
+    """
+
     auth_header: AuthHeader
 
-    @log_execution_time
     async def get_all_repositories(self) -> list["GitHubRepository"]:
+        """
+        Fetches all repositories for the authenticated user.
+
+        Returns:
+            list[GitHubRepository]: A list of `GitHubRepository` objects representing the repositories.
+        """
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user/repos"
         language_result = []
@@ -73,7 +87,6 @@ class GithubHTTPClient(GitHubClient):
             for repo, langs in zip(repos.root, languages)
         ]
 
-    @log_execution_time
     async def language_from_repo(self, repo: Repository) -> list[str]:
         header = self.auth_header.to_dict()
         path = repo.languages_url
@@ -85,7 +98,6 @@ class GithubHTTPClient(GitHubClient):
             else:
                 return []
 
-    @log_execution_time
     async def get_all_files(self, repo: GitHubRepository) -> list[GitHubFile]:
         header = self.auth_header.to_dict()
         path = f"https://api.github.com/repos/{repo.user}/{repo.name}/git/trees/{repo.default_branch}?recursive=1"
@@ -112,7 +124,6 @@ class GithubHTTPClient(GitHubClient):
             for file in responses
         ]
 
-    @log_execution_time
     async def get_user(self) -> str:
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user"
@@ -122,16 +133,42 @@ class GithubHTTPClient(GitHubClient):
 
     @classmethod
     def from_config(cls, config: IngestionConfig) -> "GithubHTTPClient":
+        """
+        Factory method to create an instance of the `GithubHTTPClient` class from a configuration object.
+
+
+        Args:
+            config (IngestionConfig): The configuration object to use for creating the client.
+
+        Returns:
+            GithubHTTPClient: An instance of the `GithubHTTPClient` class.
+        """
         header = AuthHeader(Authorization="Authorization", token=config.github_token)
         return cls(header)
 
 
-@dataclass(frozen=True)
+@instrument_all_async(log_async_execution_time)
+@dataclass(frozen=True, slots=True)
 class IngestionService:
+    """
+    The `IngestionService` class is responsible for fetching data from the GitHub API and persisting it to the database.
+    It handles the process of the initial fetch of the repositories, fetching the files for each repository, and saving the data to the database.
+    Only metadata about the repositories is saved, not the actual file contents.
+
+    It can be instantiated using the `from_config` class method, which reads the configuration from the environment variables or a secrets manager.
+
+    Args:
+        db (Storage): The database service to use for storing the fetched data.
+        client (GitHubClient): The GitHub client to use for fetching data from the GitHub API.
+    """
+
     db: Storage
     client: GitHubClient
 
     async def fetch_and_persist_data(self) -> None:
+        """
+        Fetches data from the GitHub API and persists it to the database.
+        """
         await self._process_repositories()
 
     async def _process_repositories(self) -> None:
@@ -151,16 +188,25 @@ class IngestionService:
 
     @classmethod
     def from_config(cls, config: IngestionConfig) -> "IngestionService":
+        """
+        Factory method to create an instance of the `IngestionService` class from a configuration object.
+
+        Args:
+            config (IngestionConfig): The configuration object to use for creating the service.
+
+        Returns:
+            IngestionService: An instance of the `IngestionService` class.
+        """
         db = DatabaseService.from_config(config)
         client = GithubHTTPClient.from_config(config)
         return cls(db=db, client=client)
 
 
-@dataclass(frozen=True)
+@instrument_all_async(log_async_execution_time)
+@dataclass(frozen=True, slots=True)
 class DatabaseService(Storage):
     session_maker: async_sessionmaker[AsyncSession]
 
-    @log_execution_time
     async def write_to_database(
         self,
         repo: GitHubRepository,
