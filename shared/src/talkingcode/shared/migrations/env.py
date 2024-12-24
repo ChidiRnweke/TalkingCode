@@ -5,6 +5,7 @@ from logging.config import fileConfig
 import pgvector.sqlalchemy
 from alembic import context
 from sqlalchemy import Connection, create_engine, text
+
 from talkingcode.shared.database import Base
 from talkingcode.shared.env import SecretsReader, get_env_or_raise
 from talkingcode.shared.telemetry import configure_telemetry
