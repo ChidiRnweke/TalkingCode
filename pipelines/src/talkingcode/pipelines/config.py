@@ -16,8 +16,8 @@ class IngestionConfig:
     embedding_disk_path: str = "embeddings"
     embedding_model: str = "text-embedding-3-large"
 
-    @staticmethod
-    def from_env() -> "IngestionConfig":
+    @classmethod
+    def from_env(cls) -> "IngestionConfig":
         github_api_key = get_env_or_raise("GITHUB_API_TOKEN")
         api_key = get_env_or_raise("OPENAI_API_KEY")
         conn_string = env_var_or_default(
@@ -32,7 +32,7 @@ class IngestionConfig:
         whitelisted_extensions = whitelist_str_as_list(whitelisted_extensions)
         blacklisted_files = whitelist_str_as_list(blacklisted_files)
 
-        return IngestionConfig(
+        return cls(
             github_token=github_api_key,
             openai_api_key=api_key,
             db_connection_string=conn_string,
