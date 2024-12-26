@@ -3,10 +3,10 @@ from .embedding import (
     EmbeddingService,
     OpenAIEmbedder,
 )
-from .ingestion import DatabaseService, IngestionService
+from .ingestion import DatabaseService, MetadataIngestionService
 
 __all__ = [
-    "IngestionService",
+    "MetadataIngestionService",
     "DatabaseService",
     "EmbeddingService",
     "EmbeddingPersistence",

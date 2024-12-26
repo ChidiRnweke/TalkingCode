@@ -158,9 +158,9 @@ class GithubHTTPClient(GitHubClient):
 
 @instrument_all_async(log_async_execution_time)
 @dataclass(frozen=True, slots=True)
-class IngestionService:
+class MetadataIngestionService:
     """
-    The `IngestionService` class is responsible for fetching data from the GitHub API and persisting it to the database.
+    The `MetadataIngestionService` class is responsible for fetching data from the GitHub API and persisting it to the database.
     It handles the process of the initial fetch of the repositories, fetching the files for each repository, and saving the data to the database.
     Only metadata about the repositories is saved, not the actual file contents.
 
@@ -174,7 +174,7 @@ class IngestionService:
     db: Storage
     client: GitHubClient
 
-    async def fetch_and_persist_data(self) -> None:
+    async def fetch_and_persist_metadata(self) -> None:
         """
         Fetches data from the GitHub API and persists it to the database.
         """
@@ -196,7 +196,7 @@ class IngestionService:
         await self.db.write_to_database(repo, files)
 
     @classmethod
-    def from_config(cls, config: IngestionConfig) -> "IngestionService":
+    def from_config(cls, config: IngestionConfig) -> "MetadataIngestionService":
         """
         Factory method to create an instance of the `IngestionService` class from a configuration object.
 
