@@ -4,10 +4,9 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from talkingcode.pipelines.config import IngestionConfig
-from talkingcode.pipelines.github_client import GitHubClient, GithubHTTPClient
+from talkingcode.pipelines.github_client import GitHubClient
 from talkingcode.pipelines.models import GitHubFile, GitHubRepository
 from talkingcode.shared.database import (
     GithubFileModel,
@@ -63,21 +62,6 @@ class MetadataIngestionService:
         files = await self.client.get_all_files(repo)
         logger.info(f"Found {len(files)} files in {repo.name}")
         await self.db.write_to_database(repo, files)
-
-    @classmethod
-    def from_config(cls, config: IngestionConfig) -> "MetadataIngestionService":
-        """
-        Factory method to create an instance of the `IngestionService` class from a configuration object.
-
-        Args:
-            config (IngestionConfig): The configuration object to use for creating the service.
-
-        Returns:
-            IngestionService: An instance of the `IngestionService` class.
-        """
-        db = DatabaseService.from_config(config)
-        client = GithubHTTPClient.from_config(config)
-        return cls(db=db, client=client)
 
 
 @instrument_all_async(log_async_execution_time)
@@ -198,9 +182,3 @@ class DatabaseService(Storage):
         else:
             if existing_languages[language] not in repo_model.languages:
                 repo_model.languages.append(existing_languages[language])
-
-    @classmethod
-    def from_config(cls, config: IngestionConfig) -> "DatabaseService":
-        engine = create_async_engine(config.db_connection_string)
-        Session = async_sessionmaker(engine, expire_on_commit=False)
-        return cls(session_maker=Session)

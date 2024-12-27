@@ -1,4 +1,4 @@
-from .ingestion.ingestion import DatabaseService, MetadataIngestionService
+from .metadata_ingestion.ingestion import DatabaseService, MetadataIngestionService
 from .transformations.embedding import OpenAIEmbedder
 
 __all__ = [
