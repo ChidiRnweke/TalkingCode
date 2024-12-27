@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 
-from talkingcode.shared.env import env_var_or_default, get_env_or_raise
+from talkingcode.shared.environment import SecretsReader
 
 
 @dataclass(frozen=True)
@@ -32,25 +32,23 @@ class IngestionConfig:
 
     @classmethod
     def from_env(cls) -> "IngestionConfig":
-        github_api_key = get_env_or_raise("GITHUB_API_TOKEN")
-        api_key = get_env_or_raise("OPENAI_API_KEY")
-        conn_string = env_var_or_default(
-            "ASYNC_DATABASE_URL",
-            "postgresql+asyncpg://postgres:postgres@localhost:5432/chatGITpt",
-        )
-        whitelisted_extensions = env_var_or_default(
-            "WHITELISTED_EXTENSIONS", "'[\"py\"]'"
-        )
-        blacklisted_files = env_var_or_default("BLACKLISTED_FILES", "[]")
-        topics_prompt = get_env_or_raise("TOPICS_PROMPT")
-        metadata_enrichment_model = get_env_or_raise("METADATA_ENRICHMENT_MODEL")
-        qdrant_server_mode = bool(env_var_or_default("QDRANT_SERVER_MODE", "False"))
-        qdrant_server_url = env_var_or_default(
+        reader = SecretsReader.from_env()
+
+        github_api_key = reader.read_secret("GITHUB_API_TOKEN")
+        api_key = reader.read_secret("OPENAI_API_KEY")
+        conn_string = reader.read_secret("ASYNC_DATABASE_URL")
+        whitelisted_extensions = reader.read_secret("WHITELISTED_EXTENSIONS")
+
+        blacklisted_files = reader.read_secret("BLACKLISTED_FILES")
+        topics_prompt = reader.read_secret("TOPICS_PROMPT")
+        metadata_enrichment_model = reader.read_secret("METADATA_ENRICHMENT_MODEL")
+        qdrant_server_mode = bool(reader.read_or_default("QDRANT_SERVER_MODE", "False"))
+        qdrant_server_url = reader.read_or_default(
             "QDRANT_SERVER_URL", "http://localhost:6333"
         )
-        qdrant_local_port = int(env_var_or_default("QDRANT_LOCAL_PORT", "6333"))
-        qdrant_collection_name = get_env_or_raise("QDRANT_COLLECTION_NAME")
-        qdrant_local_storage_path = env_var_or_default(
+        qdrant_local_port = int(reader.read_or_default("QDRANT_LOCAL_PORT", "6333"))
+        qdrant_collection_name = reader.read_secret("QDRANT_COLLECTION_NAME")
+        qdrant_local_storage_path = reader.read_or_default(
             "QDRANT_LOCAL_STORAGE_PATH", "../qdrant-data"
         )
 

@@ -1,8 +1,7 @@
-from . import database, telemetry
-from .env import SecretsReader
+from . import database, environment, telemetry
 
 __all__ = [
     "database",
-    "SecretsReader",
+    "environment",
     "telemetry",
 ]
