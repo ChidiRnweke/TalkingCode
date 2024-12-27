@@ -1,29 +1,37 @@
 import asyncio
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Protocol, Sequence
 
 from talkingcode.pipelines.github_client import GitHubClient
 from talkingcode.pipelines.models import FileMetadata
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
 
-class ToDict[T](Protocol):
-    transformation_name: str
-    data: T
-
+class ToDict(Protocol):
     def to_dict(self) -> dict[str, Any]: ...
 
 
 class MetadataStore(Protocol):
-    async def get_all_repositories(self) -> list[str]: ...
-    async def get_file_metadata(self, repository_name: str) -> list[FileMetadata]: ...
+    async def get_all_repositories(self) -> Sequence[str]: ...
+    async def get_file_metadata(
+        self, repository_name: str
+    ) -> Sequence[FileMetadata]: ...
+    async def mark_file_as_completed(self, document_id: int) -> None: ...
 
 
 @dataclass(frozen=True, slots=True)
-class FinalPayload:
+class MergedTransformations:
     file_name: str
     repository_name: str
-    data: dict[str, dict[str, Any]]
+    document_id: int
+    data: dict[str, str]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "file_name": self.file_name,
+            "repository_name": self.repository_name,
+            "document_id": self.document_id,
+        } | self.data
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,7 +42,7 @@ class EmbeddedChunk:
 
 @dataclass(frozen=True, slots=True)
 class EmbeddingsWithPayload:
-    payload: FinalPayload
+    payload: MergedTransformations
     chunks: list[EmbeddedChunk]
 
 
@@ -50,12 +58,13 @@ class TransformedFile[T: ToDict]:
     data: T
 
     @classmethod
-    def combine(cls, files: list["TransformedFile[T]"]) -> FinalPayload:
-        data = {file.data.transformation_name: file.data.to_dict() for file in files}
+    def combine(cls, files: list["TransformedFile[T]"]) -> MergedTransformations:
+        data = {k: v for file in files for k, v in file.data.to_dict().items()}
 
-        return FinalPayload(
+        return MergedTransformations(
             file_name=files[0].file_name,
             repository_name=files[0].repository_name,
+            document_id=files[0].document_id,
             data=data,
         )
 
@@ -86,7 +95,7 @@ class TransformationPipeline:
                 repo_files = await self.metadata_store.get_file_metadata(repository)
                 tg.create_task(self.transform_repository(repo_files))
 
-    async def transform_repository(self, files: list[FileMetadata]) -> None:
+    async def transform_repository(self, files: Sequence[FileMetadata]) -> None:
         transformation_tasks: list[list[asyncio.Task[TransformedFile]]] = []
         embedding_tasks: list[asyncio.Task[list[EmbeddedChunk]]] = []
         async with asyncio.TaskGroup() as tg:
