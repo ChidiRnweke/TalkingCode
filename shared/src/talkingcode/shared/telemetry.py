@@ -20,7 +20,7 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import set_tracer_provider
+from opentelemetry.trace import get_tracer, set_tracer_provider
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -71,6 +71,41 @@ def instrument_all_async(
         return cls
 
     return class_decorator
+
+
+def run_in_span(name: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
+    tracer = get_tracer(__name__)
+
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
+        @wraps(func)
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            with tracer.start_as_current_span(name):
+                return func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def async_run_in_span(
+    name: str,
+) -> Callable[
+    [Callable[P, Coroutine[Any, Any, T]]], Callable[P, Coroutine[Any, Any, T]]
+]:
+    tracer = get_tracer(__name__)
+
+    def decorator(
+        func: Callable[P, Coroutine[Any, Any, T]],
+    ) -> Callable[P, Coroutine[Any, Any, T]]:
+        @wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            # Create a new span for each invocation of the function
+            with tracer.start_as_current_span(name):
+                return await func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 def instrument_all_sync(
