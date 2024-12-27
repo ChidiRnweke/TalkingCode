@@ -2,11 +2,9 @@ from datetime import datetime
 
 from alembic import command
 from alembic.config import Config
-from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Column,
     DateTime,
-    ForeignKey,
     ForeignKeyConstraint,
     Integer,
     String,
@@ -94,32 +92,6 @@ class GithubFileModel(Base):
 
     repository: Mapped[GitHubRepositoryModel] = relationship(
         back_populates="files", foreign_keys=[repository_name, repository_user]
-    )
-
-    embedding: Mapped[list["EmbeddedDocumentModel"]] = relationship(
-        back_populates="document", cascade="all, delete-orphan"
-    )
-
-
-class EmbeddedDocumentModel(Base):
-    __tablename__ = "embedded_documents"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    document_id: Mapped[int] = mapped_column(Integer, ForeignKey("github_files.id"))
-    embedding: Mapped[Vector] = mapped_column(Vector(3072))
-    input_token_count: Mapped[int]
-
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["document_id"],
-            ["github_files.id"],
-        ),
-    )
-
-    document: Mapped[GithubFileModel] = relationship(
-        back_populates="embedding",
-        foreign_keys=[document_id],
-        lazy="joined",
     )
 
 
