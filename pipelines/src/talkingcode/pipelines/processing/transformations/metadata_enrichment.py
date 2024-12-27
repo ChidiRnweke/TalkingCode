@@ -18,10 +18,9 @@ _openai_enrichment_semaphore = asyncio.Semaphore(10)
 
 class IdentifiedTopics(BaseModel):
     data: list[str]
-    transformation_name: str = "identified_topics"
 
     def to_dict(self) -> dict[str, Any]:
-        return self.model_dump()
+        return {"topics": self.data}
 
 
 class FileSummary(BaseModel):
@@ -29,7 +28,7 @@ class FileSummary(BaseModel):
     transformation_name: str = "file_summary"
 
     def to_dict(self) -> dict[str, Any]:
-        return self.model_dump()
+        return {"file_summary": self.data}
 
 
 @instrument_all_async(log_async_execution_time)

@@ -6,8 +6,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from openai import AsyncOpenAI
 from openai.types import CreateEmbeddingResponse
 
-from talkingcode.pipelines.config import IngestionConfig
-from talkingcode.pipelines.github_client import GitHubClient, GithubHTTPClient
+from talkingcode.pipelines.github_client import GitHubClient
 from talkingcode.pipelines.models import FileMetadata, GitHubFile
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
@@ -21,7 +20,7 @@ class TextSplitter:
     chunk_size: int = 7000
     chunk_overlap: int = 500
 
-    def split_text_to_chunks(self, text: str, name: str) -> list[str]:
+    def split_text_to_chunks(self, text: str) -> list[str]:
         splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
             "cl100k_base",
             chunk_size=self.chunk_size,
@@ -36,9 +35,12 @@ class TextSplitter:
 class OpenAIEmbedder(Embedder):
     """
     A TextEmbedder implementation that uses the OpenAI API to embed text.
+
     Args:
         api_client (AsyncOpenAI): The OpenAI API client to use.
         embedding_model (str): The name of the embedding model to use.
+        github (GitHubClient): The GitHub client to use for fetching file content.
+        splitter (TextSplitter): The text splitter to use for splitting text into chunks.
     """
 
     api_client: AsyncOpenAI
@@ -48,20 +50,12 @@ class OpenAIEmbedder(Embedder):
 
     async def embed(self, file: FileMetadata) -> list[EmbeddedChunk]:
         file_content = await self.github.get_file_content(file.file)
-        split_file_content = self.splitter.split_text_to_chunks(
-            file_content, file.file.name
-        )
+        split_file_content = self.splitter.split_text_to_chunks(file_content)
         enriched_content = [
             self._enrich_file_content(chunk, file.file) for chunk in split_file_content
         ]
         embeddings = await self._embed_document(enriched_content)
         return embeddings
-
-    @classmethod
-    def from_config(cls, config: IngestionConfig) -> "OpenAIEmbedder":
-        client = AsyncOpenAI(api_key=config.openai_api_key)
-        github = GithubHTTPClient.from_config(config)
-        return cls(client, TextSplitter(), github, config.embedding_model)
 
     def _enrich_file_content(self, file_content: str, file: GitHubFile) -> str:
         file_name = f"\nThe file name is {file.name}.\n"
