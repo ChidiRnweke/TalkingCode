@@ -1,14 +1,8 @@
-from .embedding import (
-    EmbeddingPersistence,
-    EmbeddingService,
-    OpenAIEmbedder,
-)
-from .ingestion import DatabaseService, MetadataIngestionService
+from .ingestion.ingestion import DatabaseService, MetadataIngestionService
+from .transformations.embedding import OpenAIEmbedder
 
 __all__ = [
     "MetadataIngestionService",
     "DatabaseService",
-    "EmbeddingService",
-    "EmbeddingPersistence",
     "OpenAIEmbedder",
 ]
