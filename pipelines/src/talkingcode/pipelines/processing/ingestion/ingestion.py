@@ -7,15 +7,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from talkingcode.pipelines.config import IngestionConfig
-from talkingcode.pipelines.processing.models import GitHubFile, GitHubRepository
+from talkingcode.pipelines.github_client import GitHubClient, GithubHTTPClient
+from talkingcode.pipelines.models import GitHubFile, GitHubRepository
 from talkingcode.shared.database import (
     GithubFileModel,
     GitHubRepositoryModel,
     LanguagesModel,
 )
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
-
-from .github import GitHubClient, GithubHTTPClient
 
 logger = logging.getLogger("app_logger")
 

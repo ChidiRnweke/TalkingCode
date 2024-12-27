@@ -13,7 +13,7 @@ from talkingcode.pipelines.github_models.repositories import (
     Repository,
 )
 from talkingcode.pipelines.github_models.user import User
-from talkingcode.pipelines.processing.models import (
+from talkingcode.pipelines.models import (
     AuthHeader,
     GitHubFile,
     GitHubRepository,
