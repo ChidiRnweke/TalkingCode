@@ -118,10 +118,7 @@ class InfisicalSecretsBackend(SecretsBackend):
             raise SecretsNotFoundError(f"Secret {secret_name} not found.") from e
 
     def read_or_default(self, secret_name: str, default: str) -> str:
-        try:
-            return self.read_secret(secret_name)
-        except Exception:
-            return default
+        return self.read_optional(secret_name) or default
 
     def read_optional(self, secret_name: str) -> str | None:
         try:
