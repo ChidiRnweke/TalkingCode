@@ -3,10 +3,7 @@ from datetime import datetime, timedelta
 from logging import getLogger
 
 from talkingcode.pipelines.config import IngestionConfig
-from talkingcode.pipelines.processing import (
-    EmbeddingService,
-    MetadataIngestionService,
-)
+from talkingcode.pipelines.processing import run_transformation_pipeline
 from talkingcode.shared.telemetry import log_execution_time
 
 _run_lock = asyncio.Lock()
@@ -22,10 +19,7 @@ async def download_and_persist_data() -> None:
     """
     async with _run_lock:
         app_config = IngestionConfig.from_env()
-        ingestion_service = MetadataIngestionService.from_config(app_config)
-        embedding_service = EmbeddingService.from_config(app_config)
-        await ingestion_service.fetch_and_persist_metadata()
-        await embedding_service.embed_and_persist_files()
+        await run_transformation_pipeline(app_config)
 
 
 async def run_pipeline_on_schedule(hour: int, minute: int) -> None:
