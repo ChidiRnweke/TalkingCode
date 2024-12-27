@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.github_client import GithubHTTPClient
 
-from .ingestion import DatabaseService, MetadataIngestionService
+from .ingestion import MetadataIngestionService
+from .storage import DatabaseService
 
 
 def from_config(config: IngestionConfig) -> MetadataIngestionService:
