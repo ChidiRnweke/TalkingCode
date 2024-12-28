@@ -7,3 +7,4 @@ config/
 backend/site
 site/
 .vscode
+pipelines/talkingcode.db

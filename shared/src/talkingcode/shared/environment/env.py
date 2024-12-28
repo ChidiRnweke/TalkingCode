@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from logging import getLogger
 from typing import Protocol, Self
 
+from dotenv import load_dotenv
 from infisical_client import (
     AuthenticationOptions,
     ClientSettings,
@@ -218,6 +219,7 @@ class SecretsReader:
         Returns:
             Self: The SecretsReader instance.
         """
+        load_dotenv()
         infisical_enabled = os.getenv("INFISICAL_ENABLED")
         if infisical_enabled:
             logger.info("Using Infisical as secrets backend")

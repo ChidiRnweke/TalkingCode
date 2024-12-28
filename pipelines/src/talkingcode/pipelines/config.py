@@ -20,6 +20,7 @@ class IngestionConfig:
     topics_prompt: str
     metadata_enrichment_model: str
     db_connection_string: str
+    migrations_connection_string: str
     whitelisted_extensions: list[str]
     blacklisted_files: list[str]
     qdrant_server_mode: bool
@@ -38,7 +39,12 @@ class IngestionConfig:
 
         github_api_key = reader.read_secret("GITHUB_API_TOKEN")
         api_key = reader.read_secret("OPENAI_API_KEY")
-        conn_string = reader.read_secret("ASYNC_DATABASE_URL")
+        conn_string = reader.read_or_default(
+            "ASYNC_DATABASE_URL", "sqlite+aiosqlite:///talkingcode.sqlite"
+        )
+        migrations_connection_string = reader.read_or_default(
+            "MIGRATIONS_CONNECTION_STRING", "sqlite:///talkingcode.sqlite"
+        )
         whitelisted_extensions = reader.read_secret("WHITELISTED_EXTENSIONS")
 
         blacklisted_files = reader.read_secret("BLACKLISTED_FILES")
@@ -49,7 +55,9 @@ class IngestionConfig:
             "QDRANT_SERVER_URL", "http://localhost:6333"
         )
         qdrant_local_port = int(reader.read_or_default("QDRANT_LOCAL_PORT", "6333"))
-        qdrant_collection_name = reader.read_secret("QDRANT_COLLECTION_NAME")
+        qdrant_collection_name = reader.read_or_default(
+            "QDRANT_COLLECTION_NAME", "talkingcode"
+        )
         qdrant_local_storage_path = reader.read_or_default(
             "QDRANT_LOCAL_STORAGE_PATH", "../qdrant-data"
         )
@@ -63,6 +71,7 @@ class IngestionConfig:
             db_connection_string=conn_string,
             whitelisted_extensions=whitelisted_extensions,
             blacklisted_files=blacklisted_files,
+            migrations_connection_string=migrations_connection_string,
             topics_prompt=topics_prompt,
             metadata_enrichment_model=metadata_enrichment_model,
             qdrant_server_mode=qdrant_server_mode,

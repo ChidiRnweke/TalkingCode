@@ -1,7 +1,5 @@
 from datetime import datetime
 
-from alembic import command
-from alembic.config import Config
 from sqlalchemy import (
     Column,
     DateTime,
@@ -11,12 +9,6 @@ from sqlalchemy import (
     Table,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-
-def run_migrations(location: str) -> None:
-    alembic_cfg = Config()
-    alembic_cfg.set_main_option("script_location", location)
-    command.upgrade(alembic_cfg, "head")
 
 
 class Base(DeclarativeBase):
