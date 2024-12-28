@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from logging import getLogger
 
 from talkingcode.pipelines.config import IngestionConfig
-from talkingcode.pipelines.database import run_migrations
 from talkingcode.pipelines.processing import run_transformation_pipeline
 from talkingcode.shared.telemetry import log_execution_time
 
@@ -20,7 +19,6 @@ async def download_and_persist_data() -> None:
     """
     async with _run_lock:
         app_config = IngestionConfig.from_env()
-        run_migrations()
         await run_transformation_pipeline(app_config)
 
 
