@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Self
 
-from talkingcode.shared.database import GithubFileModel, GitHubRepositoryModel
+from talkingcode.pipelines.database import GithubFileModel, GitHubRepositoryModel
 
 
 @dataclass(frozen=True, slots=True)
