@@ -49,7 +49,8 @@ class OpenAIEmbedder(Embedder):
     embedding_model: str
 
     async def embed(self, file: FileMetadata) -> list[EmbeddedChunk]:
-        file_content = await self.github.get_file_content(file.file)
+        async with self.github as client:
+            file_content = await client.get_file_content(file.file)
         split_file_content = self.splitter.split_text_to_chunks(file_content)
         enriched_content = [
             self._enrich_file_content(chunk, file.file) for chunk in split_file_content

@@ -24,6 +24,9 @@ from talkingcode.shared.telemetry import instrument_all_async, log_async_executi
 logger = getLogger("app_logger")
 
 
+_github_semaphore = asyncio.Semaphore(30)
+
+
 class GitHubClient(Protocol):
     async def get_all_repositories(self) -> list[GitHubRepository]: ...
 
@@ -32,6 +35,9 @@ class GitHubClient(Protocol):
     async def get_all_files(self, repo: GitHubRepository) -> list[GitHubFile]: ...
 
     async def get_user(self) -> str: ...
+
+    async def __aenter__(self) -> "GitHubClient": ...
+    async def __aexit__(self, exc_type, exc_val, exc_tb): ...
 
 
 @instrument_all_async(log_async_execution_time)
@@ -46,6 +52,13 @@ class GithubHTTPClient(GitHubClient):
     """
 
     auth_header: AuthHeader
+    client: AsyncClient = AsyncClient(timeout=500)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.client.aclose()
 
     async def get_all_repositories(self) -> list[GitHubRepository]:
         """
@@ -57,8 +70,8 @@ class GithubHTTPClient(GitHubClient):
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user/repos"
         language_result = []
-        async with AsyncClient(timeout=500) as client:
-            response = await client.get(path, headers=header)
+        async with _github_semaphore:
+            response = await self.client.get(path, headers=header)
             _repos = response.json()
             repos = RepositoriesResponse(root=_repos)
         logger.info(
@@ -85,15 +98,15 @@ class GithubHTTPClient(GitHubClient):
     async def get_file_content(self, file: GitHubFile) -> str:
         header = self.auth_header.to_dict()
         path = file.content_url
-        async with AsyncClient(timeout=500) as client:
-            response = await client.get(path, headers=header)
+        async with _github_semaphore:
+            response = await self.client.get(path, headers=header)
             return response.text
 
     async def language_from_repo(self, repo: Repository) -> list[str]:
         header = self.auth_header.to_dict()
         path = repo.languages_url
-        async with AsyncClient(timeout=500) as client:
-            response = await client.get(path, headers=header)
+        async with _github_semaphore:
+            response = await self.client.get(path, headers=header)
             langs_and_usage = Languages(root=response.json())
             if langs := langs_and_usage.root:
                 return list(langs.keys())
@@ -104,15 +117,17 @@ class GithubHTTPClient(GitHubClient):
         logger.info(f"Fetching files for {repo.name}")
         header = self.auth_header.to_dict()
         path = f"https://api.github.com/repos/{repo.user}/{repo.name}/git/trees/{repo.default_branch}?recursive=1"
-        async with AsyncClient(timeout=500) as client:
-            response = await client.get(path, headers=header)
+
+        async with _github_semaphore:
+            response = await self.client.get(path, headers=header)
             files = GitTree(**response.json())
             file_paths = [file.path for file in files.tree if file.type == "blob"]
             links = []
             for file_path in file_paths:
                 content_path = f"https://api.github.com/repos/{repo.user}/{repo.name}/contents/{file_path}"
-                file = client.get(content_path, headers=header)
-                links.append(file)
+                async with _github_semaphore:
+                    file = self.client.get(content_path, headers=header)
+                    links.append(file)
             responses = await asyncio.gather(*links)
             responses = [ContentTree(**response.json()) for response in responses]
             logger.info(f"Found {len(responses)} files for {repo.name}")
@@ -131,8 +146,8 @@ class GithubHTTPClient(GitHubClient):
     async def get_user(self) -> str:
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user"
-        async with AsyncClient(timeout=500) as client:
-            response = await client.get(path, headers=header)
+        async with _github_semaphore:
+            response = await self.client.get(path, headers=header)
             return User(**response.json()).root.login
 
     @classmethod

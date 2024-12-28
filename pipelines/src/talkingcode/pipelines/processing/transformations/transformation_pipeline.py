@@ -45,7 +45,8 @@ class TransformationPipeline:
         async with asyncio.TaskGroup() as tg:
             for file in files:
                 file_transformations = []
-                content = await self.github.get_file_content(file.file)
+                async with self.github as client:
+                    content = await client.get_file_content(file.file)
                 embedding_tasks.append(tg.create_task(self.embedder.embed(file)))
                 for transformation in self.file_transformations:
                     transformed = tg.create_task(
