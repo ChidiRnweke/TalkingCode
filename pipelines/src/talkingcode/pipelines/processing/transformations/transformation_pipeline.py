@@ -1,5 +1,6 @@
 import asyncio
 from dataclasses import dataclass
+from logging import getLogger
 from typing import Sequence
 
 from talkingcode.pipelines.github_client import GitHubClient
@@ -16,6 +17,8 @@ from .transformed_file import (
     TransformedFile,
 )
 
+logger = getLogger("app_logger")
+
 
 @instrument_all_async(log_async_execution_time)
 @dataclass(frozen=True, slots=True)
@@ -27,11 +30,14 @@ class TransformationPipeline:
     payload_store: PayloadStore
 
     async def transform_all_repositories(self) -> None:
+        logger.info("Starting transformation pipeline")
         repositories = await self.metadata_store.get_all_repositories()
         async with asyncio.TaskGroup() as tg:
             for repository in repositories:
                 repo_files = await self.metadata_store.get_file_metadata(repository)
+                logger.info(f"Processing repository {repository}")
                 tg.create_task(self.transform_repository(repo_files))
+        logger.info("Transformation pipeline completed")
 
     async def transform_repository(self, files: Sequence[FileMetadata]) -> None:
         transformation_tasks: list[list[asyncio.Task[TransformedFile]]] = []
