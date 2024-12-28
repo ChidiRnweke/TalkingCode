@@ -2,6 +2,7 @@ import asyncio
 import inspect
 import logging
 import time
+from contextlib import contextmanager
 from functools import wraps
 from logging import getLogger
 from typing import Any, Callable, Coroutine, ParamSpec, TypeVar
@@ -25,6 +26,15 @@ from opentelemetry.trace import get_tracer, set_tracer_provider
 T = TypeVar("T")
 P = ParamSpec("P")
 C = TypeVar("C", bound=type)
+
+
+@contextmanager
+def suppress_stack_trace():
+    """Suppresses the decorator's code from appearing in stack traces."""
+    try:
+        yield
+    except Exception:
+        raise
 
 
 def instrument_all_async(
@@ -163,13 +173,14 @@ def log_execution_time(func: Callable[P, T]) -> Callable[P, T]:
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         start_time = time.time()
-        try:
-            result = func(*args, **kwargs)
-        finally:
-            end_time = time.time()
-            execution_time = end_time - start_time
-            execution_time_histogram.record(execution_time, attributes=attributes)
-        return result
+        with suppress_stack_trace():
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                end_time = time.time()
+                execution_time = end_time - start_time
+                execution_time_histogram.record(execution_time, attributes=attributes)
+            return result
 
     return wrapper
 
@@ -203,15 +214,16 @@ def log_async_execution_time(
     @wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         start_time = time.time()
-        try:
-            result = await func(*args, **kwargs)
-        finally:
-            end_time = time.time()
-            execution_time = end_time - start_time
+        with suppress_stack_trace():
+            try:
+                result = await func(*args, **kwargs)
+            finally:
+                end_time = time.time()
+                execution_time = end_time - start_time
 
-            execution_time_histogram.record(execution_time, attributes=attributes)
+                execution_time_histogram.record(execution_time, attributes=attributes)
 
-        return result
+            return result
 
     return wrapper
 
@@ -232,24 +244,27 @@ def _measure_blocking_time(
     )
     attributes = _function_metadata(f)
 
+    @wraps(f)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        coroutine = f(*args, **kwargs)
-        fut = asyncio.Future()
-        s = time.perf_counter()
+        loop = asyncio.get_running_loop()
+        start_time = time.perf_counter()
 
-        def done(arg=None):
-            try:
-                next_ = coroutine.send(arg)
-                next_.add_done_callback(done)
-            except StopIteration as e:
-                block_time = round(time.perf_counter() - s, 2)
-                blocking_time_histogram.record(block_time, attributes=attributes)
-                if block_time > 0.1:
+        with suppress_stack_trace():
+            task = loop.create_task(f(*args, **kwargs))
+            while not task.done():
+                loop_start = time.perf_counter()
+                await asyncio.sleep(0)
+                loop_end = time.perf_counter()
+
+                blocking_time = loop_end - loop_start
+                if blocking_time > 0.1:
                     blocking_counter.add(1)
-                fut.set_result(e.value)
+                    blocking_time_histogram.record(blocking_time, attributes=attributes)
 
-        done()
-        return await fut
+            result = await task
+            total_time = time.perf_counter() - start_time
+            blocking_time_histogram.record(total_time, attributes=attributes)
+            return result
 
     return wrapper
 
@@ -271,13 +286,14 @@ def async_log_failure(
 
     @wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-        try:
-            result = await func(*args, **kwargs)
-        except Exception as e:
-            logger = getLogger("app_logger")
-            logger.exception(e, stack_info=True, stacklevel=5, extra=attributes)
-            raise e
-        return result
+        with suppress_stack_trace():
+            try:
+                result = await func(*args, **kwargs)
+            except Exception as e:
+                logger = getLogger("app_logger")
+                logger.exception(e, stack_info=True, stacklevel=5, extra=attributes)
+                raise e
+            return result
 
     return wrapper
 
