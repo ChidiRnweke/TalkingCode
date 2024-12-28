@@ -35,40 +35,42 @@ class DatabaseService(MetadataStorage):
         repo_model = repo.to_db_object()
         stmt = select(GitHubRepositoryModel).filter_by(name=repo.name, user=repo.user)
         async with self.session_maker() as session:
-            existing_repo = (await session.scalars(stmt)).first()
+            with session.no_autoflush:
+                existing_repo = (await session.scalars(stmt)).first()
 
-            if existing_repo:
-                existing_repo.description = repo_model.description
-                existing_repo.url = repo_model.url
+                if existing_repo:
+                    existing_repo.description = repo_model.description
+                    existing_repo.url = repo_model.url
 
-                existing_files = await self._get_existing_files(session, repo)
-                for file in files:
-                    await self._process_if_new(
-                        file,
-                        repo,
-                        existing_repo,
-                        existing_files,
-                    )
+                    existing_files = await self._get_existing_files(session, repo)
+                    for file in files:
+                        await self._process_if_new(
+                            file,
+                            repo,
+                            existing_repo,
+                            existing_files,
+                        )
 
-            else:
-                session.add(repo_model)
-                for file in files:
-                    file_model = file.to_db_object(repo)
-                    repo_model.files.append(file_model)
+                else:
+                    session.add(repo_model)
+                    for file in files:
+                        file_model = file.to_db_object(repo)
+                        repo_model.files.append(file_model)
 
-        existing_languages = await self._get_existing_languages(session)
+                existing_languages = await self._get_existing_languages(session)
 
-        for language in set(repo.languages):
-            if language not in existing_languages:
-                lang_model = LanguagesModel(language=language)
-                session.add(lang_model)
-                existing_languages[language] = lang_model
+                for language in set(repo.languages):
+                    if language not in existing_languages:
+                        lang_model = LanguagesModel(language=language)
+                        session.add(lang_model)
+                        existing_languages[language] = lang_model
 
-            if existing_languages[language] not in repo_model.languages:
-                repo_model.languages.append(existing_languages[language])
+                    if existing_languages[language] not in repo_model.languages:
+                        repo_model.languages.append(existing_languages[language])
 
-        await session.commit()
-        logger.info(f"Saved {repo.name} to the database")
+                await session.flush()
+                await session.commit()
+                logger.info(f"Saved {repo.name} to the database")
 
     async def _process_if_new(
         self,
