@@ -4,8 +4,8 @@ from typing import Sequence
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from talkingcode.pipelines.database import GithubFileModel, GitHubRepositoryModel
 from talkingcode.pipelines.models import FileMetadata
-from talkingcode.shared.database import GithubFileModel, GitHubRepositoryModel
 
 from .transformed_file import MetadataStore
 
@@ -13,6 +13,9 @@ from .transformed_file import MetadataStore
 @dataclass(frozen=True, slots=True)
 class MetadataStorageService(MetadataStore):
     session: async_sessionmaker[AsyncSession]
+    allowed_extensions: Sequence[str]
+    disallowed_files: Sequence[str]
+
     """
     A metadata storage service that interacts with the database to store and retrieve metadata about files and repositories.
 
@@ -27,8 +30,12 @@ class MetadataStorageService(MetadataStore):
             return result.all()
 
     async def get_file_metadata(self, repository_name: str) -> Sequence[FileMetadata]:
-        stmt = select(GithubFileModel).where(
-            GithubFileModel.repository_name == repository_name
+        stmt = (
+            select(GithubFileModel)
+            .where(GithubFileModel.repository_name == repository_name)
+            .where(GithubFileModel.is_embedded.is_(False))
+            .where(GithubFileModel.name.not_in(self.disallowed_files))
+            .where(GithubFileModel.file_extension.in_(self.allowed_extensions))
         )
         async with self.session() as session:
             result = await session.scalars(stmt)
@@ -43,5 +50,5 @@ class MetadataStorageService(MetadataStore):
         )
 
         async with self.session() as session:
-            await session.scalars(stmt)
+            await session.execute(stmt)
             await session.commit()

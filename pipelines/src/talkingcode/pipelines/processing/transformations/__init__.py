@@ -50,7 +50,7 @@ def qdrant_vector_store_from_config(config: IngestionConfig) -> QdrantVectorStor
     if server_mode:
         client = AsyncQdrantClient(url=config.qdrant_server_url)
     else:
-        client = AsyncQdrantClient(port=config.qdrant_local_port, path=local_storage)
+        client = AsyncQdrantClient(path=local_storage)
     return QdrantVectorStore(client, metadata_store, collection_name)
 
 
@@ -67,7 +67,11 @@ def metadata_storage_from_config(config: IngestionConfig) -> MetadataStorageServ
     """
     engine = create_async_engine(config.db_connection_string)
     Session = async_sessionmaker(engine, expire_on_commit=False)
-    return MetadataStorageService(session=Session)
+    return MetadataStorageService(
+        session=Session,
+        allowed_extensions=config.allowed_extensions,
+        disallowed_files=config.skipped_files,
+    )
 
 
 __all__ = ["from_config"]
