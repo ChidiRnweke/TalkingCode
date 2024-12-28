@@ -36,8 +36,8 @@ class MetadataIngestionService:
         await self._process_repositories()
 
     async def _process_repositories(self) -> None:
-        user = await self.client.get_user()
-        repos = await self.client.get_all_repositories()
+        user = self.client.get_user()
+        repos = self.client.get_all_repositories()
         (user, repos) = await asyncio.gather(*[user, repos])
         repo_futures = [self._process_repository(user, repo) for repo in repos]
         await asyncio.gather(*repo_futures)
