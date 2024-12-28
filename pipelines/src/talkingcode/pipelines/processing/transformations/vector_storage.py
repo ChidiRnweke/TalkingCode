@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 from logging import getLogger
 from typing import Sequence
@@ -20,6 +21,7 @@ class QdrantVectorStore(PayloadStore):
     collection_name: str
 
     async def persist_embeddings(self, embeddings: EmbeddingsWithMetadata) -> None:
+        await self._create_if_not_exists(embeddings.chunks[0].embedding)
         logger.info(f"Storing embeddings for {embeddings.payload.file_name}")
         points = self._embeddings_to_point_struct(embeddings)
         await self.qdrant_client.upsert(self.collection_name, points)
@@ -34,12 +36,8 @@ class QdrantVectorStore(PayloadStore):
     def _embeddings_to_point_struct(
         self, embeddings: EmbeddingsWithMetadata
     ) -> list[PointStruct]:
-        file_name = embeddings.payload.file_name
-        repository_name = embeddings.payload.repository_name
         metadata = embeddings.payload.to_dict()
-        ids = [
-            f"{repository_name}/{file_name}/{i}" for i in range(len(embeddings.chunks))
-        ]
+        ids = [str(uuid.uuid4()) for _ in embeddings.chunks]
         return [
             PointStruct(id=id, vector=chunk.embedding, payload=metadata)
             for chunk, id in zip(embeddings.chunks, ids)
