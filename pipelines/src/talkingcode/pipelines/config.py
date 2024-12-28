@@ -6,14 +6,14 @@ from talkingcode.shared.environment import SecretsReader
 from .default_prompts import metadata_prompt
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class QdrantConfig:
     server_mode: bool
     server_url: str
     local_port: int
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class IngestionConfig:
     github_token: str
     openai_api_key: str
@@ -21,8 +21,8 @@ class IngestionConfig:
     metadata_enrichment_model: str
     db_connection_string: str
     migrations_connection_string: str
-    whitelisted_extensions: list[str]
-    blacklisted_files: list[str]
+    allowed_extensions: list[str]
+    skipped_files: list[str]
     qdrant_server_mode: bool
     qdrant_server_url: str
     qdrant_local_port: int
@@ -45,12 +45,12 @@ class IngestionConfig:
         migrations_connection_string = reader.read_or_default(
             "MIGRATIONS_CONNECTION_STRING", "sqlite:///talkingcode.sqlite"
         )
-        whitelisted_extensions = reader.read_secret("WHITELISTED_EXTENSIONS")
+        allowed_extensions = reader.read_secret("WHITELISTED_EXTENSIONS")
 
-        blacklisted_files = reader.read_secret("BLACKLISTED_FILES")
+        skipped_files = reader.read_secret("BLACKLISTED_FILES")
         topics_prompt = reader.read_or_default("TOPICS_PROMPT", metadata_prompt)
         metadata_enrichment_model = reader.read_secret("METADATA_ENRICHMENT_MODEL")
-        qdrant_server_mode = bool(reader.read_or_default("QDRANT_SERVER_MODE", "False"))
+        qdrant_server_mode = bool(reader.read_optional("QDRANT_SERVER_MODE"))
         qdrant_server_url = reader.read_or_default(
             "QDRANT_SERVER_URL", "http://localhost:6333"
         )
@@ -62,15 +62,15 @@ class IngestionConfig:
             "QDRANT_LOCAL_STORAGE_PATH", "../qdrant-data"
         )
 
-        whitelisted_extensions = whitelist_str_as_list(whitelisted_extensions)
-        blacklisted_files = whitelist_str_as_list(blacklisted_files)
+        allowed_extensions = strings_to_list(allowed_extensions)
+        skipped_files = strings_to_list(skipped_files)
 
         return cls(
             github_token=github_api_key,
             openai_api_key=api_key,
             db_connection_string=conn_string,
-            whitelisted_extensions=whitelisted_extensions,
-            blacklisted_files=blacklisted_files,
+            allowed_extensions=allowed_extensions,
+            skipped_files=skipped_files,
             migrations_connection_string=migrations_connection_string,
             topics_prompt=topics_prompt,
             metadata_enrichment_model=metadata_enrichment_model,
@@ -82,12 +82,12 @@ class IngestionConfig:
         )
 
 
-def whitelist_str_as_list(whitelisted_extensions: str) -> list[str]:
+def strings_to_list(string_list: str) -> list[str]:
     try:
-        whitelist = json.loads(whitelisted_extensions)
+        _list = json.loads(string_list)
     except json.JSONDecodeError:
         raise ValueError(
-            'WHITELISTED_EXTENSIONS must be a valid JSON array of strings. Example: \'["py", "java"]\''
+            f'{string_list} must be a valid JSON array of strings. Example: \'["py", "java"]\''
         )
 
-    return whitelist
+    return _list
