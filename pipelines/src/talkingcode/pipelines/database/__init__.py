@@ -1,24 +1,11 @@
 from logging import getLogger
 from sqlite3 import Connection as SQLiteConnection
 
-from alembic import command
-from alembic.config import Config
 from sqlalchemy import Connection, Engine, event
 
-from .schema import Base, GithubFileModel, GitHubRepositoryModel
+from .schema import Base, GithubFileModel, GitHubRepositoryModel, LanguagesModel
 
 logger = getLogger("app_logger")
-
-
-def run_migrations() -> None:
-    logger.info("Running migrations...")
-    try:
-        alembic_cfg = Config()
-        command.upgrade(alembic_cfg, "head")
-        logger.info("Migrations complete.")
-    except Exception as e:
-        logger.error(f"Error running migrations: {e}")
-        raise e
 
 
 @event.listens_for(Engine, "connect")
@@ -29,4 +16,4 @@ def enable_foreign_keys(dbapi_connection: Connection, connection_record) -> None
         cursor.close()
 
 
-__all__ = ["Base", "GitHubRepositoryModel", "GithubFileModel", "run_migrations"]
+__all__ = ["Base", "GitHubRepositoryModel", "GithubFileModel", "LanguagesModel"]
