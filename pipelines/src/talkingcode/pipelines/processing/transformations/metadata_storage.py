@@ -3,6 +3,7 @@ from typing import Sequence
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from talkingcode.pipelines.database import GithubFileModel, GitHubRepositoryModel
 from talkingcode.pipelines.models import FileMetadata
@@ -42,10 +43,13 @@ class MetadataStorageService(MetadataStore):
             files = result.all()
             return [FileMetadata.from_db_object(file) for file in files]
 
-    async def mark_file_as_completed(self, document_id: int) -> None:
+    @retry(
+        stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=20)
+    )
+    async def mark_files_as_completed(self, document_ids: list[int]) -> None:
         stmt = (
             update(GithubFileModel)
-            .where(GithubFileModel.id == document_id)
+            .where(GithubFileModel.id.in_(document_ids))
             .values(is_embedded=True)
         )
 

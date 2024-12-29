@@ -40,28 +40,37 @@ class TransformationPipeline:
         logger.info("Transformation pipeline completed")
 
     async def transform_repository(self, files: Sequence[FileMetadata]) -> None:
-        transformation_tasks: list[list[asyncio.Task[TransformedFile]]] = []
+        transform_tasks: list[list[asyncio.Task[TransformedFile]]] = []
         embedding_tasks: list[asyncio.Task[list[EmbeddedChunk]]] = []
+        succeeded_files = []
         async with asyncio.TaskGroup() as tg:
             for file in files:
                 file_transformations = []
-                async with self.github as client:
-                    content = await client.get_file_content(file.file)
+                content = await self.github.get_file_content(file.file)
                 embedding_tasks.append(tg.create_task(self.embedder.embed(file)))
-                for transformation in self.file_transformations:
-                    transformed = tg.create_task(
-                        transformation.transform(file, content)
-                    )
+
+                for transform in self.file_transformations:
+                    transformed = tg.create_task(transform.transform(file, content))
                     file_transformations.append(transformed)
 
-                transformation_tasks.append(file_transformations)
+                transform_tasks.append(file_transformations)
 
         async with asyncio.TaskGroup() as tg:
-            for transformations, embeddings in zip(
-                transformation_tasks, embedding_tasks
-            ):
-                _transforms = [t.result() for t in transformations]
+            for transformations, embeddings in zip(transform_tasks, embedding_tasks):
+                try:
+                    _embeddings = embeddings.result()
+                except Exception as e:
+                    logger.error(f"Failed to embed file: {e}")
+                    continue
+                try:
+                    _transforms = [t.result() for t in transformations]
+                except Exception as e:
+                    logger.error(f"Failed to transform file: {e}")
+                    continue
+
+                succeeded_files.append(_transforms[0].document_id)
                 payload = TransformedFile.combine(_transforms)
-                _embeddings = embeddings.result()
                 _payload = EmbeddingsWithMetadata(payload=payload, chunks=_embeddings)
                 tg.create_task(self.payload_store.persist_embeddings(_payload))
+
+        await self.metadata_store.mark_files_as_completed(succeeded_files)
