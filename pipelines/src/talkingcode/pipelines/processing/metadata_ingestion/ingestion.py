@@ -36,19 +36,16 @@ class MetadataIngestionService:
         await self._process_repositories()
 
     async def _process_repositories(self) -> None:
-        async with self.client as client:
-            user = client.get_user()
-            _repos = client.get_all_repositories()
-            (user, _repos) = await asyncio.gather(*[user, _repos])
-            _repos = [self._process_repository(user, repo, client) for repo in _repos]
-            await asyncio.gather(*_repos)
+        user = self.client.get_user()
+        _repos = self.client.get_all_repositories()
+        (user, _repos) = await asyncio.gather(*[user, _repos])
+        _repos = [self._process_repository(user, repo) for repo in _repos]
+        await asyncio.gather(*_repos)
 
-    async def _process_repository(
-        self, user: str, repo: "GitHubRepository", client: GitHubClient
-    ) -> None:
+    async def _process_repository(self, user: str, repo: "GitHubRepository") -> None:
         if repo.fork or repo.owner != user:
             return None
         logger.info(f"Processing repository {repo.name}")
-        files = await client.get_all_files(repo)
+        files = await self.client.get_all_files(repo)
         logger.info(f"Found {len(files)} files in {repo.name}")
         await self.db.write_to_database(repo, files)
