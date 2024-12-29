@@ -13,7 +13,7 @@ from .transformed_file import FileTransformation, TransformedFile
 
 logger = getLogger("app_logger")
 
-_openai_enrichment_semaphore = asyncio.Semaphore(10)
+_openai_enrichment_semaphore = asyncio.Semaphore(5)
 
 
 class IdentifiedTopics(BaseModel):
