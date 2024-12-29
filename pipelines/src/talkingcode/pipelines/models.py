@@ -69,6 +69,12 @@ class GitHubFile:
             path_in_project=file.path_in_repo,
         )
 
+    def enrich_content(self, file_content: str) -> str:
+        file_name = f"\nThe file name is {self.name}.\n"
+        file_place_in_project = f"The file is located at {self.path_in_project}.\n"
+        file_extension = f"The file extension is {self.extension}.\n"
+        return file_content + file_name + file_place_in_project + file_extension
+
     def to_db_object(self, repository: GitHubRepository) -> "GithubFileModel":
         return GithubFileModel(
             name=self.name,

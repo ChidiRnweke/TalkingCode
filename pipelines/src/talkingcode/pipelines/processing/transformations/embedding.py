@@ -7,7 +7,7 @@ from openai import AsyncOpenAI
 from openai.types import CreateEmbeddingResponse
 
 from talkingcode.pipelines.github_client import GitHubClient
-from talkingcode.pipelines.models import FileMetadata, GitHubFile
+from talkingcode.pipelines.models import FileMetadata
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
 from .transformed_file import EmbeddedChunk, Embedder
@@ -49,20 +49,15 @@ class OpenAIEmbedder(Embedder):
     embedding_model: str
 
     async def embed(self, file: FileMetadata) -> list[EmbeddedChunk]:
-        file_content = await self.github.get_file_content(file.file)
+        github_file = file.file
+        file_content = await self.github.get_file_content(github_file)
         file_content = "Empty file" if len(file_content) == 0 else file_content
-        split_file_content = self.splitter.split_text_to_chunks(file_content)
-        enriched_content = [
-            self._enrich_file_content(chunk, file.file) for chunk in split_file_content
-        ]
-        embeddings = await self._embed_document(enriched_content)
-        return embeddings
 
-    def _enrich_file_content(self, file_content: str, file: GitHubFile) -> str:
-        file_name = f"\nThe file name is {file.name}.\n"
-        file_place_in_project = f"The file is located at {file.path_in_project}.\n"
-        file_extension = f"The file extension is {file.extension}.\n"
-        return file_content + file_name + file_place_in_project + file_extension
+        split_content = self.splitter.split_text_to_chunks(file_content)
+        enriched_chunks = [github_file.enrich_content(chunk) for chunk in split_content]
+
+        embeddings = await self._embed_document(enriched_chunks)
+        return embeddings
 
     async def _embed_document(self, text: list[str]) -> list[EmbeddedChunk]:
         tasks: list[asyncio.Task[CreateEmbeddingResponse]] = []
