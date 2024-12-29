@@ -104,15 +104,13 @@ async def _fetch_openai_response[A](
     content: str,
     response_format: Type[A],
 ):
+    enriched = file.file.enrich_content(content)
     async with _openai_enrichment_semaphore:
         return await client.beta.chat.completions.parse(
             model=model,
             messages=[
                 {"role": "system", "content": prompt},
-                {
-                    "role": "user",
-                    "content": f"repo: {file.repository_name}, file: {file.file} content: {content}",
-                },
+                {"role": "user", "content": enriched},
             ],
             response_format=response_format,
         )
