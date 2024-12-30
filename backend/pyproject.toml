@@ -16,6 +16,7 @@ python-dotenv = "^1.0.1"
 asyncpg = "^0.29.0"
 qdrant-client = "1.12.1"
 alembic = "^1.14.0"
+aiosqlite = "^0.20.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
