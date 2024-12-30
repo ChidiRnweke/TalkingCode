@@ -6,7 +6,6 @@ from typing import AsyncGenerator, AsyncIterator, TypedDict, cast
 
 from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from openai import AsyncOpenAI
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +22,9 @@ from talkingcode.backend.rag import (
     OpenAIGenerationService,
     RemainingSpend,
     RetrievalAugmentedGeneration,
-    SQLRetrievalService,
+    RetrievalService,
+    SQLTokenStore,
+    vector_store_from_config,
 )
 
 logger = logging.getLogger("app_logger")
@@ -34,6 +35,7 @@ router = APIRouter()
 
 class State(TypedDict):
     app_config: AppConfig
+    retrieval_service: RetrievalService
 
 
 @asynccontextmanager
@@ -47,10 +49,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[State]:
     Args:
         app (FastAPI): The FastAPI application instance.
     """
-    yield {"app_config": AppConfig.from_config()}
+    config = AppConfig.from_config()
+    retrieval_service = vector_store_from_config(config)
+    yield {
+        "app_config": AppConfig.from_config(),
+        "retrieval_service": retrieval_service,
+    }
 
 
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
+async def get_database_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
     """
     This function is used to get an async session from the application configuration.
     It draws the session from the application configuration and yields it to the caller.
@@ -67,120 +74,29 @@ async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-def get_openAI_client(request: Request) -> AsyncOpenAI:
+async def get_retrieval_service(request: Request) -> RetrievalService:
     """
-    This function is used to get the OpenAI client from the application configuration.
-    It returns the OpenAI client from the application configuration.
+    This function is used to get the retrieval service from the application configuration.
+    It returns the retrieval service from the application configuration.
 
     Returns:
-        (AsyncOpenAI): The OpenAI client.
+        (RetrievalService): The retrieval service.
     """
+    retrieval_service = cast(RetrievalService, request.state.retrieval_service)
+    return retrieval_service
+
+
+def get_app_config(request: Request) -> AppConfig:
     config = cast(AppConfig, request.state.app_config)
-    return config.openAI_client
-
-
-def get_embedding_model(request: Request) -> str:
-    """
-    This function is used to get the embedding model from the application configuration.
-    It is required by the `EmbeddingService` to embed the text.
-
-    Returns:
-        (str): The name of the text embedding model.
-    """
-    config = cast(AppConfig, request.state.app_config)
-    return config.embedding_model
-
-
-def get_top_k(request: Request) -> int:
-    """
-    This function is used to get the top_k value from the application configuration.
-    It is used to determine the number of top candidates to return from the model.
-
-    Returns:
-        (int): The number of top candidates to return from the model.
-    """
-    config = cast(AppConfig, request.state.app_config)
-    return config.top_k
-
-
-def get_chat_model(request: Request) -> str:
-    """
-    This function is used to get the chat model from the application configuration.
-    It is required by the `GenerationService` to generate the response.
-
-    Returns:
-        (str): The name of the chat model.
-    """
-    config = cast(AppConfig, request.state.app_config)
-    return config.chat_model
-
-
-def get_system_prompt(request: Request) -> str:
-    """
-    This function is used to get the system prompt from the application configuration.
-    It is required by the `GenerationService` to generate the response.
-
-    Returns:
-        (str): The system prompt to use for the chat model.
-    """
-    config = cast(AppConfig, request.state.app_config)
-    return config.system_prompt
-
-
-def get_max_spend(request: Request) -> float:
-    """
-    This function is used to get the maximum spend from the application configuration.
-    It is used to determine the maximum amount of money that can be spent in a day.
-
-    Returns:
-        (float): The maximum amount of money that can be spent in a day.
-    """
-    config = cast(AppConfig, request.state.app_config)
-    return config.max_spend
-
-
-def get_embedder(request: Request) -> OpenAIEmbeddingService:
-    """
-    This function is used to get the OpenAI embedding service.
-    It is used to embed the text using the OpenAI API. All of the required dependencies
-    are transitively provided by the application configuration singleton.
-
-    Returns:
-        (OpenAIEmbeddingService): The OpenAI embedding service.
-    """
-    openAI_client = get_openAI_client(request)
-    embedding_model = get_embedding_model(request)
-    return OpenAIEmbeddingService(client=openAI_client, embedding_model=embedding_model)
-
-
-def get_generator(request: Request) -> OpenAIGenerationService:
-    """
-    This function is used to get the OpenAI generation service.
-    It is used to generate the response using the OpenAI API. All of the required dependencies
-    are transitively provided by the application configuration singleton.
-
-    Returns:
-        (OpenAIGenerationService): The OpenAI generation service.
-    """
-    openAI_client = get_openAI_client(request)
-    chat_model = get_chat_model(request)
-    system_prompt = get_system_prompt(request)
-
-    return OpenAIGenerationService(
-        client=openAI_client,
-        chat_model=chat_model,
-        system_prompt=system_prompt,
-    )
+    return config
 
 
 @router.post("/")
 async def chat(
     question: InputQuery,
-    session: AsyncSession = Depends(get_session),
-    max_spend: float = Depends(get_max_spend),
-    top_k: int = Depends(get_top_k),
-    openai_embedding_service: OpenAIEmbeddingService = Depends(get_embedder),
-    openai_generation_service: OpenAIGenerationService = Depends(get_generator),
+    session: AsyncSession = Depends(get_database_session),
+    app_config: AppConfig = Depends(get_app_config),
+    retrieval_service: RetrievalService = Depends(get_retrieval_service),
 ) -> StreamingResponse:
     """
     This function is used to handle the chat endpoint. It is used to handle the incoming
@@ -192,38 +108,43 @@ async def chat(
         question (InputQuery): The input query object.
         session (AsyncSession): The async session object. This is provided by the FastAPI
             dependency injection.
-
-    Returns:
-        (RAGResponse): The response object containing the response and the session ID.
     """
+
+    token_store = SQLTokenStore(async_session=session)
+    openai_embedding_service = OpenAIEmbeddingService(
+        client=app_config.openAI_client,
+        embedding_model=app_config.embedding_model,
+        token_store=token_store,
+    )
+    openai_generation_service = OpenAIGenerationService(
+        client=app_config.openAI_client,
+        model=app_config.chat_model,
+        system_prompt=app_config.system_prompt,
+        token_store=token_store,
+    )
 
     rag = RetrievalAugmentedGeneration(
         embedding_service=openai_embedding_service,
         generation_service=openai_generation_service,
-        retrieval_service=SQLRetrievalService(session),
-        max_spend=max_spend,
+        retrieval_service=retrieval_service,
+        max_spend=app_config.max_spend,
+        token_store=token_store,
         date=date.today(),
     )
-    id = await rag.validate_and_assign_session_id(question)
 
     async def event_generator():
-        chunk_stream = rag.retrieval_augmented_generation(question, top_k, id)
+        chunk_stream = rag.rag_stream(question)
         async for chunk in chunk_stream:
             yield chunk
 
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={"X-Session-ID": id},
-    )
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.get("/remaining_spend")
 async def remaining_spend(
-    session: AsyncSession = Depends(get_session),
-    generation_service: OpenAIGenerationService = Depends(get_generator),
-    embedding_service: OpenAIEmbeddingService = Depends(get_embedder),
-    max_spend: float = Depends(get_max_spend),
+    session: AsyncSession = Depends(get_database_session),
+    app_config: AppConfig = Depends(get_app_config),
+    retrieval_service: RetrievalService = Depends(get_retrieval_service),
 ) -> RemainingSpend:
     """
     This function is used to get the remaining spend for the day. It is used to get the
@@ -238,13 +159,28 @@ async def remaining_spend(
         (RemainingSpend): The remaining spend object containing the remaining spend for
             the day.
     """
+    token_store = SQLTokenStore(async_session=session)
+    openai_embedding_service = OpenAIEmbeddingService(
+        client=app_config.openAI_client,
+        embedding_model=app_config.embedding_model,
+        token_store=token_store,
+    )
+    openai_generation_service = OpenAIGenerationService(
+        client=app_config.openAI_client,
+        model=app_config.chat_model,
+        system_prompt=app_config.system_prompt,
+        token_store=token_store,
+    )
+
     rag = RetrievalAugmentedGeneration(
-        embedding_service=embedding_service,
-        generation_service=generation_service,
-        retrieval_service=SQLRetrievalService(session),
-        max_spend=max_spend,
+        embedding_service=openai_embedding_service,
+        generation_service=openai_generation_service,
+        retrieval_service=retrieval_service,
+        max_spend=app_config.max_spend,
+        token_store=token_store,
         date=date.today(),
     )
+
     return await rag.remaining_spend()
 
 
