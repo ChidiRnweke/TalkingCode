@@ -21,12 +21,12 @@ class QdrantVectorStore(PayloadStore):
     collection_name: str
 
     async def persist_embeddings(self, embeddings: EmbeddingsWithMetadata) -> None:
+        logger.debug(f"Storing embeddings for {embeddings.payload.file_name}")
         embedding_data = embeddings.chunks[0].embedding
         await self._create_if_not_exists(embedding_data)
-        logger.info(f"Storing embeddings for {embeddings.payload.file_name}")
         points = self._embeddings_to_point_struct(embeddings)
         await self.qdrant_client.upsert(self.collection_name, points)
-        logger.info(f"Embeddings stored for {embeddings.payload.file_name}")
+        logger.debug(f"Embeddings stored for {embeddings.payload.file_name}")
 
     async def _create_if_not_exists(self, embedding: Sequence[float]) -> None:
         config = VectorParams(size=len(embedding), distance=Distance.COSINE)
