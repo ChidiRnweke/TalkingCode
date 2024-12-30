@@ -104,10 +104,10 @@ class SQLTokenStore(TokenSpendStore):
         Returns:
             (float): The current spend for the given date.
         """
-        stmt = select(TokenSpendModel).where(
-            cast(TokenSpendModel.timestamp, Date) == date
+        stmt = select(TokenSpendModel.token_count).where(
+            cast(TokenSpendModel.timestamp, Date) == cast(date, Date)
         )
         async with self.async_session.begin():
             with map_errors():
-                result = await self.async_session.execute(stmt)
-            return sum([r.token_count for r in result.scalars()]) * 0.00001
+                result = (await self.async_session.scalars(stmt)).all()
+        return sum(result) * 0.00001
