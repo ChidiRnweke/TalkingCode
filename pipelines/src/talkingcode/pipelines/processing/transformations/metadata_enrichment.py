@@ -5,6 +5,7 @@ from typing import Any, Type
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from talkingcode.pipelines.models import FileMetadata
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
@@ -128,6 +129,7 @@ class OpenAIMetadataEnricher(FileTransformation[FileSummary]):
         )
 
 
+@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=20))
 async def _fetch_openai_response[A](
     client: AsyncOpenAI,
     model: str,
