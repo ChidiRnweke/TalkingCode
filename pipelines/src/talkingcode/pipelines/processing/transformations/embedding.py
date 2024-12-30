@@ -50,10 +50,10 @@ class OpenAIEmbedder(Embedder):
 
     async def embed(self, file: FileMetadata) -> list[EmbeddedChunk]:
         github_file = file.file
-        file_content = await self.github.get_file_content(github_file)
-        file_content = "Empty file" if len(file_content) == 0 else file_content
+        content = await self.github.get_file_content(github_file)
+        content = "Empty file" if self._file_is_empty(content) else content
 
-        split_content = self.splitter.split_text_to_chunks(file_content)
+        split_content = self.splitter.split_text_to_chunks(content)
         enriched_chunks = [github_file.enrich_content(chunk) for chunk in split_content]
 
         embeddings = await self._embed_document(enriched_chunks)
@@ -81,3 +81,8 @@ class OpenAIEmbedder(Embedder):
         embedding_vec = response.data[0].embedding
         embedding = EmbeddedChunk(text=chunk_text, embedding=embedding_vec)
         return embedding
+
+    def _file_is_empty(self, file_content: str) -> bool:
+        no_newlines = file_content.replace("\n", "")
+        stripped = no_newlines.strip()
+        return len(stripped) == 0

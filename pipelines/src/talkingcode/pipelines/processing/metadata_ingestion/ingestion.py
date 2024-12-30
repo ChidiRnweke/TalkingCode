@@ -47,5 +47,5 @@ class MetadataIngestionService:
             return None
         logger.info(f"Processing repository {repo.name}")
         files = await self.client.get_all_files(repo)
-        logger.info(f"Found {len(files)} files in {repo.name}")
+        logger.debug(f"Found {len(files)} files in {repo.name}")
         await self.db.write_to_database(repo, files)

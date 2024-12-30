@@ -67,6 +67,9 @@ class TransformationPipeline:
                 except Exception as e:
                     logger.error(f"Failed to transform file: {e}")
                     continue
+                logger.debug(
+                    f"Found {len(_embeddings)} chunks for file {_transforms[0].file_name}"
+                )
 
                 succeeded_files.append(_transforms[0].document_id)
                 payload = TransformedFile.combine(_transforms)

@@ -222,10 +222,10 @@ class SecretsReader:
         load_dotenv()
         infisical_enabled = os.getenv("INFISICAL_ENABLED")
         if infisical_enabled:
-            logger.info("Using Infisical as secrets backend")
+            logger.debug("Using Infisical as secrets backend")
             return cls(backend=InfisicalSecretsBackend.from_env())
         else:
-            logger.info("Using environment variables as secrets backend")
+            logger.debug("Using environment variables as secrets backend")
             return cls(backend=EnvSecretsBackend())
 
 

@@ -135,7 +135,7 @@ class GithubHTTPClient(GitHubClient):
                         links.append(file)
                 responses = await asyncio.gather(*links)
                 responses = [ContentTree(**response.json()) for response in responses]
-                logger.info(f"Found {len(responses)} files for {repo.name}")
+                logger.debug(f"Found {len(responses)} files for {repo.name}")
 
         return [
             GitHubFile(
