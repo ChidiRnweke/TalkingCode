@@ -24,9 +24,6 @@ export interface paths {
          *         question (InputQuery): The input query object.
          *         session (AsyncSession): The async session object. This is provided by the FastAPI
          *             dependency injection.
-         *
-         *     Returns:
-         *         (RAGResponse): The response object containing the response and the session ID.
          */
         post: operations["chat__post"];
         delete?: never;
@@ -93,7 +90,7 @@ export interface components {
             /** Previous Context */
             previous_context?: components["schemas"]["PreviousQAs"][] | null;
             /** Session Id */
-            session_id?: string | null;
+            session_id: string;
         };
         /**
          * PreviousQAs

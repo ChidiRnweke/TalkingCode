@@ -4,11 +4,16 @@
 		"title": "FastAPI",
 		"version": "0.1.0"
 	},
+	"servers": [
+		{
+			"url": "/api/v1"
+		}
+	],
 	"paths": {
 		"/": {
 			"post": {
 				"summary": "Chat",
-				"description": "This function is used to handle the chat endpoint. It is used to handle the incoming\nchat requests and generate the response using the RAG model. The RAG model is used to\nretrieve the context, embed the text, and generate the response. The response is then\nreturned to the user.\n\nArgs:\n    question (InputQuery): The input query object.\n    session (AsyncSession): The async session object. This is provided by the FastAPI\n        dependency injection.\n\nReturns:\n    (RAGResponse): The response object containing the response and the session ID.",
+				"description": "This function is used to handle the chat endpoint. It is used to handle the incoming\nchat requests and generate the response using the RAG model. The RAG model is used to\nretrieve the context, embed the text, and generate the response. The response is then\nreturned to the user.\n\nArgs:\n    question (InputQuery): The input query object.\n    session (AsyncSession): The async session object. This is provided by the FastAPI\n        dependency injection.",
 				"operationId": "chat__post",
 				"requestBody": {
 					"content": {
@@ -98,19 +103,12 @@
 						"title": "Previous Context"
 					},
 					"session_id": {
-						"anyOf": [
-							{
-								"type": "string"
-							},
-							{
-								"type": "null"
-							}
-						],
+						"type": "string",
 						"title": "Session Id"
 					}
 				},
 				"type": "object",
-				"required": ["query"],
+				"required": ["query", "session_id"],
 				"title": "InputQuery",
 				"description": "A Pydantic model for the input query. This class is client facing and is used to validate the input query.\nThe first question in the conversation will not have any previous context and will not have a session ID.\nThe subsequent questions will have a session ID and previous context. The previous context is a list of\nquestion-answer pairs from the previous interactions. The session ID is used to track the token spend for\nthe given session.\n\nIf the session ID is provided, the previous context must also be provided otherwise a `ValueError` is raised.\n\nRaises:\n    (ValueError): If the session ID is provided but the previous context is not provided or vice versa."
 			},
