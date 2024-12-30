@@ -138,13 +138,13 @@ frozenlist = ">=1.1.0"
 
 [[package]]
 name = "alembic"
-version = "1.13.2"
+version = "1.14.0"
 description = "A database migration tool for SQLAlchemy."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "alembic-1.13.2-py3-none-any.whl", hash = "sha256:6b8733129a6224a9a711e17c99b08462dbf7cc9670ba8f2e2ae9af860ceb1953"},
-    {file = "alembic-1.13.2.tar.gz", hash = "sha256:1ff0ae32975f4fd96028c39ed9bb3c867fe3af956bd7bb37343b54c9fe7445ef"},
+    {file = "alembic-1.14.0-py3-none-any.whl", hash = "sha256:99bd884ca390466db5e27ffccff1d179ec5c05c965cfefc0607e69f9e411cb25"},
+    {file = "alembic-1.14.0.tar.gz", hash = "sha256:b00892b53b3642d0b8dbedba234dbf1924b69be83a9a769d5a624b01094e304b"},
 ]
 
 [package.dependencies]
@@ -2788,29 +2788,6 @@ test = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "ini2toml[lite] (>=
 type = ["importlib_metadata (>=7.0.2)", "jaraco.develop (>=7.21)", "mypy (>=1.12,<1.14)", "pytest-mypy"]
 
 [[package]]
-name = "shared"
-version = "0.1.5"
-description = "A package containing utilities shared between the data pipelines and the backend side of the project"
-optional = false
-python-versions = "^3.12"
-files = []
-develop = false
-
-[package.dependencies]
-alembic = "^1.13.1"
-infisical-python = "^2.3.5"
-opentelemetry-exporter-otlp = "^1.29.0"
-opentelemetry-instrumentation-fastapi = "^0.50b0"
-pgvector = "^0.2.5"
-psycopg2 = "^2.9.9"
-python-dotenv = "^1.0.1"
-sqlalchemy = "^2.0.30"
-
-[package.source]
-type = "directory"
-url = "../shared"
-
-[[package]]
 name = "shellingham"
 version = "1.5.4"
 description = "Tool to Detect Surrounding Shell"
@@ -2965,6 +2942,30 @@ anyio = ">=3.4.0,<5"
 
 [package.extras]
 full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart (>=0.0.7)", "pyyaml"]
+
+[[package]]
+name = "talkingcode-shared"
+version = "0.1.13"
+description = "A package containing utilities shared between the data pipelines and the backend side of the project"
+optional = false
+python-versions = "^3.12"
+files = []
+develop = false
+
+[package.dependencies]
+alembic = "^1.13.1"
+infisical-python = "^2.3.5"
+opentelemetry-exporter-otlp = "^1.29.0"
+opentelemetry-instrumentation-fastapi = "^0.50b0"
+pgvector = "^0.2.5"
+psycopg2 = "^2.9.9"
+python-dotenv = "^1.0.1"
+qdrant-client = "^1.12.1"
+sqlalchemy = "^2.0.30"
+
+[package.source]
+type = "directory"
+url = "../shared"
 
 [[package]]
 name = "testcontainers"
@@ -3594,4 +3595,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "2b9700ef18547b0b1d6ad222274afde66165d5a0af65186006e47a9a730ee818"
+content-hash = "9c6fd0e6b52c0d916016f8933287954154cde28e0a9f5ce3ad06f0a46e643ede"
