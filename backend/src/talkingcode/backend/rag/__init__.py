@@ -1,18 +1,36 @@
+from qdrant_client import AsyncQdrantClient
+
+from talkingcode.backend.config import AppConfig
+
 from .generation import InputQuery, OpenAIGenerationService
 from .rag import RetrievalAugmentedGeneration
 from .retrieve import (
     OpenAIEmbeddingService,
-    RAGResponse,
+    QdrantRetrievalService,
     RemainingSpend,
-    SQLRetrievalService,
+    RetrievalService,
 )
+from .token_spend import SQLTokenStore
+
+
+def vector_store_from_config(config: AppConfig) -> RetrievalService:
+    server_mode = config.qdrant_server_mode
+    collection_name = config.qdrant_collection_name
+    local_storage = config.qdrant_local_storage_path
+    if server_mode:
+        client = AsyncQdrantClient(url=config.qdrant_server_url)
+    else:
+        client = AsyncQdrantClient(path=local_storage)
+    return QdrantRetrievalService(client, config.top_k, collection_name)
+
 
 __all__ = [
     "RetrievalAugmentedGeneration",
     "InputQuery",
-    "RAGResponse",
     "OpenAIEmbeddingService",
     "OpenAIGenerationService",
-    "SQLRetrievalService",
+    "RetrievalService",
     "RemainingSpend",
+    "vector_store_from_config",
+    "SQLTokenStore",
 ]
