@@ -91,7 +91,7 @@ def get_app_config(request: Request) -> AppConfig:
     return config
 
 
-@router.post("/")
+@router.post("/rag/chat")
 async def chat(
     question: InputQuery,
     session: AsyncSession = Depends(get_database_session),
@@ -140,7 +140,7 @@ async def chat(
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-@router.get("/remaining_spend")
+@router.get("/rag/remaining_spend", response_model=RemainingSpend)
 async def remaining_spend(
     session: AsyncSession = Depends(get_database_session),
     app_config: AppConfig = Depends(get_app_config),

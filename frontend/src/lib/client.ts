@@ -3,10 +3,11 @@ import createClient from 'openapi-fetch';
 
 const baseUrl = '/api/v1';
 const client = createClient<paths>({ baseUrl });
-export type InputQuery = paths['/']['post']['requestBody']['content']['application/json'];
-export type RAGResponse = paths['/']['post']['responses']['200']['content']['application/json'];
+export type InputQuery = paths['/rag/chat']['post']['requestBody']['content']['application/json'];
+export type RAGResponse =
+	paths['/rag/chat']['post']['responses']['200']['content']['application/json'];
 export type RemainingSpend =
-	paths['/remaining_spend']['get']['responses']['200']['content']['application/json'];
+	paths['/rag/remaining_spend']['get']['responses']['200']['content']['application/json'];
 
 import { writable } from 'svelte/store';
 export const remainingSpace = writable(2);
@@ -56,7 +57,7 @@ class RAGClient implements RAGService {
 
 	getAnswer = async (inputQuery: InputQuery): Promise<void> => {
 		currentAnswer.set('');
-		const responseStream = await fetch(baseUrl, {
+		const responseStream = await fetch(`${baseUrl}/rag/chat`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
@@ -85,7 +86,7 @@ class RAGClient implements RAGService {
 	};
 
 	getCurrentSpend = async (): Promise<number> => {
-		const { data } = await this.client.GET('/remaining_spend');
+		const { data } = await this.client.GET('/rag/remaining_spend');
 		if (data) {
 			return data.remaining_spend;
 		} else {

@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/": {
+    "/rag/chat": {
         parameters: {
             query?: never;
             header?: never;
@@ -25,14 +25,14 @@ export interface paths {
          *         session (AsyncSession): The async session object. This is provided by the FastAPI
          *             dependency injection.
          */
-        post: operations["chat__post"];
+        post: operations["chat_rag_chat_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/remaining_spend": {
+    "/rag/remaining_spend": {
         parameters: {
             query?: never;
             header?: never;
@@ -53,7 +53,7 @@ export interface paths {
          *         (RemainingSpend): The remaining spend object containing the remaining spend for
          *             the day.
          */
-        get: operations["remaining_spend_remaining_spend_get"];
+        get: operations["remaining_spend_rag_remaining_spend_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -131,7 +131,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    chat__post: {
+    chat_rag_chat_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -164,7 +164,7 @@ export interface operations {
             };
         };
     };
-    remaining_spend_remaining_spend_get: {
+    remaining_spend_rag_remaining_spend_get: {
         parameters: {
             query?: never;
             header?: never;
