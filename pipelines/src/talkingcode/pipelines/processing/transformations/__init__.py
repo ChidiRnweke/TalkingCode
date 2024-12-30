@@ -66,12 +66,14 @@ def metadata_storage_from_config(config: IngestionConfig) -> MetadataStorageServ
     Returns:
         MetadataStorageService: An instance of the `MetadataStorageService` class.
     """
+    sync_mode = "sqlite" in config.db_connection_string
     engine = create_async_engine(config.db_connection_string)
     Session = async_sessionmaker(engine, expire_on_commit=False)
     return MetadataStorageService(
         session=Session,
         allowed_extensions=config.allowed_extensions,
         disallowed_files=config.skipped_files,
+        sync_mode=sync_mode,
     )
 
 

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
+from typing import ClassVar
 
 from talkingcode.pipelines.github_client import GitHubClient
 from talkingcode.pipelines.models import GitHubRepository
@@ -24,10 +25,13 @@ class MetadataIngestionService:
     Args:
         db (Storage): The database service to use for storing the fetched data.
         client (GitHubClient): The GitHub client to use for fetching data from the GitHub API.
+        sync_mode (bool): Whether to write to the database in synchronous mode. Defaults to False.
     """
 
     db: MetadataStorage
     client: GitHubClient
+    sync_mode: bool = False
+    _db_lock: ClassVar[asyncio.Lock] = asyncio.Lock()
 
     async def fetch_and_persist_metadata(self) -> None:
         """
@@ -48,4 +52,8 @@ class MetadataIngestionService:
         logger.info(f"Processing repository {repo.name}")
         files = await self.client.get_all_files(repo)
         logger.debug(f"Found {len(files)} files in {repo.name}")
-        await self.db.write_to_database(repo, files)
+        if self.sync_mode:
+            async with MetadataIngestionService._db_lock:
+                await self.db.write_to_database(repo, files)
+        else:
+            await self.db.write_to_database(repo, files)

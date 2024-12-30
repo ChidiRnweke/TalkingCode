@@ -1,5 +1,6 @@
+import asyncio
 from dataclasses import dataclass
-from typing import Sequence
+from typing import ClassVar, Sequence
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -16,6 +17,8 @@ class MetadataStorageService(MetadataStore):
     session: async_sessionmaker[AsyncSession]
     allowed_extensions: Sequence[str]
     disallowed_files: Sequence[str]
+    sync_mode: bool = False
+    _db_lock: ClassVar[asyncio.Lock] = asyncio.Lock()
 
     """
     A metadata storage service that interacts with the database to store and retrieve metadata about files and repositories.
@@ -25,12 +28,30 @@ class MetadataStorageService(MetadataStore):
     """
 
     async def get_all_repositories(self) -> Sequence[str]:
-        stmt = select(GitHubRepositoryModel.name)
-        async with self.session() as session:
-            result = await session.scalars(stmt)
-            return result.all()
+        if self.sync_mode:
+            result = await self._get_all_repositories()
+        else:
+            result = await self._get_all_repositories()
+        return result
 
     async def get_file_metadata(self, repository_name: str) -> Sequence[FileMetadata]:
+        if self.sync_mode:
+            result = await self._get_file_metadata(repository_name)
+        else:
+            result = await self._get_file_metadata(repository_name)
+        return result
+
+    @retry(
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=4, max=20)
+    )
+    async def mark_files_as_completed(self, document_ids: list[int]) -> None:
+        if self.sync_mode:
+            result = await self._mark_files_as_completed(document_ids)
+        else:
+            result = await self._mark_files_as_completed(document_ids)
+        return result
+
+    async def _get_file_metadata(self, repository_name: str) -> Sequence[FileMetadata]:
         stmt = (
             select(GithubFileModel)
             .where(GithubFileModel.repository_name == repository_name)
@@ -43,16 +64,21 @@ class MetadataStorageService(MetadataStore):
             files = result.all()
             return [FileMetadata.from_db_object(file) for file in files]
 
+    async def _get_all_repositories(self) -> Sequence[str]:
+        stmt = select(GitHubRepositoryModel.name)
+        async with self.session() as session:
+            result = await session.scalars(stmt)
+            return result.all()
+
     @retry(
-        stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=20)
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=4, max=20)
     )
-    async def mark_files_as_completed(self, document_ids: list[int]) -> None:
+    async def _mark_files_as_completed(self, document_ids: list[int]) -> None:
         stmt = (
             update(GithubFileModel)
             .where(GithubFileModel.id.in_(document_ids))
             .values(is_embedded=True)
         )
-
         async with self.session() as session:
             await session.execute(stmt)
             await session.commit()

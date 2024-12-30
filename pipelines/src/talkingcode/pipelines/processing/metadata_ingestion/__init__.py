@@ -18,9 +18,10 @@ def from_config(config: IngestionConfig) -> MetadataIngestionService:
     Returns:
         IngestionService: An instance of the `IngestionService` class.
     """
+    sync_mode = "sqlite" in config.db_connection_string
     db = database_service_from_config(config)
     client = GithubHTTPClient.from_config(config)
-    return MetadataIngestionService(db=db, client=client)
+    return MetadataIngestionService(db=db, client=client, sync_mode=sync_mode)
 
 
 def database_service_from_config(config: IngestionConfig) -> DatabaseService:
