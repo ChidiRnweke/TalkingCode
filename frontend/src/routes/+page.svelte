@@ -49,6 +49,7 @@
 		};
 		inConversation = true;
 		status = GenerateAnswerStatus.LOADING;
+		await ragClient.getAnswer(inputQuery);
 		previousContext = [...previousContext, { question: question, answer: answer }];
 		status = GenerateAnswerStatus.NONE;
 		error = false;
