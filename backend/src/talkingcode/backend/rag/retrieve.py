@@ -241,7 +241,6 @@ class QdrantRetrievalService(RetrievalService):
     def _point_to_context(self, point: ScoredPoint) -> RetrievedContext:
         if not point.payload:
             raise ValueError("Payload is empty, cannot convert to context.")
-        print(point.payload)
         return RetrievedContext(
             file_name=point.payload["file_name"],
             repository_name=point.payload["repository_name"],
