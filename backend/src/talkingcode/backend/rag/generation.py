@@ -24,8 +24,8 @@ class GenerationService(Protocol):
     model: str
 
     async def augmented_generation(
-        self, query: "InputQuery", context: list[RetrievedContext]
-    ) -> AsyncGenerator[str]:
+        self, query: "InputQuery", context: list["RetrievedContext"]
+    ) -> AsyncGenerator[str, None]:
         """Answers the user's query with the retrieved context.
         Requires that you already have the context retrieved from the `RetrievalService`.
 
@@ -112,8 +112,8 @@ class OpenAIGenerationService(GenerationService):
     token_store: TokenSpendStore
 
     async def augmented_generation(
-        self, query: InputQuery, context: list[RetrievedContext]
-    ) -> AsyncGenerator[str]:
+        self, query: InputQuery, context: list["RetrievedContext"]
+    ) -> AsyncGenerator[str, None]:
         """
         Answers the user's query with the retrieved context. Requires that you already have the context
         retrieved from the `RetrievalService`.

@@ -33,7 +33,7 @@ class RetrievalAugmentedGeneration:
     max_spend: float
     date: date
 
-    async def rag_stream(self, input: InputQuery) -> AsyncGenerator[str]:
+    async def rag_stream(self, input: InputQuery) -> AsyncGenerator[str, None]:
         """
         Performs retrieval-augmented generation given an input query and k value.
         The method enforces the spend limit, validates the session ID, retrieves the top k contexts,
