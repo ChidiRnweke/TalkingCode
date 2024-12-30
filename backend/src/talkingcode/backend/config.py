@@ -5,7 +5,7 @@ from logging import getLogger
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from talkingcode.shared.env import SecretsReader
+from talkingcode.shared.environment import SecretsReader
 from talkingcode.shared.telemetry import configure_telemetry as _configure_telemetry
 
 logger = getLogger("app_logger")
@@ -39,6 +39,12 @@ class AppConfig:
     openAI_client: AsyncOpenAI
     max_spend: float
 
+    qdrant_server_mode: bool
+    qdrant_server_url: str
+    qdrant_local_port: int
+    qdrant_collection_name: str
+    qdrant_local_storage_path: str
+
     @classmethod
     def from_config(cls) -> "AppConfig":
         reader = SecretsReader.from_env()
@@ -51,6 +57,17 @@ class AppConfig:
             system_prompt = reader.read_secret(secret_name="SYSTEM_PROMPT")
             max_spend = float(reader.read_secret(secret_name="MAX_SPEND"))
             openai_api_key = reader.read_secret(secret_name="OPENAI_API_KEY")
+            qdrant_server_mode = bool(reader.read_optional("QDRANT_SERVER_MODE"))
+            qdrant_server_url = reader.read_or_default(
+                "QDRANT_SERVER_URL", "http://localhost:6333"
+            )
+            qdrant_local_port = int(reader.read_or_default("QDRANT_LOCAL_PORT", "6333"))
+            qdrant_collection_name = reader.read_or_default(
+                "QDRANT_COLLECTION_NAME", "talkingcode"
+            )
+            qdrant_local_storage_path = reader.read_or_default(
+                "QDRANT_LOCAL_STORAGE_PATH", "../qdrant-data"
+            )
             openAI_client = AsyncOpenAI(api_key=openai_api_key)
 
             session = configure_async_session_maker(conn_str)
@@ -65,6 +82,11 @@ class AppConfig:
             system_prompt=system_prompt,
             openAI_client=openAI_client,
             max_spend=max_spend,
+            qdrant_server_mode=qdrant_server_mode,
+            qdrant_server_url=qdrant_server_url,
+            qdrant_local_port=qdrant_local_port,
+            qdrant_collection_name=qdrant_collection_name,
+            qdrant_local_storage_path=qdrant_local_storage_path,
         )
 
 
