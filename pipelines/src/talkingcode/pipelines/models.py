@@ -27,7 +27,7 @@ class AuthHeader:
         Returns:
             dict[str, str]: The authorization header as a dictionary.
         """
-        return {"Authorization": f"Bearer {self.token}"}
+        return {"Authorization": f"Bearer {self.token}", "connection": "keep-alive"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,7 +47,6 @@ class GitHubRepository:
             user=self.user,
             description=self.description,
             url=self.url,
-            languages=[],
         )
 
 

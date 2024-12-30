@@ -1,12 +1,10 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    Column,
     DateTime,
     ForeignKeyConstraint,
     Integer,
     String,
-    Table,
 )
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -14,32 +12,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
-
-
-class LanguagesModel(Base):
-    __tablename__ = "github_languages"
-
-    language: Mapped[str] = mapped_column(String(255), primary_key=True)
-
-
-languages_repository_bridge = Table(
-    "languages_repository_bridge",
-    Base.metadata,
-    Column("language_name", String(255), primary_key=True),
-    Column("repository_name", String(255), primary_key=True),
-    Column("repository_user", String(255), primary_key=True),
-    ForeignKeyConstraint(
-        ["repository_name", "repository_user"],
-        [
-            "github_repositories.name",
-            "github_repositories.user",
-        ],
-    ),
-    ForeignKeyConstraint(
-        ["language_name"],
-        ["github_languages.language"],
-    ),
-)
 
 
 class GitHubRepositoryModel(Base):
@@ -53,9 +25,6 @@ class GitHubRepositoryModel(Base):
 
     files: Mapped[list["GithubFileModel"]] = relationship(
         back_populates="repository", cascade="all, delete-orphan"
-    )
-    languages: Mapped[list[LanguagesModel]] = relationship(
-        secondary=languages_repository_bridge
     )
 
 

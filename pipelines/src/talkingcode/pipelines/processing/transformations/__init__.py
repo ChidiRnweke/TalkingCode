@@ -6,7 +6,7 @@ from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.github_client import GithubHTTPClient
 
 from .embedding import OpenAIEmbedder, TextSplitter
-from .metadata_enrichment import TopicsEnrichment
+from .metadata_enrichment import MetadataEnricher, TopicsEnrichment
 from .metadata_storage import MetadataStorageService
 from .transformation_pipeline import TransformationPipeline
 from .vector_storage import QdrantVectorStore
@@ -18,8 +18,9 @@ def from_config(config: IngestionConfig) -> TransformationPipeline:
     github = GithubHTTPClient.from_config(config)
     qdrant_store = qdrant_vector_store_from_config(config)
     topics_enrichment = topics_enrichment_from_config(config)
+    metadata_enricher = MetadataEnricher()
     return TransformationPipeline(
-        file_transformations=[topics_enrichment],
+        file_transformations=[topics_enrichment, metadata_enricher],
         metadata_store=metadata_store,
         embedder=embedder,
         github=github,

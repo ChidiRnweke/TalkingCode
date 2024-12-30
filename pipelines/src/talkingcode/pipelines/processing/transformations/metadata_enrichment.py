@@ -31,6 +31,20 @@ class FileSummary(BaseModel):
         return {"file_summary": self.data}
 
 
+@dataclass(frozen=True, slots=True)
+class Metadata:
+    path_in_repo: str
+    extension: str
+    url: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "path_in_repo": self.path_in_repo,
+            "extension": self.extension,
+            "url": self.url,
+        }
+
+
 @instrument_all_async(log_async_execution_time)
 @dataclass(frozen=True, slots=True)
 class TopicsEnrichment(FileTransformation[IdentifiedTopics]):
@@ -60,6 +74,24 @@ class TopicsEnrichment(FileTransformation[IdentifiedTopics]):
             document_id=file.document_id,
             file_name=file.file.name,
             data=topics,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class MetadataEnricher(FileTransformation[Metadata]):
+    async def transform(
+        self, file: FileMetadata, file_content: str
+    ) -> TransformedFile[Metadata]:
+        url = file.file.content_url
+        path_in_repo = file.file.path_in_project
+        extension = file.file.extension
+
+        metadata = Metadata(path_in_repo=path_in_repo, extension=extension, url=url)
+        return TransformedFile(
+            repository_name=file.repository_name,
+            document_id=file.document_id,
+            file_name=file.file.name,
+            data=metadata,
         )
 
 

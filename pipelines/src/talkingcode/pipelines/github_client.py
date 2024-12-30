@@ -1,9 +1,10 @@
 import asyncio
 from dataclasses import dataclass
 from logging import getLogger
-from typing import Protocol
+from typing import ClassVar, Protocol
 
 from httpx import AsyncClient
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.github_models.file_content import ContentTree
@@ -22,9 +23,6 @@ from talkingcode.pipelines.models import (
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
 logger = getLogger("app_logger")
-
-
-_github_semaphore = asyncio.Semaphore(30)
 
 
 class GitHubClient(Protocol):
@@ -49,7 +47,11 @@ class GithubHTTPClient(GitHubClient):
     """
 
     auth_header: AuthHeader
+    _semaphore: ClassVar[asyncio.Semaphore] = asyncio.Semaphore(30)
 
+    @retry(
+        stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=20)
+    )
     async def get_all_repositories(self) -> list[GitHubRepository]:
         """
         Fetches all repositories for the authenticated user.
@@ -60,7 +62,7 @@ class GithubHTTPClient(GitHubClient):
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user/repos"
         language_result = []
-        async with _github_semaphore:
+        async with GithubHTTPClient._semaphore:
             async with AsyncClient(timeout=500) as client:
                 response = await client.get(path, headers=header)
             _repos = response.json()
@@ -86,18 +88,24 @@ class GithubHTTPClient(GitHubClient):
             for repo, langs in zip(repos.root, languages)
         ]
 
+    @retry(
+        stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=20)
+    )
     async def get_file_content(self, file: GitHubFile) -> str:
         header = self.auth_header.to_dict()
         path = file.content_url
-        async with _github_semaphore:
+        async with GithubHTTPClient._semaphore:
             async with AsyncClient(timeout=500) as client:
                 response = await client.get(path, headers=header)
             return response.text
 
+    @retry(
+        stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=20)
+    )
     async def language_from_repo(self, repo: Repository) -> list[str]:
         header = self.auth_header.to_dict()
         path = repo.languages_url
-        async with _github_semaphore:
+        async with GithubHTTPClient._semaphore:
             async with AsyncClient(timeout=500) as client:
                 response = await client.get(path, headers=header)
             langs_and_usage = Languages(root=response.json())
@@ -106,12 +114,15 @@ class GithubHTTPClient(GitHubClient):
             else:
                 return []
 
+    @retry(
+        stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=20)
+    )
     async def get_all_files(self, repo: GitHubRepository) -> list[GitHubFile]:
         logger.info(f"Fetching files for {repo.name}")
         header = self.auth_header.to_dict()
         path = f"https://api.github.com/repos/{repo.user}/{repo.name}/git/trees/{repo.default_branch}?recursive=1"
 
-        async with _github_semaphore:
+        async with GithubHTTPClient._semaphore:
             async with AsyncClient(timeout=500) as client:
                 response = await client.get(path, headers=header)
                 files = GitTree(**response.json())
@@ -119,7 +130,7 @@ class GithubHTTPClient(GitHubClient):
                 links = []
                 for file_path in file_paths:
                     content_path = f"https://api.github.com/repos/{repo.user}/{repo.name}/contents/{file_path}"
-                    async with _github_semaphore:
+                    async with GithubHTTPClient._semaphore:
                         file = client.get(content_path, headers=header)
                         links.append(file)
                 responses = await asyncio.gather(*links)
@@ -137,10 +148,13 @@ class GithubHTTPClient(GitHubClient):
             for file in responses
         ]
 
+    @retry(
+        stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=20)
+    )
     async def get_user(self) -> str:
         header = self.auth_header.to_dict()
         path = "https://api.github.com/user"
-        async with _github_semaphore:
+        async with GithubHTTPClient._semaphore:
             async with AsyncClient(timeout=500) as client:
                 response = await client.get(path, headers=header)
             return User(**response.json()).root.login

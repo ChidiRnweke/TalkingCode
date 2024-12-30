@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from talkingcode.pipelines.database import (
     GithubFileModel,
     GitHubRepositoryModel,
-    LanguagesModel,
 )
 from talkingcode.pipelines.models import GitHubFile, GitHubRepository
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
@@ -57,17 +56,6 @@ class DatabaseService(MetadataStorage):
                         file_model = file.to_db_object(repo)
                         repo_model.files.append(file_model)
 
-                existing_languages = await self._get_existing_languages(session)
-
-                for language in set(repo.languages):
-                    if language not in existing_languages:
-                        lang_model = LanguagesModel(language=language)
-                        session.add(lang_model)
-                        existing_languages[language] = lang_model
-
-                    if existing_languages[language] not in repo_model.languages:
-                        repo_model.languages.append(existing_languages[language])
-
                 await session.flush()
                 await session.commit()
                 logger.info(f"Saved {repo.name} to the database")
@@ -110,13 +98,6 @@ class DatabaseService(MetadataStorage):
         )
         existing_files = await session.scalars(existing_files_stmt)
         return {file.path_in_repo: file for file in existing_files.all()}
-
-    async def _get_existing_languages(
-        self, session: AsyncSession
-    ) -> dict[str, LanguagesModel]:
-        stmt = select(LanguagesModel)
-        languages = (await session.scalars(stmt)).all()
-        return {lang.language: lang for lang in languages}
 
     async def _add_file_to_repository(
         self,
