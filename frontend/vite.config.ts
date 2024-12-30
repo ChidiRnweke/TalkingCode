@@ -9,7 +9,7 @@ export default defineConfig({
 				changeOrigin: true,
 				rewrite: (path) => path.replace(/^\/api\/v1/, '')
 			},
-			'/docs': 'http://localhost:8080',
+			'/docs': 'http://localhost:8000',
 			'/openapi.json': 'http://localhost:8000'
 		}
 	},
