@@ -16,7 +16,6 @@ RUN pip install poetry==$POETRY_VERSION
 FROM base as pipelines_base
 ENV PRODUCTION=true
 
-
 COPY ./pipelines /app
 COPY shared/ /shared
 

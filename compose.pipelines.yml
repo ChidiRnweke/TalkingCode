@@ -15,6 +15,12 @@ services:
   data_pipelines:
     container_name: talkingcode_data_pipelines
     image: ghcr.io/chidirnweke/talkingcode-data_pipelines:latest
+      [
+      "poetry",
+      "run",
+      "python",
+      "src/talkingcode/backend/main.py"
+      ]
     depends_on:
       - startup_container
     networks:
@@ -24,7 +30,7 @@ services:
     <<: *shared-env
 
   startup_container:
-    container_name: talkingcode_startup_container
+    container_name: data_pipelines_startup_container
     image: ghcr.io/chidirnweke/talkingcode-data_pipelines:latest
     restart: "no"
     command: ["poetry", "run", "alembic", "upgrade", "head"]
