@@ -7,7 +7,7 @@ on:
       - master
     paths:
       - "backend/**"
-      - "docker.backend.yml"
+      - "compose.backend.yml"
       - "compose.backend.override.yml"
       - ".github/workflows/backend.yaml"
   workflow_dispatch:
