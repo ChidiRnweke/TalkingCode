@@ -7,7 +7,7 @@ on:
       - master
     paths:
       - "pipelines/**"
-      - "docker.pipelines.yml"
+      - "compose.pipelines.yml"
       - "docker/pipelines/Dockerfile"
       - "compose.pipelines.override.yml"
       - ".github/workflows/pipelines.yaml"
