@@ -4,7 +4,7 @@ const config = {
 		'./node_modules/flowbite-svelte/**/*.{html,js,svelte,ts}',
 		'./node_modules/flowbite-svelte-icons/**/*.{html,js,svelte,ts}'
 	],
-	plugins: [require('flowbite/plugin')],
+	plugins: [import('flowbite/plugin.js')],
 	darkMode: 'selector',
 	theme: {
 		extend: {
@@ -105,4 +105,4 @@ const config = {
 	}
 };
 
-module.exports = config;
+export default config;

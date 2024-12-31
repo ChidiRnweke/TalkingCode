@@ -1,21 +1,28 @@
-FROM python:3.12.4-slim-bookworm as poetry_base
+FROM python:3.12.7-slim-bullseye as base
 
+ENV POETRY_HOME=/opt/poetry
+ENV POETRY_VENV=/opt/poetry-venv
+ENV POETRY_CACHE_DIR=/opt/.cache
+ENV POETRY_VERSION=1.8.2
+ENV POETRY_VIRTUALENVS_CREATE=false
 
-RUN pip install --no-cache-dir poetry==1.8.3
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libpq-dev python3-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-FROM poetry_base as base
-RUN mkdir -p /app
-
+RUN pip install poetry==$POETRY_VERSION
+FROM base as backend_base
 ENV PRODUCTION=true
 
-WORKDIR /app
-COPY backend/ /app
+COPY ./backend /app
 COPY shared/ /shared
-RUN poetry install --only main --no-root
-LABEL org.opencontainers.image.source https://github.com/chidirnweke/chatGITpt
 
-CMD ["poetry", "run", "fastapi", "run", "backend/main.py", "--port", "8000"]
+WORKDIR /app
+
+LABEL org.opencontainers.image.source https://github.com/chidirnweke/talkingcode
+
+RUN poetry check
+
+RUN poetry install --no-interaction --no-cache --without dev

@@ -7,7 +7,7 @@
 		remainingSpace,
 		type PreviousContext,
 		currentAnswer,
-		type inputQuery
+		type InputQuery
 	} from '$lib/client';
 	import Suggestions from '../components/Suggestions.svelte';
 	import Heading from 'flowbite-svelte/Heading.svelte';
@@ -16,35 +16,40 @@
 	import Button from 'flowbite-svelte/Button.svelte';
 	import Undo from 'flowbite-svelte-icons/UndoOutline.svelte';
 	import ErrorMessage from '../components/ErrorMessage.svelte';
-	import TextPlaceholder from 'flowbite-svelte/TextPlaceholder.svelte';
 	import CurrentSpend from '../components/CurrentSpend.svelte';
 
 	let input = writable('');
 	setContext('input', input); // set the context for the input. This is used for the Suggestions component
 
-	let previousContext: PreviousContext[] = [];
-	let sessionID: string | undefined = undefined;
-	let latestQuestion: string = '';
-	let inConversation = false;
+	let previousContext: PreviousContext[] = $state([]);
+	let latestQuestion: string = $state('');
+	let inConversation = $state(false);
 	enum GenerateAnswerStatus {
 		NONE,
 		LOADING
 	}
+	const generateId = (): string => {
+		return (
+			Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+		);
+	};
 
-	let status = GenerateAnswerStatus.NONE;
-	$: disabled = status === GenerateAnswerStatus.LOADING;
-	$: answer = $currentAnswer;
+	let sessionId = generateId();
+
+	let status = $state(GenerateAnswerStatus.NONE);
+	// @ts-expect-error
+	let disabled = $derived(status === GenerateAnswerStatus.LOADING);
+	let answer = $derived($currentAnswer);
 
 	const generateAnswer = async (question: string): Promise<void> => {
-		const inputQuery: inputQuery = {
+		const inputQuery: InputQuery = {
 			query: question,
-			session_id: sessionID,
+			session_id: sessionId,
 			previous_context: previousContext
 		};
 		inConversation = true;
 		status = GenerateAnswerStatus.LOADING;
-		sessionID = await ragClient.getAnswer(inputQuery);
-		console.log('sessionID', $currentAnswer);
+		await ragClient.getAnswer(inputQuery);
 		previousContext = [...previousContext, { question: question, answer: answer }];
 		status = GenerateAnswerStatus.NONE;
 		error = false;
@@ -62,14 +67,14 @@
 
 	const reset = (): void => {
 		previousContext = [];
-		sessionID = undefined;
+		sessionId = generateId();
 		input.set('');
 		error = false;
 		inConversation = false;
 		status = GenerateAnswerStatus.NONE;
 	};
 
-	let error: boolean = false;
+	let error: boolean = $state(false);
 
 	const handleError = (): void => {
 		inConversation = true;

@@ -1,7 +1,12 @@
 <script lang="ts">
 	import P from 'flowbite-svelte/P.svelte';
 	import Avatar from 'flowbite-svelte/Avatar.svelte';
-	export let loading = false;
+	interface Props {
+		loading?: boolean;
+		children: import('svelte').Snippet;
+	}
+
+	let { loading = false, children }: Props = $props();
 </script>
 
 <section class="flex flex-row mr-auto ml-0 lg:gap-x-10 gap-x-4 w-full">
@@ -16,7 +21,7 @@
 	</div>
 	<P class="text-lg leading-10 break-words flex-grow w-0 max-w-full">
 		<div class="generated">
-			<slot />
+			{@render children()}
 			{#if loading}
 				<span class="animate-pulse text-6xl">.</span>
 			{/if}

@@ -4,12 +4,17 @@
 		"title": "FastAPI",
 		"version": "0.1.0"
 	},
+	"servers": [
+		{
+			"url": "/api/v1"
+		}
+	],
 	"paths": {
-		"/": {
+		"/rag/chat": {
 			"post": {
 				"summary": "Chat",
-				"description": "This function is used to handle the chat endpoint. It is used to handle the incoming\nchat requests and generate the response using the RAG model. The RAG model is used to\nretrieve the context, embed the text, and generate the response. The response is then\nreturned to the user.\n\nArgs:\n    question (InputQuery): The input query object.\n    session (AsyncSession): The async session object. This is provided by the FastAPI\n        dependency injection.\n\nReturns:\n    (RAGResponse): The response object containing the response and the session ID.",
-				"operationId": "chat__post",
+				"description": "This function is used to handle the chat endpoint. It is used to handle the incoming\nchat requests and generate the response using the RAG model. The RAG model is used to\nretrieve the context, embed the text, and generate the response. The response is then\nreturned to the user.\n\nArgs:\n    question (InputQuery): The input query object.\n    session (AsyncSession): The async session object. This is provided by the FastAPI\n        dependency injection.",
+				"operationId": "chat_rag_chat_post",
 				"requestBody": {
 					"content": {
 						"application/json": {
@@ -42,11 +47,11 @@
 				}
 			}
 		},
-		"/remaining_spend": {
+		"/rag/remaining_spend": {
 			"get": {
 				"summary": "Remaining Spend",
 				"description": "This function is used to get the remaining spend for the day. It is used to get the\nremaining spend for the day by querying the database and calculating the remaining\nspend based on the maximum spend for the day.\n\nArgs:\n    session (AsyncSession): The async session object. This is provided by the FastAPI\n        dependency injection.\n\nReturns:\n    (RemainingSpend): The remaining spend object containing the remaining spend for\n        the day.",
-				"operationId": "remaining_spend_remaining_spend_get",
+				"operationId": "remaining_spend_rag_remaining_spend_get",
 				"responses": {
 					"200": {
 						"description": "Successful Response",
@@ -98,19 +103,12 @@
 						"title": "Previous Context"
 					},
 					"session_id": {
-						"anyOf": [
-							{
-								"type": "string"
-							},
-							{
-								"type": "null"
-							}
-						],
+						"type": "string",
 						"title": "Session Id"
 					}
 				},
 				"type": "object",
-				"required": ["query"],
+				"required": ["query", "session_id"],
 				"title": "InputQuery",
 				"description": "A Pydantic model for the input query. This class is client facing and is used to validate the input query.\nThe first question in the conversation will not have any previous context and will not have a session ID.\nThe subsequent questions will have a session ID and previous context. The previous context is a list of\nquestion-answer pairs from the previous interactions. The session ID is used to track the token spend for\nthe given session.\n\nIf the session ID is provided, the previous context must also be provided otherwise a `ValueError` is raised.\n\nRaises:\n    (ValueError): If the session ID is provided but the previous context is not provided or vice versa."
 			},

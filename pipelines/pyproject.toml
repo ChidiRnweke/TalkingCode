@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "pipelines"
+name = "talkingcode"
 version = "0.1.0"
 description = "Data pipelines for the chatGPITpt project. The responsibilities of this subproject are downloading the git history, making the embeddings and scheduling this in a pipeline run."
 authors = ["ChidiRNweke <chidi125@gmail.com>"]
@@ -8,27 +8,28 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
-dagster = "^1.7.8"
-dagster-webserver = "^1.7.8"
 pygithub = "^2.3.0"
 python-dotenv = "^1.0.1"
 sqlalchemy = "^2.0.30"
 alembic = "^1.13.1"
 openai = "^1.30.5"
 pgvector = "^0.2.5"
-dagster-postgres = "^0.23.8"
 aiohttp = "^3.9.5"
-shared = {path = "../shared"}
+talkingcode-shared = {path = "../shared"}
 tiktoken = "^0.7.0"
+langchain-text-splitters = "^0.3.4"
+aiosqlite = "^0.20.0"
+tenacity = "^9.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
+datamodel-code-generator = "^0.26.4"
+ruff = "^0.8.4"
 
-
+[tool.ruff.lint]
+extend-select = ["I"]
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.dagster]
-module_name = "pipelines"

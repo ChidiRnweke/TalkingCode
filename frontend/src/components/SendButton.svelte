@@ -4,9 +4,13 @@
 	import PaperPlaneOutline from 'flowbite-svelte-icons/PaperPlaneOutline.svelte';
 	import Button from 'flowbite-svelte/Button.svelte';
 
-	export let input = '';
-	export let action: () => Promise<void>;
-	export let disabled = false;
+	interface Props {
+		input: string;
+		action: () => Promise<void>;
+		disabled?: boolean;
+	}
+
+	let { input = $bindable(''), action, disabled = false }: Props = $props();
 	function handleInput(event: Event) {
 		const textarea = event.target as HTMLTextAreaElement;
 		if (textarea.scrollHeight > 280) {

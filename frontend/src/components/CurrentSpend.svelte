@@ -1,8 +1,12 @@
 <script lang="ts">
 	import EuroOutline from 'flowbite-svelte-icons/EuroOutline.svelte';
 	import Card from 'flowbite-svelte/Card.svelte';
-	export let amount: number;
-	$: rounded = amount.toFixed(2);
+	interface Props {
+		amount: number;
+	}
+
+	let { amount }: Props = $props();
+	let rounded = $derived(amount.toFixed(2));
 </script>
 
 <Card

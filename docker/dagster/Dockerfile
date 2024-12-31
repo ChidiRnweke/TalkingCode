@@ -1,35 +1,29 @@
-FROM python:3.12.4-slim-bookworm as poetry_base
+FROM python:3.12.7-slim-bullseye as base
 
-RUN pip install --no-cache-dir poetry==1.8.3
+ENV POETRY_HOME=/opt/poetry
+ENV POETRY_VENV=/opt/poetry-venv
+ENV POETRY_CACHE_DIR=/opt/.cache
+ENV POETRY_VERSION=1.8.2
+ENV POETRY_VIRTUALENVS_CREATE=false
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libpq-dev python3-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM poetry_base as dagster
-
-RUN mkdir -p /opt/dagster/dagster_home /opt/dagster/app
+RUN pip install poetry==$POETRY_VERSION
+FROM base as pipelines_base
 ENV PRODUCTION=true
 
-COPY pipelines/dagster.yaml  /opt/dagster/dagster_home/
 
-ENV DAGSTER_HOME=/opt/dagster/dagster_home/
+COPY ./pipelines /app
+COPY shared/ /shared
 
-COPY pipelines/ /opt/dagster/app/
+WORKDIR /app
 
-COPY shared/ /opt/dagster/shared
+LABEL org.opencontainers.image.source https://github.com/chidirnweke/talkingcode
 
-WORKDIR /opt/dagster/app
+RUN poetry check
 
-RUN rm dagster.yaml
-
-RUN poetry install --only main --no-root
-
-WORKDIR /opt/dagster/app
-
-EXPOSE 3000
-
-LABEL org.opencontainers.image.source https://github.com/chidirnweke/chatGITpt
-
-ENTRYPOINT ["poetry", "run", "dagster", "dev", "-h", "0.0.0.0", "-p", "3000"]
+RUN poetry install --no-interaction --no-cache --without dev

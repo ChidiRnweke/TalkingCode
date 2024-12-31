@@ -9,10 +9,11 @@ export default defineConfig({
 				changeOrigin: true,
 				rewrite: (path) => path.replace(/^\/api\/v1/, '')
 			},
-			'/docs': 'http://localhost:8080',
+			'/docs': 'http://localhost:8000',
 			'/openapi.json': 'http://localhost:8000'
 		}
 	},
+	//@ts-expect-error - vite-plugin-svelte is not typed
 	plugins: [sveltekit()],
 	test: {
 		include: ['src/**/*.{test,spec}.{js,ts}']
