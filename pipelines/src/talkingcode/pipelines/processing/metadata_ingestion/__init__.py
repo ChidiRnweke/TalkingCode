@@ -35,7 +35,15 @@ def database_service_from_config(config: IngestionConfig) -> DatabaseService:
     Returns:
         DatabaseService: An instance of the `DatabaseService` class.
     """
-    engine = create_async_engine(config.db_connection_string)
+    if "asyncpg" in config.db_connection_string:
+        connection_args = {"server_settings": {"search_path": "ingestion"}}
+        engine = create_async_engine(
+            config.db_connection_string,
+            echo=True,
+            connect_args=connection_args,
+        )
+    else:
+        engine = create_async_engine(config.db_connection_string)
     Session = async_sessionmaker(engine, expire_on_commit=False)
     return DatabaseService(session_maker=Session)
 

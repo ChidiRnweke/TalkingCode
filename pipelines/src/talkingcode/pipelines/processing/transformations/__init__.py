@@ -69,7 +69,14 @@ def metadata_storage_from_config(config: IngestionConfig) -> MetadataStorageServ
         MetadataStorageService: An instance of the `MetadataStorageService` class.
     """
     sync_mode = "sqlite" in config.db_connection_string
-    engine = create_async_engine(config.db_connection_string)
+    if "asyncpg" in config.db_connection_string:
+        connection_args = {"server_settings": {"search_path": "ingestion"}}
+        engine = create_async_engine(
+            config.db_connection_string,
+            connect_args=connection_args,
+        )
+    else:
+        engine = create_async_engine(config.db_connection_string)
     Session = async_sessionmaker(engine, expire_on_commit=False)
     return MetadataStorageService(
         session=Session,
