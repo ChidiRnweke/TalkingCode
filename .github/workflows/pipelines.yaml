@@ -8,6 +8,7 @@ on:
     paths:
       - "pipelines/**"
       - "docker.pipelines.yml"
+      - "docker/pipelines/Dockerfile"
       - "compose.pipelines.override.yml"
       - ".github/workflows/pipelines.yaml"
   workflow_dispatch:
@@ -47,6 +48,7 @@ jobs:
           echo "TELEMETRY_ENABLED=true" >> .env
           echo "TELEMETRY_ENDPOINT=${{ secrets.TELEMETRY_ENDPOINT }}" >> .env
           echo "INFISICAL_ENVIRONMENT=prod" >> .env
+          echo "INFISICAL_ENABLED=true" >> .env
 
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.5.3

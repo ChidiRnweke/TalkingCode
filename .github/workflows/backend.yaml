@@ -48,6 +48,7 @@ jobs:
           echo "TELEMETRY_ENABLED=true" >> .env
           echo "TELEMETRY_ENDPOINT=${{ secrets.TELEMETRY_ENDPOINT }}" >> .env
           echo "INFISICAL_ENVIRONMENT=prod" >> .env
+          echo "INFISICAL_ENABLED=true" >> .env
 
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.5.3
