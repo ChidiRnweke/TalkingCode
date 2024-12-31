@@ -41,10 +41,10 @@ class IngestionConfig:
         github_api_key = reader.read_secret("GITHUB_API_TOKEN")
         api_key = reader.read_secret("OPENAI_API_KEY")
         conn_string = reader.read_or_default(
-            "ASYNC_DATABASE_URL", "sqlite+aiosqlite:///talkingcode.sqlite"
+            "INGESTION_DB_CONNECTION_STRING", "sqlite+aiosqlite:///talkingcode.sqlite"
         )
         migrations_connection_string = reader.read_or_default(
-            "MIGRATIONS_CONNECTION_STRING", "sqlite:///talkingcode.sqlite"
+            "INGESTION_MIGRATIONS_CONNECTION_STRING", "sqlite:///talkingcode.sqlite"
         )
         allowed_extensions = reader.read_secret("WHITELISTED_EXTENSIONS")
 
