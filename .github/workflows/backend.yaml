@@ -44,7 +44,9 @@ jobs:
           echo "INFISICAL_CLIENT_SECRET=${{ secrets.INFISICAL_CLIENT_SECRET }}" >> .env
           echo "INFISICAL_PROJECT_ID=${{ secrets.INFISICAL_PROJECT_ID }}" >> .env
           echo "INFISICAL_URL=${{ secrets.INFISICAL_URL }}" >> .env
-          echo "INFISICAL_ENVIRONMENT=production" >> .env
+          echo "TELEMETRY_ENABLED=true" >> .env
+          echo "TELEMETRY_ENDPOINT=${{ secrets.TELEMETRY_ENDPOINT }}" >> .env
+          echo "INFISICAL_ENVIRONMENT=prod" >> .env
 
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.5.3
@@ -55,7 +57,7 @@ jobs:
         run: ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'mkdir -p ~/${{ vars.PROJECT }}'
 
       - name: Copy compose files
-        run: scp -o StrictHostKeyChecking=no docker-compose.yml .env ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/${{ vars.PROJECT }}
+        run: scp -o StrictHostKeyChecking=no docker.backend.yml .env ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/${{ vars.PROJECT }}
 
       - name: Deploy to server
         run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/${{ vars.PROJECT }} && docker compose -f docker.backend.yml --env-file .env up -d --pull always && rm docker.backend.yml'
