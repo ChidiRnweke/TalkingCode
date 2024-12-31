@@ -30,6 +30,8 @@ async def run_pipeline_on_schedule(hour: int, minute: int) -> None:
         hour (int): The hour of the day to run the pipeline (24-hour format).
         minute (int): The minute of the hour to run the pipeline.
     """
+    logger.info("Doing initial run of scheduled pipeline...")
+    await download_and_persist_data()
     while True:
         await _sleep_until(hour, minute)
 
@@ -53,4 +55,5 @@ async def _sleep_until(hour: int, minute: int) -> None:
         next_run += timedelta(days=1)
 
     sleep_duration = (next_run - now).total_seconds()
+    logger.info(f"Sleeping until the next run at {next_run}...")
     await asyncio.sleep(sleep_duration)
