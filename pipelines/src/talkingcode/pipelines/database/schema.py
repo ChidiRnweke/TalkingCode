@@ -1,11 +1,4 @@
-from datetime import datetime
-
-from sqlalchemy import (
-    DateTime,
-    ForeignKeyConstraint,
-    Integer,
-    String,
-)
+from sqlalchemy import ForeignKeyConstraint, Integer, String
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -55,13 +48,3 @@ class GithubFileModel(Base):
     repository: Mapped[GitHubRepositoryModel] = relationship(
         back_populates="files", foreign_keys=[repository_name, repository_user]
     )
-
-
-class TokenSpendModel(Base):
-    __tablename__ = "tokens_spent"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    session_id: Mapped[str] = mapped_column(String(255))
-    token_count: Mapped[int] = mapped_column(Integer)
-    model: Mapped[str] = mapped_column(String(255))
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
