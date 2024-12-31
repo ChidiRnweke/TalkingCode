@@ -4,8 +4,13 @@ on:
   push:
     branches:
       - main
+      - master
     paths:
       - "backend/**"
+      - "docker.backend.yml"
+      - "compose.backend.override.yml"
+      - ".github/workflows/backend.yaml"
+  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -23,7 +28,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Push Docker image to Docker Hub
-        run: docker compose -f compose.backend.yml -f compose.backend.override.yml build --push
+        run: docker compose -f docker.backend.yml -f compose.backend.override.yml build --push
 
   deploy:
     needs: build-and-push
@@ -33,13 +38,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Create a .env file with Infisical secrets
+        run: |
+          echo "INFISICAL_CLIENT_ID=${{ secrets.INFISICAL_CLIENT_ID }}" >> .env
+          echo "INFISICAL_CLIENT_SECRET=${{ secrets.INFISICAL_CLIENT_SECRET }}" >> .env
+          echo "INFISICAL_PROJECT_ID=${{ secrets.INFISICAL_PROJECT_ID }}" >> .env
+          echo "INFISICAL_URL=${{ secrets.INFISICAL_URL }}" >> .env
+          echo "INFISICAL_ENVIRONMENT=production" >> .env
+
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: copy compose files
-        run: scp -o StrictHostKeyChecking=no compose.backend.yml ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/chatgitpt
+      - name: Create project directory if it doesn't exist
+        run: ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'mkdir -p ~/${{ vars.PROJECT }}'
+
+      - name: Copy compose files
+        run: scp -o StrictHostKeyChecking=no docker-compose.yml .env ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/${{ vars.PROJECT }}
 
       - name: Deploy to server
-        run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/chatgitpt && docker compose -f compose.backend.yml --env-file .env up -d --pull always && rm compose.backend.yml'
+        run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/${{ vars.PROJECT }} && docker compose -f docker.backend.yml --env-file .env up -d --pull always && rm docker.backend.yml'
