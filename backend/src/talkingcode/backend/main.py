@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[State]:
     config = AppConfig.from_config()
     retrieval_service = vector_store_from_config(config)
     yield {
-        "app_config": AppConfig.from_config(),
+        "app_config": config,
         "retrieval_service": retrieval_service,
     }
 
