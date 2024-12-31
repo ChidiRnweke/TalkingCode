@@ -62,7 +62,7 @@ class IngestionConfig:
         qdrant_local_storage_path = reader.read_or_default(
             "QDRANT_LOCAL_STORAGE_PATH", "../qdrant-data"
         )
-        qdrant_api_key = reader.read_secret("QDRANT_API_KEY")
+        qdrant_api_key = reader.read_or_default("QDRANT_API_KEY", "api_key")
 
         allowed_extensions = strings_to_list(allowed_extensions)
         skipped_files = strings_to_list(skipped_files)
