@@ -31,7 +31,7 @@ services:
       ]
     networks:
       - postgres_network
-      - qdrant_network
+      - qdrant-network
       - reverse-proxy
       - telemetry-network
 
@@ -42,7 +42,7 @@ services:
     command: ["poetry", "run", "alembic", "upgrade", "head"]
     networks:
       - telemetry-network
-      - postgres_network
+      - postgres-network
     <<: *shared-env
 
 networks:

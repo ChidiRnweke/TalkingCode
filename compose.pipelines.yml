@@ -18,8 +18,8 @@ services:
       - startup_container
     networks:
       - telemetry-network
-      - postgres_network
-      - qdrant_network
+      - postgres-network
+      - qdrant-network
     <<: *shared-env
 
   startup_container:
@@ -29,13 +29,13 @@ services:
     command: ["poetry", "run", "alembic", "upgrade", "head"]
     networks:
       - telemetry-network
-      - postgres_network
+      - postgres-network
     <<: *shared-env
 
 networks:
   telemetry-network:
     external: true
-  postgres_network:
+  postgres-network:
     external: true
-  qdrant_network:
+  qdrant-network:
     external: true
