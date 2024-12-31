@@ -46,6 +46,7 @@ class AppConfig:
     qdrant_local_port: int
     qdrant_collection_name: str
     qdrant_local_storage_path: str
+    qdrant_api_key: str
 
     @classmethod
     def from_config(cls) -> "AppConfig":
@@ -73,6 +74,7 @@ class AppConfig:
             migrations_connection_string = reader.read_or_default(
                 "MIGRATIONS_CONNECTION_STRING", "sqlite:///talkingcode.sqlite"
             )
+            qdrant_api_key = reader.read_secret("QDRANT_API_KEY")
             openAI_client = AsyncOpenAI(api_key=openai_api_key)
 
             session = configure_async_session_maker(conn_str)
@@ -93,6 +95,7 @@ class AppConfig:
             qdrant_collection_name=qdrant_collection_name,
             qdrant_local_storage_path=qdrant_local_storage_path,
             migrations_connection_string=migrations_connection_string,
+            qdrant_api_key=qdrant_api_key,
         )
 
 

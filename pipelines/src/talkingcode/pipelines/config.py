@@ -28,6 +28,7 @@ class IngestionConfig:
     qdrant_local_port: int
     qdrant_collection_name: str
     qdrant_local_storage_path: str
+    qdrant_api_key: str
 
     max_embedding_input_length: int = 8000
     embedding_disk_path: str = "embeddings"
@@ -61,6 +62,7 @@ class IngestionConfig:
         qdrant_local_storage_path = reader.read_or_default(
             "QDRANT_LOCAL_STORAGE_PATH", "../qdrant-data"
         )
+        qdrant_api_key = reader.read_secret("QDRANT_API_KEY")
 
         allowed_extensions = strings_to_list(allowed_extensions)
         skipped_files = strings_to_list(skipped_files)
@@ -79,6 +81,7 @@ class IngestionConfig:
             qdrant_local_port=qdrant_local_port,
             qdrant_collection_name=qdrant_collection_name,
             qdrant_local_storage_path=qdrant_local_storage_path,
+            qdrant_api_key=qdrant_api_key,
         )
 
 

@@ -18,7 +18,9 @@ def vector_store_from_config(config: AppConfig) -> RetrievalService:
     collection_name = config.qdrant_collection_name
     local_storage = config.qdrant_local_storage_path
     if server_mode:
-        client = AsyncQdrantClient(url=config.qdrant_server_url)
+        url = config.qdrant_server_url
+        api_key = config.qdrant_api_key
+        client = AsyncQdrantClient(url=url, api_key=api_key)
     else:
         client = AsyncQdrantClient(path=local_storage)
     return QdrantRetrievalService(client, config.top_k, collection_name)
