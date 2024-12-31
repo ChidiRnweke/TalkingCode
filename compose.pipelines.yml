@@ -15,7 +15,7 @@ services:
   data_pipelines:
     container_name: talkingcode_data_pipelines
     image: ghcr.io/chidirnweke/talkingcode-data_pipelines:latest
-    command: ["poetry", "run", "python", "src/talkingcode/backend/main.py"]
+    command: ["poetry", "run", "python", "src/talkingcode/backend/app.py"]
     depends_on:
       - startup_container
     networks:
