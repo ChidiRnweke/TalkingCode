@@ -12,7 +12,7 @@ x-shared-environment: &shared-env
 
 services:
   rag_backend:
-    image: ghcr.io/chidirnweke/chatgitpt-backend:latest
+    image: ghcr.io/chidirnweke/talkingcode-backend:latest
     container_name: rag_backend
     <<: *shared-env
     depends_on:
@@ -30,14 +30,14 @@ services:
         "8000",
       ]
     networks:
-      - postgres_network
+      - postgres-network
       - qdrant-network
       - reverse-proxy
       - telemetry-network
 
   startup_container:
     container_name: rag_backend_startup_container
-    image: ghcr.io/chidirnweke/chatgitpt-backend:latest
+    image: ghcr.io/chidirnweke/talkingcode-backend:latest
     restart: "no"
     command: ["poetry", "run", "alembic", "upgrade", "head"]
     networks:
@@ -50,7 +50,7 @@ networks:
     external: true
   telemetry-network:
     external: true
-  postgres_network:
+  postgres-network:
     external: true
   qdrant-network:
     external: true
