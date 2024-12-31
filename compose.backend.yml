@@ -52,5 +52,5 @@ networks:
     external: true
   postgres_network:
     external: true
-  qdrant_network:
+  qdrant-network:
     external: true
