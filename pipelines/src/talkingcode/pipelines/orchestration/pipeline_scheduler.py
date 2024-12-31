@@ -19,7 +19,10 @@ async def download_and_persist_data() -> None:
     """
     async with _run_lock:
         app_config = IngestionConfig.from_env()
-        await run_transformation_pipeline(app_config)
+        try:
+            await run_transformation_pipeline(app_config)
+        except Exception as e:
+            logger.exception(f"An error occurred while running the pipeline: {e}")
 
 
 async def run_pipeline_on_schedule(hour: int, minute: int) -> None:
