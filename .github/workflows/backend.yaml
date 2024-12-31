@@ -8,6 +8,7 @@ on:
     paths:
       - "backend/**"
       - "compose.backend.yml"
+      - "docker/backend/Dockerfile"
       - "compose.backend.override.yml"
       - ".github/workflows/backend.yaml"
   workflow_dispatch:

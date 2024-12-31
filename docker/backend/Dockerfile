@@ -21,7 +21,7 @@ COPY shared/ /shared
 
 WORKDIR /app
 
-LABEL org.opencontainers.image.source https://github.com/chidirnweke/talkingcode-backend
+LABEL org.opencontainers.image.source https://github.com/chidirnweke/talkingcode
 
 RUN poetry check
 
