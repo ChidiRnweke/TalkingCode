@@ -3,9 +3,9 @@ services:
   data_pipelines:
     build:
       context: .
-      dockerfile: docker/data_pipelines/Dockerfile
+      dockerfile: docker/pipelines/Dockerfile
 
   startup_container:
     build:
       context: .
-      dockerfile: docker/data_pipelines/Dockerfile
+      dockerfile: docker/pipelines/Dockerfile
