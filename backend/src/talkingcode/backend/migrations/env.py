@@ -1,3 +1,5 @@
+import logging
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -5,9 +7,32 @@ from sqlalchemy import engine_from_config, pool
 
 from talkingcode.backend.config import AppConfig
 from talkingcode.backend.database import Base
+from talkingcode.shared.telemetry import configure_telemetry
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
+
+app_logger = logging.getLogger("app_logger")
+app_logger.setLevel(logging.DEBUG)
+if not app_logger.handlers:
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    console_handler.setFormatter(formatter)
+    app_logger.addHandler(console_handler)
+
+telemetry_enabled = bool(os.getenv("TELEMETRY_ENABLED"))
+if telemetry_enabled:
+    telemetry_endpoint = os.getenv("TELEMETRY_ENDPOINT")
+    if not telemetry_endpoint:
+        raise ValueError("Telemetry endpoint is required when telemetry is enabled.")
+    configure_telemetry(telemetry_endpoint)
+
+app_logger.info("Starting Alembic migrations")
+
+
 config = context.config
 section = config.config_ini_section
 app_config = AppConfig.from_config()
@@ -76,7 +101,12 @@ def run_migrations_online() -> None:
             context.run_migrations()
 
 
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
+try:
+    if context.is_offline_mode():
+        run_migrations_offline()
+    else:
+        run_migrations_online()
+    app_logger.info("Finished running Alembic migrations")
+except Exception as e:
+    app_logger.error(f"Error running migrations: {e}")
+    raise e
