@@ -30,5 +30,8 @@ if __name__ == "__main__":
                 "Telemetry endpoint is required when telemetry is enabled."
             )
         configure_telemetry(telemetry_endpoint)
+        app_logger.info("Telemetry is enabled on talkingcode pipelines.")
+    else:
+        app_logger.info("Telemetry is disabled on talkingcode pipelines.")
 
     asyncio.run(main())
