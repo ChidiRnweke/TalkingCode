@@ -12,7 +12,7 @@ from talkingcode.shared.telemetry import instrument_all_async, log_async_executi
 
 from .transformed_file import EmbeddedChunk, Embedder
 
-logger = structlog.getLogger("talkingcode")
+logger: structlog.stdlib.BoundLogger = structlog.getLogger("talkingcode")
 
 
 @dataclass(frozen=True, slots=True)

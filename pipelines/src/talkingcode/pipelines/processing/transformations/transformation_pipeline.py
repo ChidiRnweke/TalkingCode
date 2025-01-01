@@ -2,7 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Sequence
 
-from structlog import getLogger
+from structlog import getLogger, stdlib
 
 from talkingcode.pipelines.github_client import GitHubClient
 from talkingcode.pipelines.models import FileMetadata
@@ -18,7 +18,7 @@ from .transformed_file import (
     TransformedFile,
 )
 
-logger = getLogger("talkingcode")
+logger: stdlib.BoundLogger = getLogger("talkingcode")
 
 
 @instrument_all_async(log_async_execution_time)

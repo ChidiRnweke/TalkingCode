@@ -1,11 +1,8 @@
 from sqlite3 import Connection as SQLiteConnection
 
 from sqlalchemy import Connection, Engine, event
-from structlog import getLogger
 
 from .schema import Base, GithubFileModel, GitHubRepositoryModel
-
-logger = getLogger("talkingcode")
 
 
 @event.listens_for(Engine, "connect")

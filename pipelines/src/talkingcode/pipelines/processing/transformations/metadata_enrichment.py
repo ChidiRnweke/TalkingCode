@@ -4,7 +4,7 @@ from typing import Any, Type
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel
-from structlog import getLogger
+from structlog import getLogger, stdlib
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from talkingcode.pipelines.models import FileMetadata
@@ -12,7 +12,7 @@ from talkingcode.shared.telemetry import instrument_all_async, log_async_executi
 
 from .transformed_file import FileTransformation, TransformedFile
 
-logger = getLogger("talkingcode")
+logger: stdlib.BoundLogger = getLogger("talkingcode")
 
 _openai_enrichment_semaphore = asyncio.Semaphore(5)
 

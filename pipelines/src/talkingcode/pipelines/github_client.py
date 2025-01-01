@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Protocol
 
 from httpx import AsyncClient
-from structlog import getLogger
+from structlog import getLogger, stdlib
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from talkingcode.pipelines.config import IngestionConfig
@@ -22,7 +22,7 @@ from talkingcode.pipelines.models import (
 )
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
-logger = getLogger("talkingcode")
+logger: stdlib.BoundLogger = getLogger("talkingcode")
 
 
 class GitHubClient(Protocol):

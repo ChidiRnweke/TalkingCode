@@ -4,13 +4,13 @@ from typing import Sequence
 
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.models import Distance, PointStruct, VectorParams
-from structlog import getLogger
+from structlog import getLogger, stdlib
 
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
 from .transformed_file import EmbeddingsWithMetadata, MetadataStore, PayloadStore
 
-logger = getLogger("talkingcode")
+logger: stdlib.BoundLogger = getLogger("talkingcode")
 
 
 @instrument_all_async(log_async_execution_time)

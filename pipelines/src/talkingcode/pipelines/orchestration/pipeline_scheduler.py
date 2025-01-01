@@ -2,14 +2,14 @@ import asyncio
 from datetime import datetime, timedelta
 
 from opentelemetry.trace import get_tracer
-from structlog import getLogger
+from structlog import getLogger, stdlib
 
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.processing import run_transformation_pipeline
 from talkingcode.shared.telemetry import log_async_execution_time
 
 _run_lock = asyncio.Lock()
-logger = getLogger("talkingcode")
+logger: stdlib.BoundLogger = getLogger("talkingcode")
 
 tracer = get_tracer(__name__)
 
