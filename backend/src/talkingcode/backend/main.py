@@ -15,6 +15,7 @@ from talkingcode.backend.errors import (
     InfraError,
     InputError,
     MaximumSpendError,
+    TokenLimitError,
 )
 from talkingcode.backend.rag import (
     InputQuery,
@@ -204,6 +205,28 @@ def create_app():
 app = create_app()
 
 
+def handle_token_limit_error(
+    request: Request, exc: TokenLimitError
+) -> StreamingResponse:
+    """
+    This function is used to handle the token limit error. It is used to catch the token limit
+    error and return the appropriate JSON response.
+
+    Args:
+        request (Request): The request object.
+        exc (TokenLimitError): The token limit error that was raised.
+
+    Returns:
+        (JSONResponse): The JSON response with the error message and status code.
+    """
+    message = "The limit for a question is 8192 tokens. This is a limitation of the OpenAI API. Could you please ask a shorter question?"
+
+    async def event_generator():
+        yield message
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
 @app.exception_handler(AppError)
 async def handle_app_errors(request: Request, exc: AppError) -> JSONResponse:
     """
@@ -235,3 +258,6 @@ async def handle_app_errors(request: Request, exc: AppError) -> JSONResponse:
 async def exception_callback(request: Request, exc: Exception):
     logger.error(str(exc))
     return JSONResponse(status_code=500, content={"message": "Internal server error"})
+
+
+app.add_exception_handler(TokenLimitError, handle_token_limit_error)  # type: ignore

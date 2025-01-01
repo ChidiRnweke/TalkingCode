@@ -2,11 +2,12 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import aiohttp
+import tiktoken
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import ScoredPoint
 
-from talkingcode.backend.errors import map_errors
+from talkingcode.backend.errors import TokenLimitError, map_errors
 
 from .generation import InputQuery
 from .token_spend import TokenSpendStore
@@ -170,6 +171,7 @@ class OpenAIEmbeddingService(EmbeddingService):
     client: AsyncOpenAI
     embedding_model: str
     token_store: TokenSpendStore
+    token_limit: int = 8000
 
     async def embed(self, input: InputQuery) -> EmbeddedChunk:
         """
@@ -182,9 +184,10 @@ class OpenAIEmbeddingService(EmbeddingService):
         Returns:
             EmbeddedResponse: The embedded response. Contains the embedding and the number of tokens spent.
         """
+        context = self._make_context(input)
         with map_errors():
             response = await self.client.embeddings.create(
-                input=[input.query], model=self.embedding_model
+                input=[context], model=self.embedding_model
             )
         await self.token_store.store_token_spent(
             session_id=input.session_id,
@@ -192,6 +195,51 @@ class OpenAIEmbeddingService(EmbeddingService):
             model_name=self.embedding_model,
         )
         return EmbeddedChunk(embedding=response.data[0].embedding)
+
+    def _make_context(self, input: InputQuery) -> str:
+        """Creates the context for the model. The context is a string that contains the user's question
+        and the retrieved contexts. The context is used to generate the response to the user.
+
+        Args:
+            input (InputQuery): The input query. Contains the user's question, and optionally,
+                the previous context and session ID.
+
+        Returns:
+            (str): The context for the model.
+        """
+        question = input.query
+        enc = tiktoken.get_encoding("cl100k_base")
+        question_tokens = self._count_tokens(question, enc)
+        if question_tokens > self.token_limit:
+            raise TokenLimitError()
+
+        if not input.previous_context:
+            return question
+        else:
+            remaining_tokens = self.token_limit - question_tokens
+            buffer = f"new question: {question}"
+            for idx, context in reversed(list(enumerate(input.previous_context))):
+                q, a = context.question, context.answer
+                context_tokens = self._count_tokens(q, enc) + self._count_tokens(a, enc)
+                if context_tokens < remaining_tokens:
+                    buffer += f"question {idx}: {q}\n answer {idx}: {a}\n"
+                    remaining_tokens -= context_tokens
+                else:
+                    # Stop processing as we've reached the token limit.
+                    break
+            return buffer
+
+    def _count_tokens(self, string: str, encoding: tiktoken.Encoding) -> int:
+        """Counts the number of tokens in a string. This is used to calculate the number of tokens
+        spent on the generation.
+
+        Args:
+            string (str): The string to count the tokens in.
+
+        Returns:
+            (int): The number of tokens in the string.
+        """
+        return len(encoding.encode(string))
 
 
 @dataclass(frozen=True, slots=True)

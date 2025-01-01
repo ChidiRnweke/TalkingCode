@@ -32,9 +32,6 @@ class AppError(Exception):
     exhaustive pattern matching to handle all cases this way.
     """
 
-    def __init__(self, err: Exception | None) -> None:
-        self.original_error = err
-
 
 class InfraError(AppError):
     """
@@ -43,13 +40,6 @@ class InfraError(AppError):
     network errors, database errors, etc.
     """
 
-    def __init__(self, err: Exception) -> None:
-        super().__init__(err)
-        self.msg = "An error occurred in the infrastructure layer"
-
-    def __str__(self) -> str:
-        return self.msg
-
 
 class MaximumSpendError(AppError):
     """Raised when the maximum spend for the day has been reached.
@@ -57,30 +47,24 @@ class MaximumSpendError(AppError):
 
     """
 
-    def __init__(self) -> None:
-        super().__init__(None)
-        self.msg = "The maximum spend for the day has been reached"
-
-    def __str__(self) -> str:
-        return self.msg
-
 
 class InputError(AppError):
     """Raised when the input provided by the user is invalid. These are cases
     that are not caught by the validation logic in the API layer (Pydantic models).
     """
 
-    def __init__(
-        self, message: str | None = None, err: Exception | None = None
-    ) -> None:
-        if message:
-            self.msg = message
-        else:
-            self.msg = "The input you provided is invalid"
-        super().__init__(err)
 
-    def __str__(self) -> str:
-        return self.msg
+class AppStartupError(Exception):
+    """Raised when an error occurs during the application startup.
+    This can be used to handle errors that occur during the application initialization
+    such as reading secrets, connecting to the database, etc.
+    """
+
+
+class TokenLimitError(Exception):
+    """
+    Raised when a question is asked that would exceed the token limit.
+    """
 
 
 P = ParamSpec("P")
@@ -98,7 +82,7 @@ class MapErrors(Generic[P, T]):
             return self._func(*args, **kwargs)
         except Exception as e:
             log.error(f"Error in {self._func.__qualname__}: {e}", exc_info=True)
-            raise self._map_to(err=e) from e
+            raise self._map_to() from e
 
 
 @contextmanager
@@ -122,4 +106,4 @@ def map_errors(map_to: Type[AppError] = InfraError):
         yield
     except Exception as e:
         log.error(f"Error in: {e}", exc_info=True)
-        raise map_to(err=e) from e
+        raise map_to() from e
