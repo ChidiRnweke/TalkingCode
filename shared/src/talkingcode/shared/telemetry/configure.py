@@ -54,8 +54,8 @@ def _configure_logs(endpoint: str, telemetry_resource: Resource):
     handler = LoggingHandler(level=logging.DEBUG, logger_provider=logger_provider)
     _configure_structlog()
 
-    structlog.getLogger("talkingcode").addHandler(handler)
-    structlog.getLogger("talkingcode").setLevel(logging.DEBUG)
+    logging.getLogger("talkingcode").addHandler(handler)
+    logging.getLogger("talkingcode").setLevel(logging.DEBUG)
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
     set_logger_provider(logger_provider)
 
