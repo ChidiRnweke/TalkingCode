@@ -74,7 +74,12 @@ class AppConfig:
             migrations_connection_string = reader.read_or_default(
                 "MIGRATIONS_CONNECTION_STRING", "sqlite:///talkingcode.sqlite"
             )
-            qdrant_api_key = reader.read_secret("QDRANT_API_KEY")
+            qdrant_api_key = reader.read_or_default("QDRANT_API_KEY", "not_set")
+            if qdrant_server_mode and qdrant_api_key == "not_set":
+                raise AppStartupError(
+                    "QDRANT_API_KEY is required when QDRANT_SERVER_MODE is enabled"
+                )
+
             openAI_client = AsyncOpenAI(api_key=openai_api_key)
 
             session = configure_async_session_maker(conn_str)
@@ -95,7 +100,7 @@ class AppConfig:
             qdrant_collection_name=qdrant_collection_name,
             qdrant_local_storage_path=qdrant_local_storage_path,
             migrations_connection_string=migrations_connection_string,
-            qdrant_api_key=qdrant_api_key,
+            qdrant_api_key=qdrant_api_key,  # type: ignore
         )
 
 
