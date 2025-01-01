@@ -110,4 +110,4 @@ class SQLTokenStore(TokenSpendStore):
         async with self.async_session.begin():
             with map_errors():
                 result = (await self.async_session.scalars(stmt)).all()
-        return sum(result) * 0.00001
+        return sum(result) * 0.000003
