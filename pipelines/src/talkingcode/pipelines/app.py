@@ -1,7 +1,6 @@
 import asyncio
+import logging
 import os
-
-import structlog
 
 from talkingcode.pipelines.orchestration import run_pipeline_on_schedule
 from talkingcode.shared.telemetry import configure_telemetry
@@ -12,7 +11,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    app_logger = structlog.getLogger("talkingcode")
+    app_logger = logging.getLogger("talkingcode")
     app_logger.setLevel(logging.DEBUG)
     if not app_logger.handlers:
         console_handler = logging.StreamHandler()
