@@ -1,5 +1,6 @@
 import type { paths } from './schema';
 import createClient from 'openapi-fetch';
+import markdownit from 'markdown-it';
 
 const baseUrl = '/api/v1';
 const client = createClient<paths>({ baseUrl });
@@ -9,21 +10,19 @@ export type RAGResponse =
 export type RemainingSpend =
 	paths['/rag/remaining_spend']['get']['responses']['200']['content']['application/json'];
 
-import { writable } from 'svelte/store';
-export const remainingSpace = writable(2);
-export const currentAnswer = writable('');
-
-const isProd = import.meta.env.PROD;
+const isProd = import.meta.env.NODE_ENV === 'production';
+const md = markdownit({ html: true, breaks: true });
 
 export interface PreviousContext {
 	question: string;
 	answer: string;
 }
 
+const htmlRender = (input: string) => md.renderInline(input);
+
 export interface RAGService {
-	getAnswer: (inputQuery: InputQuery) => Promise<void>;
-	refreshRemainingSpend: () => Promise<void>;
-	getCurrentSpend: () => Promise<number>;
+	getAnswer: (inputQuery: InputQuery) => AsyncGenerator<string, void, unknown>;
+	getRemainingSpend: () => Promise<number>;
 }
 
 class APIError extends Error {
@@ -33,30 +32,32 @@ class APIError extends Error {
 }
 
 class MockRagClient implements RAGService {
-	getAnswer = async (): Promise<void> => {
+	async *getAnswer(): AsyncGenerator<string, void, unknown> {
 		if (!isProd) {
 			const mockData = await fetch('/mock-response.json').then((res) => res.json());
+			let answer = '';
 			for (const chunk of mockData.response) {
-				currentAnswer.update((foo) => foo + chunk);
+				answer += chunk;
+				yield htmlRender(answer);
 				await new Promise((resolve) => setTimeout(resolve, 1)); // Simulate delay
 			}
+		} else {
+			throw new APIError('Mock data is only available in development mode.');
 		}
-		throw new APIError('Mock data is only available in development mode.');
-	};
+	}
 
-	refreshRemainingSpend = async () => {
-		remainingSpace.set(2);
-	};
-
-	getCurrentSpend = async (): Promise<number> => {
-		return 2;
+	getRemainingSpend = async (): Promise<number> => {
+		return Promise.resolve(2);
 	};
 }
 class RAGClient implements RAGService {
 	private client = client;
 
-	getAnswer = async (inputQuery: InputQuery): Promise<void> => {
-		currentAnswer.set('');
+	async *getAnswer(inputQuery: InputQuery): AsyncGenerator<string, void, unknown> {
+		let renderingBuffer = '';
+		const bufferSize = 15;
+		let bufferLength = 0;
+		let currentAnswer = '';
 		const responseStream = await fetch(`${baseUrl}/rag/chat`, {
 			method: 'POST',
 			headers: {
@@ -76,16 +77,23 @@ class RAGClient implements RAGService {
 			const { done, value } = await reader.read();
 			if (done) break;
 			const text = new TextDecoder().decode(value);
-			currentAnswer.update((current) => current + text);
+
+			renderingBuffer += text;
+			bufferLength += text.length;
+			if (bufferLength >= bufferSize) {
+				currentAnswer += renderingBuffer;
+				yield htmlRender(currentAnswer);
+				renderingBuffer = '';
+				bufferLength = 0;
+			}
 		}
-	};
+		if (bufferLength > 0) {
+			currentAnswer += renderingBuffer;
+			yield htmlRender(currentAnswer);
+		}
+	}
 
-	refreshRemainingSpend = async () => {
-		const remainingSpend = await this.getCurrentSpend();
-		remainingSpace.set(remainingSpend);
-	};
-
-	getCurrentSpend = async (): Promise<number> => {
+	getRemainingSpend = async (): Promise<number> => {
 		const { data } = await this.client.GET('/rag/remaining_spend');
 		if (data) {
 			return data.remaining_spend;

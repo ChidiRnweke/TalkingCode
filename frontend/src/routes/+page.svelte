@@ -2,13 +2,7 @@
 	import Question from '../components/Question.svelte';
 	import Answer from '../components/Answer.svelte';
 	import SendButton from '../components/SendButton.svelte';
-	import {
-		ragClient,
-		remainingSpace,
-		type PreviousContext,
-		currentAnswer,
-		type InputQuery
-	} from '$lib/client';
+	import { ragClient, type PreviousContext, type InputQuery } from '$lib/client.svelte';
 	import Suggestions from '../components/Suggestions.svelte';
 	import Heading from 'flowbite-svelte/Heading.svelte';
 	import { setContext, onMount } from 'svelte';
@@ -24,6 +18,8 @@
 	let previousContext: PreviousContext[] = $state([]);
 	let latestQuestion: string = $state('');
 	let inConversation = $state(false);
+	let remainingSpend = $state(2);
+
 	enum GenerateAnswerStatus {
 		NONE,
 		LOADING
@@ -35,11 +31,10 @@
 	};
 
 	let sessionId = generateId();
-
+	let currentAnswer = $state('');
 	let status = $state(GenerateAnswerStatus.NONE);
 	// @ts-expect-error
 	let disabled = $derived(status === GenerateAnswerStatus.LOADING);
-	let answer = $derived($currentAnswer);
 
 	const generateAnswer = async (question: string): Promise<void> => {
 		const inputQuery: InputQuery = {
@@ -49,7 +44,11 @@
 		};
 		inConversation = true;
 		status = GenerateAnswerStatus.LOADING;
-		await ragClient.getAnswer(inputQuery);
+		for await (const response of ragClient.getAnswer(inputQuery)) {
+			currentAnswer = response;
+		}
+		let answer = currentAnswer;
+		currentAnswer = '';
 		previousContext = [...previousContext, { question: question, answer: answer }];
 		status = GenerateAnswerStatus.NONE;
 		error = false;
@@ -59,7 +58,7 @@
 		latestQuestion = $input;
 		try {
 			await generateAnswer(latestQuestion);
-			await ragClient.refreshRemainingSpend();
+			remainingSpend = await ragClient.getRemainingSpend();
 		} catch (error) {
 			handleError();
 		}
@@ -83,7 +82,7 @@
 	};
 
 	onMount(async () => {
-		await ragClient.refreshRemainingSpend();
+		remainingSpend = await ragClient.getRemainingSpend();
 	});
 </script>
 
@@ -109,7 +108,7 @@
 			{#if status === GenerateAnswerStatus.LOADING}
 				<Question>{latestQuestion}</Question>
 				<Answer loading={status === GenerateAnswerStatus.LOADING}>
-					{@html $currentAnswer}
+					{@html currentAnswer}
 				</Answer>
 			{/if}
 			{#if error}
@@ -122,6 +121,6 @@
 {/if}
 
 <div class="flex flex-col">
-	<CurrentSpend amount={$remainingSpace} />
+	<CurrentSpend amount={remainingSpend} />
 	<SendButton {disabled} bind:input={$input} action={submitQuestion} />
 </div>
