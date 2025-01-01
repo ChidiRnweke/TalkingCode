@@ -10,7 +10,7 @@ export type RAGResponse =
 export type RemainingSpend =
 	paths['/rag/remaining_spend']['get']['responses']['200']['content']['application/json'];
 
-const isProd = import.meta.env.NODE_ENV === 'production';
+const isProd = import.meta.env.PROD;
 const md = markdownit({ html: true, breaks: true });
 
 export interface PreviousContext {
