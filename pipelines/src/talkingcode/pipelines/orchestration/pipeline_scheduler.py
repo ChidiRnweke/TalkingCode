@@ -4,13 +4,13 @@ from logging import getLogger
 
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.processing import run_transformation_pipeline
-from talkingcode.shared.telemetry import log_execution_time
+from talkingcode.shared.telemetry import log_async_execution_time
 
 _run_lock = asyncio.Lock()
-logger = getLogger(__name__)
+logger = getLogger("app_logger")
 
 
-@log_execution_time
+@log_async_execution_time
 async def download_and_persist_data() -> None:
     """
     Download and persist data from the GitHub API to the database.
