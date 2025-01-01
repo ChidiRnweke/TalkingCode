@@ -41,10 +41,11 @@
 		<Heading tag="h2" class="mb-8">The tech stack</Heading>
 		<Paragraph>
 			The summary of the tech stack is that it's a full-stack application built with Python in the
-			backend and SvelteKit (Typescript) in the frontend. The backend is built using FastAPI and the
-			database is Postgres with the PGVector extension. The app is hosted on a VPS running Ubuntu
-			and is deployed using Docker and Docker Compose. The deployment is done using Ansible and
-			GitHub Actions. All the code is available on GitHub.
+			backend and SvelteKit (Typescript) in the frontend. The backend is built using FastAPI. Two
+			databases are used, a vector database for storing the embeddings (Qdrant) and a regular
+			database for storing the metadata (Postgres or sqlite). The app is hosted on a VPS running
+			Ubuntu and is deployed using Docker and Docker Compose. The deployment is done using Ansible
+			and GitHub Actions. All the code is available on GitHub.
 		</Paragraph>
 		<section>
 			<Heading tag="h3" class="mb-8">The ETL: Python</Heading>
@@ -60,22 +61,24 @@
 				After the data is stored in the database, the data is embedded.
 			</Paragraph>
 			<Paragraph>
-				The entire process is orchestrated using <A href="https://dagster.io">Dagster</A>. The DAG
-				consists of two nodes: one for extracting the data and one for embedding the data. The
-				pipeline practices a strict separation of orchestration and computation. The orchestration
-				is done in the Dagster pipeline and the computation is done in the Python code.
+				The entire process is orchestrated using a simple Python script that runs the ETL every
+				night. The metrics are stored inside my observability stack, consisting of Loki, Tempo,
+				Prometheus, and Grafana.
 			</Paragraph>
 		</section>
 		<section>
-			<Heading tag="h3" class="mb-8">The database: PGVector</Heading>
+			<Heading tag="h3" class="mb-8">The database: Qdrant and Postgres</Heading>
 			<Paragraph>
 				Vector databases are a hot topic right now. The idea is to store the data in a way that
-				makes it easy to search and rank. The database used is good old Postgres with the
-				<A href="https://github.com/pgvector/pgvector">PGVector</A>
-				extension. The extension allows for storing vectors in the database and performing vector operations,
-				in this case cosine similarity. This was a conscious choice over choosing a dedicated vector
-				database like Chroma or Pinecone. The reason being that I wanted to keep the tech stack as simple
-				as possible.
+				makes it easy to search and rank. Qdrant is used for this purpose. The database is simple to
+				use and has a great Python client. The database is used for storing the embeddings of the
+				data. Qdrant was chosen in particular because it can run with a client-server architecture
+				as well as locally with the same ease as sqlite.
+			</Paragraph>
+			<Paragraph>
+				The metadata for the ingestion process as well as the tokens spent are stored in a
+				relational database. The database is either Postgres or sqlite. Postgres is used for
+				production and sqlite is used for development. The database is accessed using SQLAlchemy.
 			</Paragraph>
 		</section>
 		<section>
@@ -83,9 +86,9 @@
 			<Paragraph>
 				The API is built using FastAPI. For now the API only has one endpoint:
 				<InlineCode>/answer</InlineCode>. FastAPI was also a conscious choice. The reason being that
-				it has great asynchronous programming support and can be upgraded to use streaming responses
-				and/or websockets. This is important because the RAG model can take a long time to generate
-				an answer.
+				it has great asynchronous programming support.This is important because the RAG model can
+				take a long time to generate an answer and I don't want to block the server while that
+				happens. The answers are also streamed to the client as they're generated.
 			</Paragraph>
 		</section>
 		<section>
@@ -116,6 +119,12 @@
 			Actions. The app is deployed to the server using an SSH connection. The backend and the ETL
 			are different services and are deployed separately.
 		</Paragraph>
+		<Paragraph>
+			I run other tools to make my life easier such as my observability stack, to keep track of
+			logs, metrics and traces. On top of that, I also run Infisical as a secrets vault, this
+			simplifies the handling of secrets and environment variables. Infisical in particular makes it
+			so that I can reuse the same CI/CD pipeline for all my projects.
+		</Paragraph>
 	</section>
 
 	<section>
@@ -128,14 +137,6 @@
 				rewriting the query. The generation can be used by providing more useful context and
 				metadata. Before I go into that I want to make sure I have the ability to quantify the
 				improvements. I have a number of ideas for how to do that as well.
-			</Paragraph>
-			<Paragraph>
-				Some other things that are relevant is making the ETL more performant by removing the
-				dependency on PyGithub and using the GitHub API directly, that way I can use asynchronous
-				programming to vastly speed up the process. Another idea would be switching from ETL to ELT
-				(extract, load, transform) and storing the raw data in the database and then transforming it
-				as needed. This would allow for more flexibility in the data processing but would also
-				require more storage on my VPS which is a cost I'm not willing to pay.
 			</Paragraph>
 		</div>
 	</section>
