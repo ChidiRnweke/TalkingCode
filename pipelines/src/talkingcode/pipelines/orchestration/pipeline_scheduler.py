@@ -6,7 +6,7 @@ from structlog import getLogger, stdlib
 
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.processing import run_transformation_pipeline
-from talkingcode.shared.telemetry import log_async_execution_time
+from talkingcode.shared.telemetry import async_log_failure, log_async_execution_time
 
 _run_lock = asyncio.Lock()
 logger: stdlib.BoundLogger = getLogger("talkingcode")
@@ -16,6 +16,7 @@ tracer = get_tracer(__name__)
 
 @log_async_execution_time
 @tracer.start_as_current_span("download_and_persist_data")
+@async_log_failure
 async def download_and_persist_data() -> None:
     """
     Download and persist data from the GitHub API to the database.
