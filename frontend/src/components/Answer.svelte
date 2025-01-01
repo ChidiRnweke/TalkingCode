@@ -61,6 +61,24 @@
 		color: blue;
 	}
 
+	.generated :global(#sources) {
+		margin-top: 3rem;
+	}
+	@media (min-width: 1024px) {
+		.generated :global(#sources) :global(ul) {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 1rem;
+		}
+	}
+
+	.generated :global(#sources) :global(ul) {
+		padding-left: 1rem;
+		padding-right: 1rem;
+		margin-top: 1rem;
+		font-size: smaller;
+	}
+
 	.generated :global(code) {
 		background-color: rgb(248 250 252 / var(--tw-bg-opacity));
 		padding-left: 0.5rem;
