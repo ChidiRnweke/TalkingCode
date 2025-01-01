@@ -1,7 +1,8 @@
 from contextlib import contextmanager
 from functools import update_wrapper
-from logging import getLogger
 from typing import Callable, Generic, ParamSpec, Type, TypeVar
+
+from structlog import getLogger
 
 P = ParamSpec("P")
 T = TypeVar("T")

@@ -1,40 +1,13 @@
 import asyncio
 import inspect
-import logging
 import time
-from contextlib import contextmanager
 from functools import wraps
-from logging import getLogger
-from typing import Any, Callable, Coroutine, ParamSpec, TypeVar
+from typing import Any, Callable, Coroutine
 
-from opentelemetry._logs import set_logger_provider
-from opentelemetry.exporter.otlp.proto.grpc._log_exporter import (
-    OTLPLogExporter,
-)
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.metrics import get_meter, set_meter_provider
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import get_tracer, set_tracer_provider
+from opentelemetry.metrics import get_meter
+from structlog import getLogger
 
-T = TypeVar("T")
-P = ParamSpec("P")
-C = TypeVar("C", bound=type)
-
-
-@contextmanager
-def suppress_stack_trace():
-    """Suppresses the decorator's code from appearing in stack traces."""
-    try:
-        yield
-    except Exception:
-        raise
+from .helpers import C, P, T, function_metadata, suppress_stack_trace
 
 
 def instrument_all_async(
@@ -81,41 +54,6 @@ def instrument_all_async(
         return cls
 
     return class_decorator
-
-
-def run_in_span(name: str) -> Callable[[Callable[P, T]], Callable[P, T]]:
-    tracer = get_tracer(__name__)
-
-    def decorator(func: Callable[P, T]) -> Callable[P, T]:
-        @wraps(func)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            with tracer.start_as_current_span(name):
-                return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
-
-
-def async_run_in_span(
-    name: str,
-) -> Callable[
-    [Callable[P, Coroutine[Any, Any, T]]], Callable[P, Coroutine[Any, Any, T]]
-]:
-    tracer = get_tracer(__name__)
-
-    def decorator(
-        func: Callable[P, Coroutine[Any, Any, T]],
-    ) -> Callable[P, Coroutine[Any, Any, T]]:
-        @wraps(func)
-        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
-            # Create a new span for each invocation of the function
-            with tracer.start_as_current_span(name):
-                return await func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
 
 
 def instrument_all_sync(
@@ -168,7 +106,7 @@ def log_execution_time(func: Callable[P, T]) -> Callable[P, T]:
         description="Execution time of functions",
         unit="seconds",
     )
-    attributes = _function_metadata(func)
+    attributes = function_metadata(func)
 
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -208,7 +146,7 @@ def log_async_execution_time(
         unit="seconds",
     )
 
-    attributes = _function_metadata(func)
+    attributes = function_metadata(func)
     func = _measure_blocking_time(func)
 
     @wraps(func)
@@ -242,7 +180,7 @@ def _measure_blocking_time(
         description="Number of times the function blocked the event loop for over 100ms",
         unit="count",
     )
-    attributes = _function_metadata(f)
+    attributes = function_metadata(f)
 
     @wraps(f)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -282,7 +220,7 @@ def async_log_failure(
         The decorated function.
     """
 
-    attributes = _function_metadata(func)
+    attributes = function_metadata(func)
 
     @wraps(func)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -309,7 +247,7 @@ def log_failure(func: Callable[P, T]) -> Callable[P, T]:
         The decorated function.
     """
 
-    attributes = _function_metadata(func)
+    attributes = function_metadata(func)
 
     @wraps(func)
     def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
@@ -322,52 +260,3 @@ def log_failure(func: Callable[P, T]) -> Callable[P, T]:
         return result
 
     return wrapper
-
-
-def configure_telemetry(telemetry_endpoint: str) -> None:
-    """
-    Configure telemetry for the application, including metrics, logs, and spans to
-    your telemetry endpoint.
-
-    Args:
-        telemetry_endpoint (str): The endpoint to send telemetry data to.
-    """
-    resource = Resource.create({"service.name": "TalkingCode"})
-    _configure_metrics(telemetry_endpoint, resource)
-    _configure_logs(telemetry_endpoint, resource)
-    _configure_spans(telemetry_endpoint, resource)
-
-
-def _configure_spans(endpoint: str, telemetry_resource: Resource):
-    span_exporter = OTLPSpanExporter(endpoint=endpoint, insecure=True)
-    tracer_provider = TracerProvider(resource=telemetry_resource)
-    tracer_provider.add_span_processor(BatchSpanProcessor(span_exporter))
-    set_tracer_provider(tracer_provider)
-
-
-def _configure_metrics(endpoint: str, telemetry_resource: Resource):
-    metric_exporter = OTLPMetricExporter(endpoint=endpoint, insecure=True)
-    metric_reader = PeriodicExportingMetricReader(metric_exporter)
-    meter_provider = MeterProvider([metric_reader], telemetry_resource)
-    set_meter_provider(meter_provider)
-
-
-def _configure_logs(endpoint: str, telemetry_resource: Resource):
-    log_exporter = OTLPLogExporter(endpoint=endpoint, insecure=True)
-
-    logger_provider = LoggerProvider(resource=telemetry_resource)
-
-    handler = LoggingHandler(level=logging.DEBUG, logger_provider=logger_provider)
-    logging.getLogger("talkingcode").addHandler(handler)
-    logging.getLogger("talkingcode").setLevel(logging.DEBUG)
-    logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
-    set_logger_provider(logger_provider)
-
-
-def _function_metadata(func: Callable[P, T]) -> dict[str, Any]:
-    module = {"module": func.__module__}
-    _class = {"class": func.__qualname__.split(".")[0]}
-    _function = {"function": func.__qualname__.split(".")[-1]}
-    file_name = {"file_name": func.__code__.co_filename}
-    line_number = {"line_number": func.__code__.co_firstlineno}
-    return {**module, **_class, **_function, **file_name, **line_number}

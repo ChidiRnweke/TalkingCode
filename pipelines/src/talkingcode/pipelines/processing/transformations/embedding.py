@@ -1,7 +1,7 @@
 import asyncio
-import logging
 from dataclasses import dataclass
 
+import structlog
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from openai import AsyncOpenAI
 from openai.types import CreateEmbeddingResponse
@@ -12,7 +12,7 @@ from talkingcode.shared.telemetry import instrument_all_async, log_async_executi
 
 from .transformed_file import EmbeddedChunk, Embedder
 
-logger = logging.getLogger("talkingcode")
+logger = structlog.getLogger("talkingcode")
 
 
 @dataclass(frozen=True, slots=True)

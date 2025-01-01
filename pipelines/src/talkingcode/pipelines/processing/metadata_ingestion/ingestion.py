@@ -1,7 +1,8 @@
 import asyncio
-import logging
 from dataclasses import dataclass
 from typing import ClassVar
+
+import structlog
 
 from talkingcode.pipelines.github_client import GitHubClient
 from talkingcode.pipelines.models import GitHubRepository
@@ -9,7 +10,7 @@ from talkingcode.shared.telemetry import instrument_all_async, log_async_executi
 
 from .storage import MetadataStorage
 
-logger = logging.getLogger("talkingcode")
+logger = structlog.getLogger("talkingcode")
 
 
 @instrument_all_async(log_async_execution_time)

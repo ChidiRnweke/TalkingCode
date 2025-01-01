@@ -1,9 +1,9 @@
-import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import date
 from typing import AsyncGenerator, AsyncIterator, TypedDict, cast
 
+import structlog
 from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
@@ -28,7 +28,7 @@ from talkingcode.backend.rag import (
     vector_store_from_config,
 )
 
-logger = logging.getLogger("talkingcode")
+logger = structlog.getLogger("talkingcode")
 
 
 router = APIRouter()

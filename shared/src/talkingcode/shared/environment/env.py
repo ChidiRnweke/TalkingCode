@@ -1,6 +1,5 @@
 import os
 from dataclasses import dataclass
-from logging import getLogger
 from typing import Protocol, Self
 
 from dotenv import load_dotenv
@@ -11,6 +10,7 @@ from infisical_client import (
     InfisicalClient,
     UniversalAuthMethod,
 )
+from structlog import getLogger
 
 logger = getLogger("talkingcode")
 

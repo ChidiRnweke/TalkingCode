@@ -1,10 +1,10 @@
 import asyncio
 from dataclasses import dataclass
-from logging import getLogger
 from typing import Any, Type
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel
+from structlog import getLogger
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from talkingcode.pipelines.models import FileMetadata

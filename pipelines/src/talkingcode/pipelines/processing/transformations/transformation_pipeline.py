@@ -1,7 +1,8 @@
 import asyncio
 from dataclasses import dataclass
-from logging import getLogger
 from typing import Sequence
+
+from structlog import getLogger
 
 from talkingcode.pipelines.github_client import GitHubClient
 from talkingcode.pipelines.models import FileMetadata

@@ -1,9 +1,9 @@
 import asyncio
 from dataclasses import dataclass
-from logging import getLogger
 from typing import ClassVar, Protocol
 
 from httpx import AsyncClient
+from structlog import getLogger
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from talkingcode.pipelines.config import IngestionConfig

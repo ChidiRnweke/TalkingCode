@@ -1,6 +1,8 @@
 import asyncio
 from datetime import datetime, timedelta
-from logging import getLogger
+
+from opentelemetry.trace import get_tracer
+from structlog import getLogger
 
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.processing import run_transformation_pipeline
@@ -9,8 +11,11 @@ from talkingcode.shared.telemetry import log_async_execution_time
 _run_lock = asyncio.Lock()
 logger = getLogger("talkingcode")
 
+tracer = get_tracer(__name__)
+
 
 @log_async_execution_time
+@tracer.start_as_current_span("download_and_persist_data")
 async def download_and_persist_data() -> None:
     """
     Download and persist data from the GitHub API to the database.
@@ -35,6 +40,7 @@ async def run_pipeline_on_schedule(hour: int, minute: int) -> None:
     """
     logger.info("Doing initial run of scheduled pipeline...")
     await download_and_persist_data()
+    logger.info("Initial run of scheduled pipeline completed.")
     while True:
         await _sleep_until(hour, minute)
 

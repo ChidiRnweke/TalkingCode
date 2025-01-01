@@ -1,4 +1,4 @@
-from logging import getLogger
+from structlog import getLogger
 
 from .schema import Base, TokenSpendModel
 
