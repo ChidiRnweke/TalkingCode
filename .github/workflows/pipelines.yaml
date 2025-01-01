@@ -62,4 +62,4 @@ jobs:
         run: scp -o StrictHostKeyChecking=no compose.pipelines.yml .env ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/${{ vars.PROJECT }}
 
       - name: Deploy to server
-        run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/${{ vars.PROJECT }} && docker compose -f compose.pipelines.yml --env-file .env up -d --pull always && rm compose.pipelines.yml'
+        run: ssh -o StrictHostKeyChecking=accept-new ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} 'cd ~/${{ vars.PROJECT }} && docker compose -f compose.pipelines.yml --env-file .env up -d --pull always --remove-orphans && rm compose.pipelines.yml'
