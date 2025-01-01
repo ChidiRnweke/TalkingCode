@@ -20,6 +20,7 @@ opentelemetry-instrumentation-fastapi = "^0.50b0"
 opentelemetry-exporter-otlp = "^1.29.0"
 qdrant-client = "^1.12.1"
 structlog = "^24.4.0"
+rich = "^13.9.4"
 
 [tool.poetry.dev-dependencies]
 mkdocs = "^1.6.0"
