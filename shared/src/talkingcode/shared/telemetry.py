@@ -290,7 +290,7 @@ def async_log_failure(
             try:
                 result = await func(*args, **kwargs)
             except Exception as e:
-                logger = getLogger("app_logger")
+                logger = getLogger("talkingcode")
                 logger.exception(e, stack_info=True, stacklevel=5, extra=attributes)
                 raise e
             return result
@@ -316,7 +316,7 @@ def log_failure(func: Callable[P, T]) -> Callable[P, T]:
         try:
             result = func(*args, **kwargs)
         except Exception as e:
-            logger = getLogger("app_logger")
+            logger = getLogger("talkingcode")
             logger.exception(e, stack_info=True, stacklevel=5, extra=attributes)
             raise e
         return result
@@ -358,8 +358,8 @@ def _configure_logs(endpoint: str, telemetry_resource: Resource):
     logger_provider = LoggerProvider(resource=telemetry_resource)
 
     handler = LoggingHandler(level=logging.DEBUG, logger_provider=logger_provider)
-    logging.getLogger("app_logger").addHandler(handler)
-    logging.getLogger("app_logger").setLevel(logging.DEBUG)
+    logging.getLogger("talkingcode").addHandler(handler)
+    logging.getLogger("talkingcode").setLevel(logging.DEBUG)
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
     set_logger_provider(logger_provider)
 

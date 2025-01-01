@@ -12,7 +12,7 @@ from talkingcode.shared.telemetry import instrument_all_async, log_async_executi
 
 from .transformed_file import FileTransformation, TransformedFile
 
-logger = getLogger("app_logger")
+logger = getLogger("talkingcode")
 
 _openai_enrichment_semaphore = asyncio.Semaphore(5)
 

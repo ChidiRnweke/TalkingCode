@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from talkingcode.shared.environment import SecretsReader
 from talkingcode.shared.telemetry import configure_telemetry as _configure_telemetry
 
-logger = getLogger("app_logger")
+logger = getLogger("talkingcode")
 
 
 class AppStartupError(Exception):

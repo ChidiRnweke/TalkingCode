@@ -12,7 +12,7 @@ from talkingcode.pipelines.database import (
 from talkingcode.pipelines.models import GitHubFile, GitHubRepository
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
-logger = logging.getLogger("app_logger")
+logger = logging.getLogger("talkingcode")
 
 
 class MetadataStorage(Protocol):

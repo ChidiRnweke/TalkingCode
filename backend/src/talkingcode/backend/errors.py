@@ -5,7 +5,7 @@ from typing import Callable, Generic, ParamSpec, Type, TypeVar
 
 P = ParamSpec("P")
 T = TypeVar("T")
-log = getLogger("app_logger")
+log = getLogger("talkingcode")
 
 
 class AppError(Exception):

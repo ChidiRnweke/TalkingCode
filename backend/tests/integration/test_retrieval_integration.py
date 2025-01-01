@@ -13,7 +13,7 @@
 #     TokenSpendModel,
 # )
 
-# logger = Logger("app_logger")
+# logger = Logger("talkingcode")
 
 
 # @pytest.mark.asyncio(scope="session")

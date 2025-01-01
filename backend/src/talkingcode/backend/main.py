@@ -28,7 +28,7 @@ from talkingcode.backend.rag import (
     vector_store_from_config,
 )
 
-logger = logging.getLogger("app_logger")
+logger = logging.getLogger("talkingcode")
 
 
 router = APIRouter()

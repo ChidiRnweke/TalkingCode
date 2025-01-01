@@ -12,7 +12,7 @@ from talkingcode.shared.telemetry import configure_telemetry
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 
-app_logger = logging.getLogger("app_logger")
+app_logger = logging.getLogger("talkingcode")
 app_logger.setLevel(logging.DEBUG)
 if not app_logger.handlers:
     console_handler = logging.StreamHandler()

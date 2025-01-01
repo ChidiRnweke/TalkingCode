@@ -19,7 +19,7 @@
 #     run_migrations,
 # )
 
-# logger = Logger("app_logger")
+# logger = Logger("talkingcode")
 
 
 # @pytest.fixture(scope="session")

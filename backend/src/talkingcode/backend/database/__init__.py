@@ -2,7 +2,7 @@ from logging import getLogger
 
 from .schema import Base, TokenSpendModel
 
-logger = getLogger("app_logger")
+logger = getLogger("talkingcode")
 
 
 __all__ = ["Base", "TokenSpendModel"]

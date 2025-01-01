@@ -12,7 +12,7 @@ from talkingcode.shared.telemetry import instrument_all_async, log_async_executi
 
 from .transformed_file import EmbeddedChunk, Embedder
 
-logger = logging.getLogger("app_logger")
+logger = logging.getLogger("talkingcode")
 
 
 @dataclass(frozen=True, slots=True)

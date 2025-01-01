@@ -12,7 +12,7 @@ from infisical_client import (
     UniversalAuthMethod,
 )
 
-logger = getLogger("app_logger")
+logger = getLogger("talkingcode")
 
 
 class SecretsNotFoundError(Exception):

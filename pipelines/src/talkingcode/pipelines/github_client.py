@@ -22,7 +22,7 @@ from talkingcode.pipelines.models import (
 )
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
-logger = getLogger("app_logger")
+logger = getLogger("talkingcode")
 
 
 class GitHubClient(Protocol):

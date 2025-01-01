@@ -7,7 +7,7 @@ from talkingcode.pipelines.processing import run_transformation_pipeline
 from talkingcode.shared.telemetry import log_async_execution_time
 
 _run_lock = asyncio.Lock()
-logger = getLogger("app_logger")
+logger = getLogger("talkingcode")
 
 
 @log_async_execution_time

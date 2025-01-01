@@ -11,7 +11,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    app_logger = logging.getLogger("app_logger")
+    app_logger = logging.getLogger("talkingcode")
     app_logger.setLevel(logging.DEBUG)
     if not app_logger.handlers:
         console_handler = logging.StreamHandler()

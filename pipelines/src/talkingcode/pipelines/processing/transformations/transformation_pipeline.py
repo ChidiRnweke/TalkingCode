@@ -17,7 +17,7 @@ from .transformed_file import (
     TransformedFile,
 )
 
-logger = getLogger("app_logger")
+logger = getLogger("talkingcode")
 
 
 @instrument_all_async(log_async_execution_time)

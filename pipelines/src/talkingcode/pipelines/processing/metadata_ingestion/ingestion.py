@@ -9,7 +9,7 @@ from talkingcode.shared.telemetry import instrument_all_async, log_async_executi
 
 from .storage import MetadataStorage
 
-logger = logging.getLogger("app_logger")
+logger = logging.getLogger("talkingcode")
 
 
 @instrument_all_async(log_async_execution_time)

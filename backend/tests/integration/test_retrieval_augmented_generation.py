@@ -15,7 +15,7 @@
 #     SQLRetrievalService,
 # )
 
-# logger = Logger("app_logger")
+# logger = Logger("talkingcode")
 
 
 # def answer_to_query(query: InputQuery) -> str:

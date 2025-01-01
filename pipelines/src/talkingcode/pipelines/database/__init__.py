@@ -5,7 +5,7 @@ from sqlalchemy import Connection, Engine, event
 
 from .schema import Base, GithubFileModel, GitHubRepositoryModel
 
-logger = getLogger("app_logger")
+logger = getLogger("talkingcode")
 
 
 @event.listens_for(Engine, "connect")
