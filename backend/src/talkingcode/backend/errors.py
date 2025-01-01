@@ -2,11 +2,11 @@ from contextlib import contextmanager
 from functools import update_wrapper
 from typing import Callable, Generic, ParamSpec, Type, TypeVar
 
-from structlog import getLogger
+from structlog import getLogger, stdlib
 
 P = ParamSpec("P")
 T = TypeVar("T")
-log = getLogger("talkingcode")
+log: stdlib.BoundLogger = getLogger("talkingcode")
 
 
 class AppError(Exception):

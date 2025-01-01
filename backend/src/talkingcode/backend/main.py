@@ -28,7 +28,7 @@ from talkingcode.backend.rag import (
     vector_store_from_config,
 )
 
-logger = structlog.getLogger("talkingcode")
+logger: structlog.stdlib.BoundLogger = structlog.getLogger("talkingcode")
 
 
 router = APIRouter()

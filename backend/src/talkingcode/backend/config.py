@@ -3,12 +3,12 @@ from dataclasses import dataclass
 
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from structlog import getLogger
+from structlog import getLogger, stdlib
 
 from talkingcode.shared.environment import SecretsReader
 from talkingcode.shared.telemetry import configure_telemetry as _configure_telemetry
 
-logger = getLogger("talkingcode")
+logger: stdlib.BoundLogger = getLogger("talkingcode")
 
 
 class AppStartupError(Exception):
