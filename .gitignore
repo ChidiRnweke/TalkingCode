@@ -10,3 +10,4 @@ site/
 talkingcode.db
 qdrant-data
 .env
+pipelines/talkingcode.sqlite
