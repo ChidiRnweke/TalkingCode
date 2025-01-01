@@ -65,8 +65,8 @@ def _configure_structlog():
         processors=[
             structlog.stdlib.filter_by_level,
             structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.JSONRenderer(),
             _add_open_telemetry_spans,
+            structlog.processors.JSONRenderer(),
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
