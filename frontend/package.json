@@ -39,10 +39,12 @@
 		"typescript-eslint": "8.0.0-alpha.30",
 		"vite": "^6.0.5",
 		"vite-plugin-tailwind-purgecss": "^0.3.3",
+		"@types/markdown-it": "^14.1.2",
 		"vitest": "^1.6.0"
 	},
 	"type": "module",
 	"dependencies": {
+		"markdown-it": "^14.1.0",
 		"openapi-fetch": "^0.9.7"
 	}
 }
