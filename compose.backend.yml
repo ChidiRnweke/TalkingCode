@@ -18,6 +18,12 @@ services:
     <<: *shared-env
     depends_on:
       - startup_container
+    healthcheck:
+      test: curl -f http://localhost:8000/v1/api/health || exit 1
+      interval: 600s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     command:
       [
         "poetry",

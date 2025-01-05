@@ -1,10 +1,12 @@
 import os
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
 from datetime import date
 from typing import AsyncGenerator, AsyncIterator, TypedDict, cast
 
+import numpy as np
 import structlog
-from fastapi import APIRouter, Depends, FastAPI, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +29,7 @@ from talkingcode.backend.rag import (
     SQLTokenStore,
     vector_store_from_config,
 )
+from talkingcode.backend.rag.retrieve import EmbeddedChunk
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger("talkingcode")
 
@@ -37,6 +40,12 @@ router = APIRouter()
 class State(TypedDict):
     app_config: AppConfig
     retrieval_service: RetrievalService
+
+
+@dataclass(frozen=True, slots=True)
+class HealthResponse:
+    status: str
+    remaining_spend: float
 
 
 @asynccontextmanager
@@ -183,6 +192,53 @@ async def remaining_spend(
     )
 
     return await rag.remaining_spend()
+
+
+@router.get("/health")
+async def health(
+    session: AsyncSession = Depends(get_database_session),
+    app_config: AppConfig = Depends(get_app_config),
+    retrieval_service: RetrievalService = Depends(get_retrieval_service),
+) -> HealthResponse:
+    """
+    This function is used to check the health of the application. It is used to check if
+    the application is running and healthy.
+
+    Returns:
+        (JSONResponse): The JSON response with the health status.
+    """
+    test_vector = EmbeddedChunk(np.random.rand(1, 3072).tolist())
+
+    token_store = SQLTokenStore(async_session=session)
+    openai_embedding_service = OpenAIEmbeddingService(
+        client=app_config.openAI_client,
+        embedding_model=app_config.embedding_model,
+        token_store=token_store,
+    )
+    openai_generation_service = OpenAIGenerationService(
+        client=app_config.openAI_client,
+        model=app_config.chat_model,
+        system_prompt=app_config.system_prompt,
+        token_store=token_store,
+    )
+
+    rag = RetrievalAugmentedGeneration(
+        embedding_service=openai_embedding_service,
+        generation_service=openai_generation_service,
+        retrieval_service=retrieval_service,
+        max_spend=app_config.max_spend,
+        token_store=token_store,
+        date=date.today(),
+    )
+    test_results = await retrieval_service.retrieve_top_k(test_vector)
+    remaining_spend = await rag.remaining_spend()
+    spend_left = remaining_spend.remaining_spend
+    if test_results is not None and spend_left == 0:
+        return HealthResponse("No spend left", spend_left)
+    elif test_results is not None and spend_left > 0:
+        return HealthResponse("Healthy", spend_left)
+    else:
+        raise HTTPException(500, "Failed to retrieve top k")
 
 
 def create_app():
