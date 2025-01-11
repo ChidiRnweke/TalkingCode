@@ -1,6 +1,7 @@
 import type { paths } from './schema';
 import createClient from 'openapi-fetch';
 import markdownit from 'markdown-it';
+import hljs from 'highlight.js';
 
 const baseUrl = '/api/v1';
 const client = createClient<paths>({ baseUrl });
@@ -10,15 +11,34 @@ export type RAGResponse =
 export type RemainingSpend =
 	paths['/rag/remaining_spend']['get']['responses']['200']['content']['application/json'];
 
-const isProd = import.meta.env.PROD;
-const md = markdownit({ html: true, breaks: true });
+const isProd = true;
+
+const md = markdownit({
+	html: true,
+	breaks: true,
+	highlight: function (str: string, lang: string): string {
+		if (lang && hljs.getLanguage(lang)) {
+			try {
+				return (
+					'<pre><code class="hljs">' +
+					hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+					'</code></pre>'
+				);
+			} catch {
+				/* empty */
+			}
+		}
+
+		return '<pre><code class="hljs">' + md.utils.escapeHtml(str) + '</code></pre>';
+	}
+});
 
 export interface PreviousContext {
 	question: string;
 	answer: string;
 }
 
-const htmlRender = (input: string) => md.renderInline(input);
+const htmlRender = (input: string) => md.render(input);
 
 export interface RAGService {
 	getAnswer: (inputQuery: InputQuery) => AsyncGenerator<string, void, unknown>;
