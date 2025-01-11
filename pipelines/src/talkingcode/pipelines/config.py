@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from talkingcode.shared.environment import SecretsReader
 
-from .default_prompts import metadata_prompt
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,7 +48,7 @@ class IngestionConfig:
         allowed_extensions = reader.read_secret("WHITELISTED_EXTENSIONS")
 
         skipped_files = reader.read_secret("BLACKLISTED_FILES")
-        topics_prompt = reader.read_or_default("TOPICS_PROMPT", metadata_prompt)
+        topics_prompt = reader.read_secret("TOPICS_PROMPT")
         metadata_enrichment_model = reader.read_secret("METADATA_ENRICHMENT_MODEL")
         qdrant_server_mode = bool(reader.read_optional("QDRANT_SERVER_MODE"))
         qdrant_server_url = reader.read_or_default(
