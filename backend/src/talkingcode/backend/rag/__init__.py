@@ -3,10 +3,11 @@ from qdrant_client import AsyncQdrantClient
 from talkingcode.backend.config import AppConfig
 
 from .generation import InputQuery, OpenAIGenerationService
+from .keyword_identifier import KeywordIdentifier, KeywordIdentifierService
 from .rag import RetrievalAugmentedGeneration
 from .retrieve import (
     OpenAIEmbeddingService,
-    QdrantRetrievalService,
+    QdrantFilterRetrievalService,
     RemainingSpend,
     RetrievalService,
 )
@@ -23,7 +24,7 @@ def vector_store_from_config(config: AppConfig) -> RetrievalService:
         client = AsyncQdrantClient(url=url, api_key=api_key)
     else:
         client = AsyncQdrantClient(path=local_storage)
-    return QdrantRetrievalService(client, config.top_k, collection_name)
+    return QdrantFilterRetrievalService(client, config.top_k, collection_name)
 
 
 __all__ = [
@@ -35,4 +36,6 @@ __all__ = [
     "RemainingSpend",
     "vector_store_from_config",
     "SQLTokenStore",
+    "KeywordIdentifier",
+    "KeywordIdentifierService",
 ]

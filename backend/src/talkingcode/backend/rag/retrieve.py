@@ -5,7 +5,7 @@ import aiohttp
 import tiktoken
 from openai import AsyncOpenAI
 from qdrant_client import AsyncQdrantClient
-from qdrant_client.models import ScoredPoint
+from qdrant_client.models import FieldCondition, Filter, MatchAny, ScoredPoint
 
 from talkingcode.backend.errors import TokenLimitError, map_errors
 
@@ -22,7 +22,9 @@ class RetrievalService(Protocol):
     """
 
     async def retrieve_top_k(
-        self, embedded_query: "EmbeddedChunk"
+        self,
+        embedded_query: "EmbeddedChunk",
+        keywords: list[str] | None = None,
     ) -> list["RetrievedContext"]:
         """
 
@@ -261,7 +263,9 @@ class QdrantRetrievalService(RetrievalService):
     collection_name: str
 
     async def retrieve_top_k(
-        self, embedded_query: EmbeddedChunk
+        self,
+        embedded_query: EmbeddedChunk,
+        keywords: list[str] | None = None,
     ) -> list[RetrievedContext]:
         """
         Retrieves the top k contexts based on the embedded query. The contexts are the k most relevant
@@ -285,6 +289,91 @@ class QdrantRetrievalService(RetrievalService):
         )
 
         return [self._point_to_context(hit) for hit in response]
+
+    def _point_to_context(self, point: ScoredPoint) -> RetrievedContext:
+        if not point.payload:
+            raise ValueError("Payload is empty, cannot convert to context.")
+        return RetrievedContext(
+            file_name=point.payload["file_name"],
+            repository_name=point.payload["repository_name"],
+            path_in_repo=point.payload["path_in_repo"],
+            extension=point.payload["extension"],
+            url=point.payload["url"],
+            distance=point.score,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class QdrantFilterRetrievalService(RetrievalService):
+    """
+    A class that performs context retrieval using SQL. The class is responsible for retrieving the top k
+    contexts based on the embedded query. The query is embedded already by the `EmbeddingService`. The class
+    is a wrapper around SQLAlchemy and provides a more testable and maintainable interface. It implements
+    the `RetrievalService` interface.
+
+    Aside from this it is also responsible for storing the token spend and validating the session ID.
+
+    Raises:
+        (InputError): If a Session ID is provided, it must already exist.
+    """
+
+    client: AsyncQdrantClient
+    top_k: int
+    collection_name: str
+
+    async def retrieve_top_k(
+        self,
+        embedded_query: EmbeddedChunk,
+        keywords: list[str] | None = None,
+    ) -> list[RetrievedContext]:
+        """
+        Retrieves the top k contexts based on the embedded query. The contexts are the k most relevant
+        documents to the embedded query. The distance between the embedded query and the retrieved context
+        is given by the cosine distance.
+
+        In short, the lower the distance, the more similar the context is to the query.
+        This is why we order by distance and limit the number of contexts to k.
+
+        Args:
+            embedded_query (EmbeddedResponse): The embedded query. This is done by the `EmbeddingService`.
+
+        Returns:
+            (list[RetrievedContext]): The list of retrieved contexts.
+        """
+        keywords = keywords or ["None"]
+        match keywords:
+            case ["None"]:
+                response = await self._default_retrieval(embedded_query)
+            case filters:
+                response = await self._filtered_retrieval(embedded_query, filters)
+
+        return [self._point_to_context(hit) for hit in response]
+
+    async def _filtered_retrieval(
+        self, embedded_query: EmbeddedChunk, filters: list[str]
+    ) -> list[ScoredPoint]:
+        conditions = FieldCondition(key="topics", match=MatchAny(any=filters))
+        filter = Filter(must=[conditions])
+        response = await self.client.search(
+            collection_name=self.collection_name,
+            query_vector=embedded_query.embedding,
+            limit=self.top_k,
+            with_payload=True,
+            query_filter=filter,
+        )
+        return response
+
+    async def _default_retrieval(
+        self, embedded_query: EmbeddedChunk
+    ) -> list[ScoredPoint]:
+        response = await self.client.search(
+            collection_name=self.collection_name,
+            query_vector=embedded_query.embedding,
+            limit=self.top_k,
+            with_payload=True,
+        )
+
+        return response
 
     def _point_to_context(self, point: ScoredPoint) -> RetrievedContext:
         if not point.payload:

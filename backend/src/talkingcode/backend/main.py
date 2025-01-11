@@ -21,6 +21,8 @@ from talkingcode.backend.errors import (
 )
 from talkingcode.backend.rag import (
     InputQuery,
+    KeywordIdentifier,
+    KeywordIdentifierService,
     OpenAIEmbeddingService,
     OpenAIGenerationService,
     RemainingSpend,
@@ -101,6 +103,14 @@ def get_app_config(request: Request) -> AppConfig:
     return config
 
 
+def get_keyword_identifier(config: AppConfig) -> KeywordIdentifier:
+    return KeywordIdentifierService(
+        client=config.openAI_client,
+        model_name=config.keyword_identifier_model,
+        prompt=config.keyword_identifier_prompt,
+    )
+
+
 @router.post("/rag/chat")
 async def chat(
     question: InputQuery,
@@ -119,7 +129,7 @@ async def chat(
         session (AsyncSession): The async session object. This is provided by the FastAPI
             dependency injection.
     """
-
+    keyword_identifier = get_keyword_identifier(app_config)
     token_store = SQLTokenStore(async_session=session)
     openai_embedding_service = OpenAIEmbeddingService(
         client=app_config.openAI_client,
@@ -139,6 +149,7 @@ async def chat(
         retrieval_service=retrieval_service,
         max_spend=app_config.max_spend,
         token_store=token_store,
+        keyword_identification_service=keyword_identifier,
         date=date.today(),
     )
 
@@ -169,6 +180,7 @@ async def remaining_spend(
         (RemainingSpend): The remaining spend object containing the remaining spend for
             the day.
     """
+    keyword_identifier = get_keyword_identifier(app_config)
     token_store = SQLTokenStore(async_session=session)
     openai_embedding_service = OpenAIEmbeddingService(
         client=app_config.openAI_client,
@@ -188,6 +200,7 @@ async def remaining_spend(
         retrieval_service=retrieval_service,
         max_spend=app_config.max_spend,
         token_store=token_store,
+        keyword_identification_service=keyword_identifier,
         date=date.today(),
     )
 
@@ -207,6 +220,7 @@ async def health(
     Returns:
         (JSONResponse): The JSON response with the health status.
     """
+    keyword_identifier = get_keyword_identifier(app_config)
     test_vector = EmbeddedChunk(np.random.rand(3072).tolist())
 
     token_store = SQLTokenStore(async_session=session)
@@ -228,6 +242,7 @@ async def health(
         retrieval_service=retrieval_service,
         max_spend=app_config.max_spend,
         token_store=token_store,
+        keyword_identification_service=keyword_identifier,
         date=date.today(),
     )
     test_results = await retrieval_service.retrieve_top_k(test_vector)

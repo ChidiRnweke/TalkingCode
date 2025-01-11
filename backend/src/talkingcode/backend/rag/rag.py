@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 
 from talkingcode.backend.errors import MaximumSpendError
 from talkingcode.backend.rag.generation import GenerationService, InputQuery
+from talkingcode.backend.rag.keyword_identifier import KeywordIdentifier
 from talkingcode.backend.rag.retrieve import (
     EmbeddingService,
     RemainingSpend,
@@ -29,6 +30,7 @@ class RetrievalAugmentedGeneration:
     embedding_service: EmbeddingService
     retrieval_service: RetrievalService
     generation_service: GenerationService
+    keyword_identification_service: KeywordIdentifier
     token_store: TokenSpendStore
     max_spend: float
     date: date
@@ -48,7 +50,6 @@ class RetrievalAugmentedGeneration:
             (MaximumSpendError): If the current spend is greater than or equal to the maximum spend limit.
         """
         await self._enforce_spend_limit()
-
         retrieved = await self._retrieve_top_k(input)
 
         chunk_stream = self.generation_service.augmented_generation(input, retrieved)
@@ -93,4 +94,7 @@ class RetrievalAugmentedGeneration:
                 and the number of tokens spent. see `RetrievedContext` for more information.
         """
         result = await self.embedding_service.embed(input)
-        return await self.retrieval_service.retrieve_top_k(result)
+        keywords = await self.keyword_identification_service.identify_keywords(
+            input.query
+        )
+        return await self.retrieval_service.retrieve_top_k(result, keywords)

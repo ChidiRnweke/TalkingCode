@@ -38,6 +38,8 @@ class AppConfig:
     system_prompt: str
     openAI_client: AsyncOpenAI
     max_spend: float
+    keyword_identifier_model: str
+    keyword_identifier_prompt: str
 
     migrations_connection_string: str
 
@@ -79,6 +81,8 @@ class AppConfig:
                 raise AppStartupError(
                     "QDRANT_API_KEY is required when QDRANT_SERVER_MODE is enabled"
                 )
+            keyword_identifier_model = reader.read_secret("METADATA_ENRICHMENT_MODEL")
+            keyword_identifier_prompt = reader.read_secret("KEYWORD_IDENTIFIER_PROMPT")
 
             openAI_client = AsyncOpenAI(api_key=openai_api_key)
 
@@ -100,7 +104,9 @@ class AppConfig:
             qdrant_collection_name=qdrant_collection_name,
             qdrant_local_storage_path=qdrant_local_storage_path,
             migrations_connection_string=migrations_connection_string,
-            qdrant_api_key=qdrant_api_key,  # type: ignore
+            keyword_identifier_model=keyword_identifier_model,
+            qdrant_api_key=qdrant_api_key,
+            keyword_identifier_prompt=keyword_identifier_prompt,
         )
 
 
