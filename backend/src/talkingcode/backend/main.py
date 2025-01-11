@@ -207,7 +207,7 @@ async def health(
     Returns:
         (JSONResponse): The JSON response with the health status.
     """
-    test_vector = EmbeddedChunk(np.random.rand(1, 3072).tolist())
+    test_vector = EmbeddedChunk(np.random.rand(3072).tolist())
 
     token_store = SQLTokenStore(async_session=session)
     openai_embedding_service = OpenAIEmbeddingService(

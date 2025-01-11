@@ -19,7 +19,7 @@ services:
     depends_on:
       - startup_container
     healthcheck:
-      test: curl -f http://localhost:8000/v1/api/health || exit 1
+      test: curl -f http://localhost:8000/health || exit 1
       interval: 600s
       timeout: 5s
       retries: 3
@@ -32,7 +32,7 @@ services:
         "run",
         "src/talkingcode/backend/main.py",
         "--workers",
-        "2",
+        "1",
         "--port",
         "8000",
       ]
