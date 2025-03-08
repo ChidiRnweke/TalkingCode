@@ -9,7 +9,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.12,<3.13"
 pgvector = "^0.2.5"
 sqlalchemy = "^2.0.30"
 alembic = "^1.13.1"

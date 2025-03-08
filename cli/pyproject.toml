@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "talkingcode-backend"
+name = "talkingcode-cli"
 version = "0.1.0"
-description = "The backend of the TalkingCode project"
+description = "CLI tool for managing TalkingCode - a GitHub code RAG system"
 authors = ["ChidiRNweke <chidi125@gmail.com>"]
 license = "MIT"
 readme = "README.md"
@@ -11,22 +11,18 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
+talkingcode-pipelines = {path = "../pipelines"}
+talkingcode-backend = {path = "../backend"}
 talkingcode-shared = {path = "../shared"}
-fastapi = "^0.111.0"
-openai = "^1.31.0"
-aiohttp = "^3.9.5"
+typer = {extras = ["all"], version = "^0.12.3"}
+rich = {extras = ["all"], version = "^13.7.0"}
 python-dotenv = "^1.0.1"
-asyncpg = "^0.30.0"
-qdrant-client = "1.12.1"
-alembic = "^1.14.0"
-aiosqlite = "^0.20.0"
-tiktoken = "^0.8.0"
+uvicorn = "^0.27.1"
+
+[tool.poetry.scripts]
+talkingcode = "talkingcode.cli.main:app"
 
 [tool.poetry.group.dev.dependencies]
-ipykernel = "^6.29.4"
-pytest = "^8.2.2"
-pytest-asyncio = "^0.23.7"
-testcontainers = {extras = ["postgres"], version = "^4.5.1"}
 ruff = "^0.8.4"
 
 [tool.ruff.lint]

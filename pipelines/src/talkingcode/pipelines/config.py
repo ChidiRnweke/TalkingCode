@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from talkingcode.shared.environment import SecretsReader
 
 
-
 @dataclass(frozen=True, slots=True)
 class QdrantConfig:
     server_mode: bool

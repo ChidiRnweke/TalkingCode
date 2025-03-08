@@ -221,7 +221,7 @@ async def health(
         (JSONResponse): The JSON response with the health status.
     """
     keyword_identifier = get_keyword_identifier(app_config)
-    test_vector = EmbeddedChunk(np.random.rand(3072).tolist())
+    test_vector = EmbeddedChunk(np.random.rand(3072).tolist())  # type: ignore
 
     token_store = SQLTokenStore(async_session=session)
     openai_embedding_service = OpenAIEmbeddingService(
@@ -256,26 +256,6 @@ async def health(
         raise HTTPException(500, "Failed to retrieve top k")
 
 
-def create_app():
-    telemetry_enabled = os.getenv("TELEMETRY_ENDPOINT") is not None
-    if telemetry_enabled:
-        configure_telemetry()
-    else:
-        logger.warning("Running without telemetry...")
-
-    app = FastAPI(lifespan=lifespan, root_path="/api/v1")
-    app.include_router(router)
-
-    if telemetry_enabled:
-        FastAPIInstrumentor.instrument_app(app)
-
-    logger.info("App configured")
-    return app
-
-
-app = create_app()
-
-
 def handle_token_limit_error(
     request: Request, exc: TokenLimitError
 ) -> StreamingResponse:
@@ -298,7 +278,6 @@ def handle_token_limit_error(
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-@app.exception_handler(AppError)
 async def handle_app_errors(request: Request, exc: AppError) -> JSONResponse:
     """
     This function is used to handle the application errors globally. It uses the app error
@@ -325,10 +304,28 @@ async def handle_app_errors(request: Request, exc: AppError) -> JSONResponse:
             return JSONResponse(str(exc), status_code=500)
 
 
-@app.exception_handler(Exception)
 async def exception_callback(request: Request, exc: Exception):
     logger.error(str(exc))
     return JSONResponse(status_code=500, content={"message": "Internal server error"})
 
 
-app.add_exception_handler(TokenLimitError, handle_token_limit_error)  # type: ignore
+def create_app():
+    telemetry_enabled = os.getenv("TELEMETRY_ENDPOINT") is not None
+    if telemetry_enabled:
+        configure_telemetry()
+    else:
+        logger.warning("Running without telemetry...")
+
+    app = FastAPI(lifespan=lifespan, root_path="/api/v1")
+    app.include_router(router)
+    app.add_exception_handler(TokenLimitError, handle_token_limit_error)  # type: ignore
+    app.add_exception_handler(AppError, handle_app_errors)  # type: ignore
+    app.add_exception_handler(Exception, exception_callback)  # type: ignore
+    if telemetry_enabled:
+        FastAPIInstrumentor.instrument_app(app)
+
+    logger.info("App configured")
+    return app
+
+
+app = create_app()
