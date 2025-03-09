@@ -3,7 +3,7 @@
 .env.secret.prod
 __pycache__/    
 dataprocessing/.vscode/settings.json
-config/
+.env.secret.dev
 backend/site
 site/
 .vscode

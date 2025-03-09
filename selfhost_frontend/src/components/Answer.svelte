@@ -6,7 +6,7 @@
 		children: import('svelte').Snippet;
 	}
 
-	const props = $props();
+	let { loading = false, children }: Props = $props();
 </script>
 
 <section class="flex flex-row mr-auto ml-0 lg:gap-x-10 gap-x-4 w-full">
@@ -21,8 +21,8 @@
 	</div>
 	<P class="text-lg leading-10 break-words flex-grow w-0 max-w-full">
 		<div class="generated">
-			{@render props.children()}
-			{#if props.loading}
+			{@render children()}
+			{#if loading}
 				<span class="animate-pulse text-6xl">.</span>
 			{/if}
 		</div>
