@@ -27,7 +27,7 @@
 				<Li>Copy over the compose files</Li>
 				<Li>Create a .env file with the necessary config variables</Li>
 				<Li>Run the containers</Li>
-				<Li>Run the pipeline using Dagster</Li>
+				<Li>Run the data pipeline</Li>
 				<Li>Use the application through the OpenAPI docs, curl or your own frontend.</Li>
 			</List>
 			If that sounds like a lot, don't worry. I'll walk you through it step by step.
@@ -210,24 +210,42 @@
 	</section>
 
 	<section>
-		<Heading tag="h2" class="mb-8">Running the pipeline using dagster</Heading>
+		<Heading tag="h2" class="mb-8">Running the data pipeline</Heading>
 		<Paragraph>
-			After you have the containers running, you can run the pipeline using Dagster. You can browse
-			to <InlineCode>localhost:3000</InlineCode> or
-			<InlineCode>localhost:DAGSTER_PORT</InlineCode> if you have changed the port. This will bring up
-			the Dagster UI. You can then start the pipeline by clicking on the
-			<em>materialize all</em> button.
+			After you have the containers running, you need to run the data pipeline to populate the
+			vector store. The pipeline will automatically run every day at midnight to keep your data
+			fresh, but for the initial setup you'll need to trigger it manually:
+			<List tag="ol">
+				<Li>
+					<InlineCode
+						>docker exec talkingcode_data_pipelines python src/talkingcode/pipelines/app.py</InlineCode
+					>
+				</Li>
+			</List>
+			This will start processing your GitHub repositories, embedding the code, and storing it in the
+			vector database.
 		</Paragraph>
 	</section>
 
 	<section>
 		<Heading tag="h2" class="mb-8">Using the application</Heading>
 		<Paragraph>
-			After you have started the pipeline, you can start using the application. You can browse to
+			After the pipeline has finished processing your data, you can start using the application.
+			Browse to
 			<InlineCode>localhost:8000/docs</InlineCode> or
 			<InlineCode>localhost:BACKEND_PORT/docs</InlineCode> if you have changed the port. This will bring
-			up the FastAPI docs. You can then start making requests to the API. You will have to provide your
-			own frontend to interact with the API. You're free to use the frontend I used as a starting point.
+			up the FastAPI docs where you can try out the API endpoints directly. The main endpoints are:
+			<List tag="ul">
+				<Li>
+					<InlineCode>/rag/chat</InlineCode> - The main chat endpoint that streams AI responses
+				</Li>
+				<Li>
+					<InlineCode>/rag/remaining_spend</InlineCode> - Check your remaining API spend allowance
+				</Li>
+				<Li>
+					<InlineCode>/health</InlineCode> - Verify the system is working correctly
+				</Li>
+			</List>
 		</Paragraph>
 	</section>
 

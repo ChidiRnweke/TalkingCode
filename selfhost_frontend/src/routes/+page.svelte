@@ -58,7 +58,7 @@
 		latestQuestion = $input;
 		try {
 			await generateAnswer(latestQuestion);
-			// remainingSpend = await ragClient.getRemainingSpend();
+			remainingSpend = await ragClient.getRemainingSpend();
 		} catch (error) {
 			handleError();
 		}
@@ -82,7 +82,7 @@
 	};
 
 	onMount(async () => {
-		// remainingSpend = await ragClient.getRemainingSpend();
+		remainingSpend = await ragClient.getRemainingSpend();
 	});
 </script>
 

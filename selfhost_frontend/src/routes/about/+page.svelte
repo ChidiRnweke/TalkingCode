@@ -84,11 +84,12 @@
 		<section>
 			<Heading tag="h3" class="mb-8">The backend: FastAPI</Heading>
 			<Paragraph>
-				The API is built using FastAPI. For now the API only has one endpoint:
-				<InlineCode>/answer</InlineCode>. FastAPI was also a conscious choice. The reason being that
-				it has great asynchronous programming support.This is important because the RAG model can
-				take a long time to generate an answer and I don't want to block the server while that
-				happens. The answers are also streamed to the client as they're generated.
+				The API is built using FastAPI. The main endpoint is
+				<InlineCode>/rag/chat</InlineCode>, which streams AI responses using chunked transfer
+				encoding. FastAPI was also a conscious choice. The reason being that it has great
+				asynchronous programming support. This is important because the RAG model can take a long
+				time to generate an answer and I don't want to block the server while that happens. The
+				answers are also streamed to the client as they're generated.
 			</Paragraph>
 		</section>
 		<section>
@@ -136,7 +137,7 @@
 				generation. The retrieval can be improved by using agents or by doing things such as
 				rewriting the query. The generation can be used by providing more useful context and
 				metadata. Before I go into that I want to make sure I have the ability to quantify the
-				improvements. I have a number of ideas for how to do that as well.
+				improvements and measure the impact of any changes made to the system.
 			</Paragraph>
 		</div>
 	</section>
