@@ -21,6 +21,7 @@ qdrant-client = "1.12.1"
 alembic = "^1.14.0"
 aiosqlite = "^0.20.0"
 tiktoken = "^0.8.0"
+openai-agents = "^0.0.3"
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.29.4"
