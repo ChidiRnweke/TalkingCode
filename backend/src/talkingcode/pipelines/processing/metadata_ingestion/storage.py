@@ -5,11 +5,11 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from talkingcode.pipelines.database import (
+from talkingcode.pipelines.models import GitHubFile, GitHubRepository
+from talkingcode.shared.database import (
     GithubFileModel,
     GitHubRepositoryModel,
 )
-from talkingcode.pipelines.models import GitHubFile, GitHubRepository
 from talkingcode.shared.telemetry import instrument_all_async, log_async_execution_time
 
 logger = structlog.getLogger("talkingcode")

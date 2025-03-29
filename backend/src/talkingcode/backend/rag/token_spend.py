@@ -5,8 +5,8 @@ from typing import Protocol
 from sqlalchemy import Date, cast, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from talkingcode.backend.database import TokenSpendModel
 from talkingcode.backend.errors import map_errors
+from talkingcode.shared.database import TokenSpendModel
 
 
 class TokenSpendStore(Protocol):

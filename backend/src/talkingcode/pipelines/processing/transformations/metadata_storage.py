@@ -6,8 +6,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from talkingcode.pipelines.database import GithubFileModel, GitHubRepositoryModel
 from talkingcode.pipelines.models import FileMetadata
+from talkingcode.shared.database import GithubFileModel, GitHubRepositoryModel
 
 from .transformed_file import MetadataStore
 

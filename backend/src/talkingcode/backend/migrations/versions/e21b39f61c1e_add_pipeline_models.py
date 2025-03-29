@@ -1,19 +1,20 @@
-"""Initialize schema
+"""Add pipeline models
 
-Revision ID: a6e2b279b467
-Revises:
-Create Date: 2024-12-31 15:03:49.984727
+Revision ID: e21b39f61c1e
+Revises: b7787d05b1ca
+Create Date: 2025-03-29 19:03:03.973809
 
 """
 
 from typing import Sequence, Union
 
-import sqlalchemy as sa
 from alembic import op
+import sqlalchemy as sa
+
 
 # revision identifiers, used by Alembic.
-revision: str = "a6e2b279b467"
-down_revision: Union[str, None] = None
+revision: str = "e21b39f61c1e"
+down_revision: Union[str, None] = "b7787d05b1ca"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

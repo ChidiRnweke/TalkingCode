@@ -2,7 +2,7 @@ from sqlite3 import Connection as SQLiteConnection
 
 from sqlalchemy import Connection, Engine, event
 
-from .schema import Base, GithubFileModel, GitHubRepositoryModel
+from .schema import Base, GithubFileModel, GitHubRepositoryModel, TokenSpendModel
 
 
 @event.listens_for(Engine, "connect")
@@ -15,4 +15,4 @@ def enable_foreign_keys(dbapi_connection: Connection, connection_record) -> None
         cursor.close()
 
 
-__all__ = ["Base", "GitHubRepositoryModel", "GithubFileModel"]
+__all__ = ["Base", "GitHubRepositoryModel", "GithubFileModel", "TokenSpendModel"]

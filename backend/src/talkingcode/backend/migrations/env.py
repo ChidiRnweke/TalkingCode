@@ -6,7 +6,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from talkingcode.backend.config import AppConfig
-from talkingcode.backend.database import Base
+from talkingcode.shared.database import Base
 from talkingcode.shared.telemetry import configure_telemetry
 
 # this is the Alembic Config object, which provides
