@@ -1,9 +1,9 @@
 from openai import AsyncOpenAI
-from qdrant_client import AsyncQdrantClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.github_client import GithubHTTPClient
+from talkingcode.shared import get_qdrant_client
 
 from .embedding import OpenAIEmbedder, TextSplitter
 from .metadata_enrichment import MetadataEnricher, TopicsEnrichment
@@ -48,12 +48,12 @@ def qdrant_vector_store_from_config(config: IngestionConfig) -> QdrantVectorStor
     metadata_store = metadata_storage_from_config(config)
     collection_name = config.qdrant_collection_name
     local_storage = config.qdrant_local_storage_path
-    if server_mode:
-        url = config.qdrant_server_url
-        api_key = config.qdrant_api_key
-        client = AsyncQdrantClient(url=url, api_key=api_key)
-    else:
-        client = AsyncQdrantClient(path=local_storage)
+    client = get_qdrant_client(
+        server_mode=server_mode,
+        server_url=config.qdrant_server_url,
+        api_key=config.qdrant_api_key,
+        local_storage_path=local_storage,
+    )
     return QdrantVectorStore(client, metadata_store, collection_name)
 
 
