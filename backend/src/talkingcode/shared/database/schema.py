@@ -9,6 +9,40 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
+class PipelineRunModel(Base):
+    __tablename__ = "pipeline_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    start_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    end_time: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    success: Mapped[bool] = mapped_column(default=False)
+    error_message: Mapped[str] = mapped_column(String(255), nullable=True)
+
+    associated_schedule: Mapped[str] = mapped_column(String(255), nullable=True)
+
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["associated_schedule"],
+            ["pipeline_schedule.id"],
+        ),
+    )
+
+
+class PipelineScheduleModel(Base):
+    __tablename__ = "pipeline_schedule"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    schedule_start_time: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now
+    )
+    start_hour: Mapped[int] = mapped_column(Integer)
+    start_minute: Mapped[int] = mapped_column(Integer)
+
+    is_active: Mapped[bool] = mapped_column(default=True)
+
+
 class TokenSpendModel(Base):
     __tablename__ = "tokens_spent"
 
