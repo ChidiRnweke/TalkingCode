@@ -32,6 +32,7 @@ from talkingcode.backend.rag import (
     vector_store_from_config,
 )
 from talkingcode.backend.rag.retrieve import EmbeddedChunk
+from talkingcode.pipelines import router as pipeline_router
 from talkingcode.pipelines.config import IngestionConfig
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger("talkingcode")
@@ -322,6 +323,7 @@ def create_app():
 
     app = FastAPI(lifespan=lifespan, root_path="/api/v1")
     app.include_router(router)
+    app.include_router(pipeline_router)
     app.add_exception_handler(TokenLimitError, handle_token_limit_error)  # type: ignore
     app.add_exception_handler(AppError, handle_app_errors)  # type: ignore
     app.add_exception_handler(Exception, exception_callback)  # type: ignore

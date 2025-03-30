@@ -156,8 +156,8 @@ class PipelineRunPersistence(PipelineStorage):
             await session.execute(update(PipelineScheduleModel).values(is_active=False))
 
             schedule_model = PipelineScheduleModel(
-                hour=hour,
-                minute=minute,
+                start_hour=hour,
+                start_minute=minute,
                 is_active=True,
             )
             session.add(schedule_model)

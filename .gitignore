@@ -11,3 +11,6 @@ talkingcode.db
 qdrant-data
 .env
 pipelines/talkingcode.sqlite
+backend/talkingcode.sqlite
+backend/talkingcode.sqlite-wal
+backend/talkingcode.sqlite-shm
