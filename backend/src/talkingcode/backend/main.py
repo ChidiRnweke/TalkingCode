@@ -32,6 +32,7 @@ from talkingcode.backend.rag import (
     vector_store_from_config,
 )
 from talkingcode.backend.rag.retrieve import EmbeddedChunk
+from talkingcode.pipelines.config import IngestionConfig
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger("talkingcode")
 
@@ -42,6 +43,7 @@ router = APIRouter()
 class State(TypedDict):
     app_config: AppConfig
     retrieval_service: RetrievalService
+    ingestion_config: IngestionConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,9 +65,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[State]:
     """
     config = AppConfig.from_config()
     retrieval_service = vector_store_from_config(config)
+    ingestion_config = IngestionConfig.from_env()
     yield {
         "app_config": config,
         "retrieval_service": retrieval_service,
+        "ingestion_config": ingestion_config,
     }
 
 

@@ -1,8 +1,10 @@
 from dataclasses import dataclass
+from typing import cast
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, Request
 from fastapi.background import BackgroundTasks
 
+from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.orchestration import (
     download_and_persist_data,
     pipeline_currently_running,
@@ -23,6 +25,11 @@ class PipelineCurrentlyRunning:
 router = APIRouter()
 
 
+def get_ingestion_config(request: Request) -> IngestionConfig:
+    config = cast(IngestionConfig, request.state.ingestion_config)
+    return config
+
+
 @router.get("/pipeline/run")
 async def check_if_pipeline_running() -> PipelineCurrentlyRunning:
     """
@@ -39,7 +46,10 @@ async def check_if_pipeline_running() -> PipelineCurrentlyRunning:
 
 
 @router.post("/pipeline/run")
-async def run_pipeline(background_tasks: BackgroundTasks) -> PipelineStarted:
+async def run_pipeline(
+    background_tasks: BackgroundTasks,
+    config: IngestionConfig = Depends(get_ingestion_config),
+) -> PipelineStarted:
     """
     Start the pipeline run immediately. If a pipeline run is already in progress, it will be skipped.
     NOTE: This isn't done in a particularly elegant way. Uvicorn can be run with multiple workers,
@@ -50,13 +60,16 @@ async def run_pipeline(background_tasks: BackgroundTasks) -> PipelineStarted:
         PipelineStarted: A message indicating the pipeline run status. Returns immediately
         after starting the pipeline run in the background.
     """
-    background_tasks.add_task(download_and_persist_data)
+    background_tasks.add_task(download_and_persist_data, config)
     return PipelineStarted(message="Pipeline run started.")
 
 
 @router.post("/pipeline/schedule")
 async def schedule_pipeline(
-    hour: int, minute: int, background_tasks: BackgroundTasks
+    hour: int,
+    minute: int,
+    background_tasks: BackgroundTasks,
+    config: IngestionConfig = Depends(get_ingestion_config),
 ) -> PipelineStarted:
     """
     Schedule the pipeline to run at a specific time every day.
@@ -74,7 +87,7 @@ async def schedule_pipeline(
     Returns:
         PipelineStarted: A message indicating the pipeline schedule status.
     """
-    background_tasks.add_task(run_pipeline_on_schedule, hour, minute)
+    background_tasks.add_task(run_pipeline_on_schedule, config, hour, minute)
     return PipelineStarted(
         message=f"Pipeline scheduled to run at {hour:02d}:{minute:02d}."
     )

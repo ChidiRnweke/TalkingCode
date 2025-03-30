@@ -1,7 +1,6 @@
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from uuid import uuid4
 
 from opentelemetry.trace import get_tracer
 from structlog import getLogger, stdlib
@@ -35,7 +34,10 @@ def pipeline_currently_running() -> bool:
 @log_async_execution_time
 @tracer.start_as_current_span("download_and_persist_data")
 @async_log_failure
-async def download_and_persist_data(schedule_id: str | None = None) -> PipelineRun:
+async def download_and_persist_data(
+    config: IngestionConfig,
+    schedule_id: int | None = None,
+) -> PipelineRun:
     """
     Download and persist data from the GitHub API to the database.
     This function is used to fetch data from the GitHub API and store it in the database.
@@ -47,22 +49,20 @@ async def download_and_persist_data(schedule_id: str | None = None) -> PipelineR
 
     async with _run_lock:
         start_time = datetime.now()
-        app_config = IngestionConfig.from_env()
-        persistence = persistence_from_config(app_config)
+        persistence = persistence_from_config(config)
         try:
-            await run_transformation_pipeline(app_config)
+            await run_transformation_pipeline(config)
             await persistence.create_pipeline_run(
-                schedule_id,
                 start_time=start_time,
                 end_time=datetime.now(),
                 success=True,
                 error_message=None,
+                associated_schedule=schedule_id,
             )
             return PipelineRun(success=True)
         except Exception as e:
             logger.exception(f"An error occurred while running the pipeline: {e}")
             await persistence.create_pipeline_run(
-                schedule_id,
                 start_time=start_time,
                 end_time=datetime.now(),
                 success=False,
@@ -71,7 +71,11 @@ async def download_and_persist_data(schedule_id: str | None = None) -> PipelineR
             return PipelineRun(success=False)
 
 
-async def run_pipeline_on_schedule(hour: int, minute: int) -> None:
+async def run_pipeline_on_schedule(
+    config: IngestionConfig,
+    hour: int,
+    minute: int,
+) -> None:
     """
     Run the pipeline on a given schedule every day at the specified hour and minute.
 
@@ -80,23 +84,22 @@ async def run_pipeline_on_schedule(hour: int, minute: int) -> None:
         minute (int): The minute of the hour to run the pipeline.
     """
     logger.info("Doing initial run of scheduled pipeline...")
-    app_config = IngestionConfig.from_env()
-    persistence = persistence_from_config(app_config)
-    pipeline_id = str(uuid4())
+    persistence = persistence_from_config(config)
 
-    await persistence.create_schedule(pipeline_id, hour, minute)
+    schedule = await persistence.create_schedule(hour, minute)
+    pipeline_id = schedule.id
 
-    await download_and_persist_data(pipeline_id)
+    await download_and_persist_data(config)
     logger.info("Initial run of scheduled pipeline completed.")
     schedule_active = True
     while schedule_active:
         await _sleep_until(hour, minute)
-        persistence = persistence_from_config(app_config)
+        persistence = persistence_from_config(config)
         schedule = await persistence.get_schedule(pipeline_id)
         if not schedule or not schedule.is_active:
             break
         logger.info("Running scheduled pipeline...")
-        await download_and_persist_data(pipeline_id)
+        await download_and_persist_data(config, pipeline_id)
         logger.info("Scheduled pipeline completed.")
 
 

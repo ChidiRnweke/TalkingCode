@@ -12,14 +12,14 @@ class Base(AsyncAttrs, DeclarativeBase):
 class PipelineRunModel(Base):
     __tablename__ = "pipeline_runs"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     start_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     end_time: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     success: Mapped[bool] = mapped_column(default=False)
     error_message: Mapped[str] = mapped_column(String(255), nullable=True)
 
-    associated_schedule: Mapped[str] = mapped_column(String(255), nullable=True)
+    associated_schedule: Mapped[int] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -32,7 +32,7 @@ class PipelineRunModel(Base):
 class PipelineScheduleModel(Base):
     __tablename__ = "pipeline_schedule"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     schedule_start_time: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.now

@@ -2,12 +2,14 @@ import asyncio
 import logging
 import os
 
+from talkingcode.pipelines.config import IngestionConfig
 from talkingcode.pipelines.orchestration import run_pipeline_on_schedule
 from talkingcode.shared.telemetry import configure_telemetry
 
 
 async def main() -> None:
-    await run_pipeline_on_schedule(00, 00)
+    config = IngestionConfig.from_env()
+    await run_pipeline_on_schedule(config, 0, 0)
 
 
 if __name__ == "__main__":
