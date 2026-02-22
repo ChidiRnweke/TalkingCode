@@ -77,7 +77,7 @@ Token scale:
 - All app usage goes through `primitives/` wrappers for `Button`, `Input`, `Card`, `Badge`.
 - Avoid raw `<button>` and `<input>` in route components.
 - Chat UI composes `svelte-ai-elements` primitives first (`new-message`, `prompt-input`,
-  `model-selector`, `sources`, `loader`, `shimmer`) before custom replacements.
+  `model-selector`, `sources`, `loader`, `shimmer`, `actions`) before custom replacements.
 - Lists that can be empty include an explicit empty state with icon + headline + CTA.
 - Loading states use skeletons that mirror final layout.
 - Status badges use semantic tokens; color is never the only signal.

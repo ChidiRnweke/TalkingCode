@@ -34,6 +34,9 @@ targeted component tests for critical UI behavior.
 - Domain components for chat/repos/pipeline/settings pages.
 - Empty states, skeleton states, responsive checks, and limited component tests.
 
+Agentic whitebox UI instrumentation is planned separately in `agentic-rag-ui-plan.md` and starts
+after this baseline UI blueprint is complete.
+
 **Out of scope:**
 
 - Pixel-perfect marketing site polish beyond core app surfaces.
@@ -74,6 +77,7 @@ Install and use these `svelte-ai-elements` components as the primary chat surfac
 - `model-selector` for explicit model picking in settings/chat composer.
 - `sources` for retrieved-context citation rendering under assistant output.
 - `loader` + `shimmer` for loading states (avoid spinner-only states).
+- `actions` for assistant response control row (Retry/Copy/Show Filters).
 
 Install command references:
 
@@ -84,7 +88,7 @@ Component mapping by route:
 
 - `/` (chat page)
   - Chat transcript rows: `Message` + `MessageContent` + `MessageResponse`
-  - Assistant actions row: `MessageActions` + `MessageAction` (copy, retry)
+  - Assistant actions row: `Actions` + `Action` (retry, copy, show filters)
   - Input area: `PromptInput`
   - Model picker: `ModelSelector`
   - Citations: `Sources`
@@ -122,7 +126,7 @@ Use these exact contracts to avoid ad-hoc UI composition.
 | Domain Component | Required Props | Must Render Using | Notes |
 | --- | --- | --- | --- |
 | `ChatMessage.svelte` | `message: ChatMessageView`, `isStreaming?: boolean` | `Message`, `MessageContent`, `MessageResponse` | `message.role` maps to `from="user" | "assistant"`; stream state shows shimmer tail. |
-| `ChatMessageActions.svelte` | `messageId: string`, `canRetry: boolean`, `onCopy: () => void`, `onRetry: () => void` | `MessageActions`, `MessageAction` | Only allow retry on assistant messages. |
+| `ChatMessageActions.svelte` | `messageId: string`, `canRetry: boolean`, `onCopy: () => void`, `onRetry: () => void`, `onToggleFilters?: () => void` | `Actions`, `Action` | Only allow retry on assistant messages; optional filter toggle when agentic mode is enabled. |
 | `ChatSources.svelte` | `sources: SourceItem[]` | `Sources` | Hidden when `sources.length === 0`; visible under assistant response only. |
 | `ChatComposer.svelte` | `value: string`, `isSubmitting: boolean`, `selectedModel: string`, `models: ModelOption[]`, `onSubmit: (value: string) => void`, `onModelChange: (id: string) => void` | `PromptInput`, `ModelSelector` | Composer stays sticky; submit disabled while streaming/submitting. |
 | `ConversationRail.svelte` | `items: ConversationSummary[]`, `activeId: string | null`, `onSelect: (id: string) => void`, `onCreate: () => void` | `Conversation` (or tokenized list wrapper) | On mobile render in drawer/sheet; desktop fixed width `320px`. |
@@ -219,3 +223,11 @@ Recommended component test scope (balanced):
 4. Confirm empty and skeleton states exist where lists/streams can be pending/empty.
 5. `pnpm --dir frontend check`
 6. `pnpm --dir frontend test`
+
+## Agentic Handoff
+
+After this blueprint is complete and verified, continue with `agentic-rag-ui-plan.md` for:
+
+- `svelte-ai-elements/actions` integration,
+- planner/tool timeline UI,
+- filter visibility toggles with payload privacy guarantees.

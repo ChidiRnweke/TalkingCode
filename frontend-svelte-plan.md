@@ -35,6 +35,9 @@ that applies design tokens and component conventions.
 - Client stores populated from loader data.
 - Script-based frontend verification that calls backend endpoints.
 
+Agentic streaming architecture work is planned separately in
+`agentic-rag-frontend-plan.md` and should begin after this baseline is complete.
+
 **Out of scope:**
 
 - Visual theming and design system decisions (UI subplan handles this).
@@ -215,3 +218,11 @@ Minimum coverage focus:
    - `/repos` loads and sync action wired.
    - `/pipeline` loads status/history.
    - `/` sends chat request and handles streaming state.
+
+## Agentic Handoff
+
+After this blueprint is complete and verified, continue with `agentic-rag-frontend-plan.md` for:
+
+- planner/tool stream event contracts,
+- timeline state orchestration,
+- agentic e2e verification script wiring.

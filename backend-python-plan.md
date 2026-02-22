@@ -34,6 +34,9 @@ frontend architecture work depends on it.
 - Repositories, services, controllers, routes, and pipeline runner.
 - Unit/integration tests for critical behavior and route smoke checks.
 
+Agentic extension work is planned separately in `agentic-rag-backend-plan.md` and should start
+after this baseline backend blueprint reaches verification.
+
 **Out of scope:**
 
 - Auth stack and user identity management.
@@ -239,3 +242,11 @@ Minimum behavior coverage:
    - `curl http://localhost:8000/api/repos`
    - `curl -X POST http://localhost:8000/api/repos/sync`
    - `curl http://localhost:8000/api/pipeline/status`
+
+## Agentic Handoff
+
+After this file is fully complete and verified, continue with `agentic-rag-backend-plan.md` for:
+
+- planner + tool-calling loop orchestration,
+- structured classification metadata,
+- whitebox timeline persistence and streaming.

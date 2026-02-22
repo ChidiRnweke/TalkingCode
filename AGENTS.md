@@ -68,3 +68,10 @@ frontend/src/lib/components/
 
 - `DESIGN_SYSTEM.md` is the source of truth for palette, typography, spacing, radius,
   primitive conventions, and anti-patterns.
+
+### Feature Blueprint Reference
+
+- Baseline implementation: `PLAN.md`, `backend-python-plan.md`, `frontend-svelte-plan.md`,
+  `frontend-ui-plan.md`
+- Agentic RAG extension: `agentic-rag-plan.md`, `agentic-rag-backend-plan.md`,
+  `agentic-rag-frontend-plan.md`, `agentic-rag-ui-plan.md`

@@ -25,6 +25,9 @@ architecture (`python-swe`), frontend architecture (`svelte-swe`), and frontend 
 (`svelte-ui`). This keeps each plan granular and pattern-constrained while preserving one top-level
 dependency graph.
 
+A dedicated feature extension blueprint also exists for agentic retrieval and tool-calling:
+`agentic-rag-plan.md` plus its backend/frontend/ui subplans.
+
 User decisions captured in this planning round: full V1 scope, balanced testing strategy,
 strict frontend layering from day one, OpenAI embeddings required, and UI direction set to
 **Editorial Light**.
@@ -34,6 +37,7 @@ strict frontend layering from day one, OpenAI embeddings required, and UI direct
 **In scope:**
 
 - Full V1 backend + frontend + UI implementation planning.
+- Agentic RAG loop extension planning and execution handoff.
 - Local development runtime via Docker Compose.
 - End-to-end integration and script-based verification.
 - Test-first mindset for critical behavior with balanced coverage depth.
@@ -44,7 +48,7 @@ strict frontend layering from day one, OpenAI embeddings required, and UI direct
 - Private repository ingestion.
 - Multi-user tenancy and roles.
 - Production hardening (autoscaling, full observability stack, secrets manager).
-- Advanced retrieval upgrades (hybrid search/rerankers) beyond baseline vector retrieval.
+- Retrieval upgrades beyond planned agentic loop scope (e.g., rerankers/hybrid search variants).
 
 ## Architecture Decisions
 
@@ -55,6 +59,7 @@ strict frontend layering from day one, OpenAI embeddings required, and UI direct
 - UI implementation follows `svelte-ui` with Editorial Light design system before components.
 - Embedding provider is OpenAI (model configurable; default expected as `text-embedding-3-small`).
 - Verification emphasizes passing tests plus scriptable e2e checks across backend/frontend.
+- Agentic RAG is executed as a separate sub-blueprint after baseline chat path is stable.
 
 ## Interfaces and Models
 
@@ -63,6 +68,7 @@ Interface and model definitions are delegated to subplans:
 - `backend-python-plan.md` owns backend Protocols, dataclasses, ORM boundaries.
 - `frontend-svelte-plan.md` owns frontend service interfaces, controller contracts, stores.
 - `frontend-ui-plan.md` owns design tokens, primitive contracts, and visual conventions.
+- `agentic-rag-plan.md` owns planner + tool-calling loop extension and delegates deeper subplans.
 
 ## Plan
 
@@ -92,6 +98,11 @@ Interface and model definitions are delegated to subplans:
       then run full integration flow (sync repos -> run pipeline -> chat stream).
       Verify: all commands in `## Verification` pass.
 
+- [ ] **Step 6: Execute agentic RAG extension blueprint**
+      Follow `agentic-rag-plan.md` and complete `agentic-rag-backend-plan.md`,
+      `agentic-rag-frontend-plan.md`, and `agentic-rag-ui-plan.md` in dependency order.
+      Verify: agentic verification commands and scripts pass.
+
 ## Tests
 
 Required aggregate quality bar for V1:
@@ -100,6 +111,7 @@ Required aggregate quality bar for V1:
 - Frontend type checks and architecture-safe tests.
 - Lightweight component tests for core UI components only (avoid explosion).
 - End-to-end script checks proving cross-service integration.
+- Agentic loop tests for planner, tool execution timeline, and whitebox streaming privacy.
 
 ## Verification
 
@@ -113,3 +125,4 @@ Run after all steps are checked off:
 6. `pnpm --dir frontend run verify:e2e` (script that calls backend APIs from frontend context)
 7. `curl http://localhost:8000/api/health`
 8. Validate flow: repos sync, pipeline run, chat response stream with sources.
+9. Validate agentic flow: planner event, tool call timeline, filters visible, payloads hidden.
