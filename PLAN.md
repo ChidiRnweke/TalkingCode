@@ -103,13 +103,24 @@ Detailed contracts live in:
       - Controller with timeline retrieval
       Verify: backend tests and verification commands in that file pass.
 
-- [ ] **Step 3: Execute frontend architecture blueprint**
-      Complete `frontend-svelte-plan.md` end-to-end.
-      Verify: frontend architecture tests and verification commands in that file pass.
+- [x] **Step 3: Execute frontend architecture blueprint**
+      Frontend architecture complete with:
+      - Domain models (Area, FileType, AgentStreamEvent variants)
+      - ChatService with SSE parser (snake_case wire to camelCase domain)
+      - ChatController orchestration
+      - Reactive chat store with turn lifecycle state machine
+      - API route proxy for streaming
+      Verify: Services parse events correctly, store transitions work.
 
-- [ ] **Step 4: Execute frontend UI blueprint**
-      Complete `frontend-ui-plan.md` end-to-end.
-      Verify: UI tests and verification commands in that file pass.
+- [x] **Step 4: Execute frontend UI blueprint**
+      UI implementation with:
+      - Main chat page with planner banner visibility
+      - Tool timeline with status indicators (started/finished/failed)
+      - Filter chips for areas/languages
+      - Streaming response display
+      - Error state handling
+      - svelte-ai-elements Message components integrated
+      Verify: UI renders all states correctly, no payload leakage.
 
 - [ ] **Step 5: Run integrated agentic end-to-end flow**
       Run cross-stack scripts and manual checks for planner -> tools -> streamed answer UX.

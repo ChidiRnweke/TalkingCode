@@ -10,6 +10,7 @@ class Area(str, Enum):
     SCRIPTS = "scripts"
     DOCS = "docs"
     TESTS = "tests"
+    UNKNOWN = "unknown"
 
 
 class FileType(str, Enum):

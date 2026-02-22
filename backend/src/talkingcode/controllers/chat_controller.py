@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from talkingcode.config import AppConfig
 from talkingcode.dependencies import get_config, get_db_session
-from talkingcode.domain.models import AgentTurnInput, ToolTimelineItem, WhiteboxEvent
+from talkingcode.domain.models import ToolTimelineItem, WhiteboxEvent
 from talkingcode.domain.services import AgentTurnInput as AgentTurnInputDTO
 from talkingcode.enums import WhiteboxEventKind
 from talkingcode.repository.conversation_repository import ConversationRepository
