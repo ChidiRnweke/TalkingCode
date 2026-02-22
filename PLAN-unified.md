@@ -1256,7 +1256,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step B.7: Create ingestion orchestrator service**
+- [x] **Step B.7: Create ingestion orchestrator service**
 
       **Files to create:**
       - `backend/src/talkingcode/services/ingestion/ingestion_service.py`
