@@ -145,7 +145,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Keep list loading and run-history refresh behavior intact.
       **Verify:** no `startIngestion` symbol used in this file.
 
-- [ ] **Step 12: Remove ingest button from repo card UI**
+- [x] **Step 12: Remove ingest button from repo card UI**
       File: `talkingcode-frontend/src/lib/components/domain/RepoCard.svelte`.
       Remove the public "Ingest now" trigger/button and related callback prop.
       Keep "Show history" / "Hide history" behavior unchanged.

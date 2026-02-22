@@ -8,11 +8,9 @@
 
 	interface Props {
 		repo: RepositoryInfo;
-		onIngest: (owner: string, name: string) => void;
-		ingesting: boolean;
 	}
 
-	let { repo, onIngest, ingesting }: Props = $props();
+	let { repo }: Props = $props();
 
 	const repoService = new RepoService();
 	let showHistory = $state(false);
@@ -69,14 +67,6 @@
 			<Badge variant="secondary">{repo.default_branch}</Badge>
 			<Button variant="outline" size="sm" onclick={toggleHistory}>
 				{showHistory ? 'Hide history' : 'Show history'}
-			</Button>
-			<Button
-				variant="default"
-				size="sm"
-				disabled={ingesting}
-				onclick={() => onIngest(repo.owner, repo.name)}
-			>
-				{ingesting ? 'Ingesting...' : 'Ingest now'}
 			</Button>
 		</div>
 	</div>
