@@ -30,8 +30,8 @@ class OpenRouterEmbedder:
     """Generates embeddings using OpenRouter embeddings API."""
 
     openrouter_client: IOpenRouterClient
-    model: str = "text-embedding-3-small"
-    dimensions: int = 1536
+    model: str = "openai/text-embedding-3-large"
+    dimensions: int = 3072
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a batch of texts.

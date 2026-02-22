@@ -23,7 +23,7 @@
 	});
 </script>
 
-<main class="flex-1 flex flex-col bg-background">
+<main class="flex-1 flex flex-col bg-background overflow-y-auto">
 	<!-- Hero Section -->
 	<section 
 		bind:this={heroRef}

@@ -83,16 +83,17 @@ class AgentLoopService:
                 raw_tool_calls = response.get("tool_calls", [])
                 tool_calls = raw_tool_calls if isinstance(raw_tool_calls, list) else []
 
-                if plan_text:
-                    yield WhiteboxEvent(
-                        kind=WhiteboxEventKind.PLAN_CHUNK,
-                        turn_id=turn_id,
-                        tool_name=None,
-                        message=plan_text,
-                        visible_args={"chunk": plan_text},
-                        timestamp=datetime.utcnow(),
-                        iteration=iteration,
-                    )
+                if plan_text and tool_calls:
+                    for chunk in self._plan_chunks(plan_text):
+                        yield WhiteboxEvent(
+                            kind=WhiteboxEventKind.PLAN_CHUNK,
+                            turn_id=turn_id,
+                            tool_name=None,
+                            message=chunk,
+                            visible_args={"chunk": chunk},
+                            timestamp=datetime.utcnow(),
+                            iteration=iteration,
+                        )
                     yield WhiteboxEvent(
                         kind=WhiteboxEventKind.PLAN_DONE,
                         turn_id=turn_id,
@@ -104,7 +105,21 @@ class AgentLoopService:
                     )
 
                 if not tool_calls:
-                    for token in self._to_tokens(plan_text):
+                    final_messages: list[dict[str, object]] = [
+                        *messages,
+                        {
+                            "role": "user",
+                            "content": (
+                                "Now provide the final answer to the user using any gathered tool results. "
+                                "Do not include internal planning notes."
+                            ),
+                        },
+                    ]
+
+                    async for token in self.openrouter_client.stream_chat(
+                        model=model,
+                        messages=final_messages,
+                    ):
                         yield WhiteboxEvent(
                             kind=WhiteboxEventKind.ASSISTANT_TOKEN,
                             turn_id=turn_id,
@@ -284,12 +299,26 @@ class AgentLoopService:
             )
 
     @staticmethod
-    def _to_tokens(text: str) -> list[str]:
-        """Split text into lightweight stream-like tokens."""
-        if not text:
+    def _plan_chunks(text: str, target_size: int = 80) -> list[str]:
+        """Split plan text into stream-like chunks."""
+        words = text.split()
+        if not words:
             return []
 
-        parts = text.split(" ")
-        if len(parts) == 1:
-            return parts
-        return [f"{part} " for part in parts[:-1]] + [parts[-1]]
+        chunks: list[str] = []
+        current: list[str] = []
+        length = 0
+        for word in words:
+            added = len(word) + (1 if current else 0)
+            if current and length + added > target_size:
+                chunks.append(" ".join(current) + " ")
+                current = [word]
+                length = len(word)
+            else:
+                current.append(word)
+                length += added
+
+        if current:
+            chunks.append(" ".join(current))
+
+        return chunks

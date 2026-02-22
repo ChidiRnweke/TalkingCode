@@ -47,10 +47,10 @@ function createChatStore() {
 			if (active.error) return 'error';
 			if (active.isStreaming) {
 				if (active.content) return 'streaming';
-				if (active.plan || active.toolCalls?.length) return 'tools';
+				if (active.plan || active.planText || active.toolCalls?.length) return 'tools';
 				return 'planning';
 			}
-			if (active.plan || active.toolCalls?.length) return 'done';
+			if (active.plan || active.planText || active.toolCalls?.length) return 'done';
 			return 'idle';
 		},
 

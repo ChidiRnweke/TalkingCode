@@ -15,7 +15,7 @@
 	class={cn(
 		'is-user:dark flex w-fit flex-col gap-2 overflow-hidden text-sm',
 		'group-[.is-user]:ml-auto group-[.is-user]:rounded-lg group-[.is-user]:bg-secondary group-[.is-user]:px-4 group-[.is-user]:py-3 group-[.is-user]:text-foreground',
-		'group-[.is-assistant]:text-foreground',
+		'group-[.is-assistant]:max-w-[74ch] group-[.is-assistant]:text-[1.04rem] group-[.is-assistant]:leading-8 group-[.is-assistant]:font-medium group-[.is-assistant]:text-foreground',
 		className
 	)}
 	{...restProps}

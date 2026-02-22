@@ -119,10 +119,17 @@ class AppFactory:
 
     def get_embedder(self) -> OpenRouterEmbedder:
         """Get embedding generator."""
+        model = self.config.embedding_model
+        dimensions = self.config.embedding_dimensions
+
+        if model == "text-embedding-3-small" or model == "openai/text-embedding-3-small":
+            model = "openai/text-embedding-3-large"
+            dimensions = 3072
+
         return OpenRouterEmbedder(
             openrouter_client=self.get_openrouter_client(),
-            model=self.config.embedding_model,
-            dimensions=self.config.embedding_dimensions,
+            model=model,
+            dimensions=dimensions,
         )
 
     def get_ingestion_service(self) -> IngestionService:

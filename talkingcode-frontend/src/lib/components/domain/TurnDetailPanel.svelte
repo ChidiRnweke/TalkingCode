@@ -19,15 +19,21 @@
 </script>
 
 {#if message}
+	<button
+		type="button"
+		class="fixed inset-x-0 bottom-0 top-16 z-40 bg-foreground/10 backdrop-blur-[1px] xl:hidden"
+		onclick={onClose}
+		aria-label="Close details panel"
+	></button>
+
 	<aside
-		class="fixed right-0 top-14 h-[calc(100dvh-3.5rem)] w-96 transform border-l border-border bg-background shadow-xl transition-transform duration-200 ease-in-out xl:relative xl:top-0 xl:h-full xl:w-96 xl:translate-x-0"
-		class:translate-x-full={!message}
+		class="fixed right-0 top-16 z-50 flex h-[calc(100dvh-4rem)] w-[min(92vw,28rem)] flex-col border-l border-border/80 bg-background shadow-2xl xl:relative xl:top-0 xl:z-10 xl:h-[calc(100dvh-4rem)] xl:w-[26rem] xl:shadow-none"
 	>
-		<div class="flex h-14 items-center justify-between border-b border-border px-4 bg-surface-2/30">
+		<div class="flex h-14 items-center justify-between border-b border-border bg-surface-2/30 px-4">
 			<div class="flex flex-col">
-				<h3 class="font-display text-sm font-bold uppercase tracking-widest text-foreground">Turn Details</h3>
+				<h3 class="font-display text-sm font-bold uppercase tracking-widest text-foreground">Activity</h3>
 				{#if message.thoughtDurationS}
-					<span class="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Thought for {message.thoughtDurationS}s</span>
+					<span class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Thought for {message.thoughtDurationS}s</span>
 				{/if}
 			</div>
 			<Button variant="ghost" size="icon-sm" onclick={onClose} aria-label="Close panel">
@@ -35,7 +41,8 @@
 			</Button>
 		</div>
 
-		<div class="flex flex-col gap-8 overflow-y-auto p-6 pb-20">
+		<div class="min-h-0 flex-1 overflow-y-auto p-6 pb-20">
+			<div class="flex flex-col gap-8">
 			{#if message.plan || message.planText}
 				<section class="space-y-4">
 					<div class="flex items-center gap-2">
@@ -46,11 +53,11 @@
 					</div>
 					
 					{#if message.planText}
-						<div class="rounded-lg bg-surface-2 p-4 text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap border border-border/40">
+						<div class="whitespace-pre-wrap rounded-lg border border-border/40 bg-surface-2 p-4 text-[0.95rem] leading-7 text-foreground/90">
 							{message.planText}
 						</div>
 					{:else if message.plan?.intent}
-						<div class="rounded-lg bg-surface-2 p-4 text-sm text-foreground/90 border border-border/40">
+						<div class="rounded-lg border border-border/40 bg-surface-2 p-4 text-[0.95rem] text-foreground/90">
 							{message.plan.intent}
 						</div>
 					{/if}
@@ -127,6 +134,7 @@
 					</div>
 				</section>
 			{/if}
+			</div>
 		</div>
 	</aside>
 {/if}

@@ -4,7 +4,7 @@
 	import Response from '$lib/components/ai-elements/response/Response.svelte';
 	import { Reasoning, ReasoningTrigger } from '$lib/components/ai-elements/reasoning';
 	import { Actions, Action } from '$lib/components/ai-elements/action';
-	import { Copy, PanelRight, RotateCcw } from 'lucide-svelte';
+	import { Copy, RotateCcw } from 'lucide-svelte';
 	import type { ChatMessage } from '$lib/models';
 	import { chatStore } from '$lib/stores';
 
@@ -28,17 +28,22 @@
 	}
 
 	let isThinking = $derived(message.isStreaming && !message.content);
-	let hasThought = $derived(!!(message.plan || (message.toolCalls && message.toolCalls.length > 0)));
+	let hasThought = $derived(
+		!!(message.plan || message.planText || (message.toolCalls && message.toolCalls.length > 0))
+	);
 </script>
 
 <Message from="assistant" class="max-w-none text-base">
 	{#if isThinking || hasThought}
-		<Reasoning 
-			isStreaming={isThinking} 
+		<Reasoning
+			isStreaming={isThinking}
 			duration={message.thoughtDurationS}
 			class="mb-2"
 		>
-			<ReasoningTrigger onclick={() => onOpenDetail?.(message.id)} />
+			<ReasoningTrigger
+				class="cursor-pointer"
+				onclick={() => onOpenDetail?.(message.id)}
+			/>
 		</Reasoning>
 	{/if}
 
@@ -67,9 +72,6 @@
 				<RotateCcw class="size-4" />
 			</Action>
 
-			<Action tooltip="View detailed timeline" onclick={() => onOpenDetail?.(message.id)}>
-				<PanelRight class="size-4" />
-			</Action>
 		</Actions>
 	{/if}
 </Message>

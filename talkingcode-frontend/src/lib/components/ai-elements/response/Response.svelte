@@ -19,7 +19,10 @@
 </script>
 
 <Streamdown
-	class={cn("size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}
+	class={cn(
+		"size-full text-[1.04rem] leading-8 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_strong]:font-bold [&_li]:my-1",
+		className
+	)}
 	shikiTheme={currentTheme}
 	baseTheme="shadcn"
 	components={{ code: Code }}

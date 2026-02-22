@@ -3,6 +3,7 @@
 import hashlib
 from dataclasses import dataclass
 from datetime import datetime
+import re
 from typing import Protocol
 from uuid import UUID
 
@@ -10,10 +11,12 @@ import structlog
 
 from talkingcode.domain.models import (
     DocumentClassificationInput,
+    DocumentClassificationOutput,
     IngestionRunInfo,
     RegisterRepoInput,
     StartIngestionInput,
 )
+from talkingcode.enums import Area, FileType
 from talkingcode.enums import IngestionStatus
 from talkingcode.errors import NotFoundError
 from talkingcode.repository.document_repository import DocumentRepository
@@ -31,11 +34,13 @@ class IIngestionService(Protocol):
 
     async def run_ingestion(self, input_data: StartIngestionInput) -> IngestionRunInfo:
         """Run a full ingestion pipeline for a repository."""
+        ...
 
     async def run_ingestion_for_owned_repos(
         self, git_ref: str | None = None
     ) -> list[IngestionRunInfo]:
         """Ingest all non-fork repositories owned by the current GitHub user."""
+        ...
 
 
 @dataclass(slots=True)
@@ -59,17 +64,27 @@ class IngestionService:
         logger.info("Starting owned repo ingestion", repo_count=len(repositories), ref=git_ref)
 
         for repo in repositories:
-            registered_repo = await self.repo_repository.register(
-                RegisterRepoInput(
+            try:
+                registered_repo = await self.repo_repository.register(
+                    RegisterRepoInput(
+                        owner=repo.owner,
+                        name=repo.name,
+                        default_branch=repo.default_branch,
+                    )
+                )
+
+                run = await self.run_ingestion(
+                    StartIngestionInput(repository_id=registered_repo.id, git_ref=git_ref)
+                )
+                runs.append(run)
+            except Exception as repo_err:  # noqa: BLE001
+                logger.error(
+                    "Owned repo ingestion failed; continuing",
                     owner=repo.owner,
                     name=repo.name,
-                    default_branch=repo.default_branch,
+                    error=str(repo_err),
                 )
-            )
-            run = await self.run_ingestion(
-                StartIngestionInput(repository_id=registered_repo.id, git_ref=git_ref)
-            )
-            runs.append(run)
+                continue
 
         logger.info("Completed owned repo ingestion", ingested_repo_count=len(runs))
         return runs
@@ -117,13 +132,24 @@ class IngestionService:
                         file_content.content.encode("utf-8")
                     ).hexdigest()
 
-                    classification = await self.classifier.classify(
-                        DocumentClassificationInput(
-                            repo=f"{repo.owner}/{repo.name}",
-                            path=path,
-                            content=file_content.content[:2000],
+                    try:
+                        classification = await self.classifier.classify(
+                            DocumentClassificationInput(
+                                repo=f"{repo.owner}/{repo.name}",
+                                path=path,
+                                content=file_content.content[:2000],
+                            )
                         )
-                    )
+                    except Exception as classification_err:  # noqa: BLE001
+                        logger.warning(
+                            "Classifier failed, using heuristic classification",
+                            path=path,
+                            error=str(classification_err),
+                        )
+                        classification = self._heuristic_classification(
+                            path=path,
+                            content=file_content.content,
+                        )
 
                     classification_dict = {
                         "language": classification.language,
@@ -202,3 +228,60 @@ class IngestionService:
 
         final_run = await self.repo_repository.get_ingestion_run(run.id)
         return final_run or run
+
+    def _heuristic_classification(self, path: str, content: str) -> DocumentClassificationOutput:
+        """Fallback classifier when model classification fails."""
+        lower = path.lower()
+
+        if "/tests/" in lower or lower.startswith("tests/") or lower.endswith("_test.py"):
+            area = "tests"
+            file_type = "test"
+        elif lower.endswith(('.md', '.rst', '.txt')):
+            area = "docs"
+            file_type = "docs"
+        elif any(part in lower for part in ["docker", ".github/", "terraform", ".tf", ".hcl"]):
+            area = "infra"
+            file_type = "config"
+        elif "/frontend/" in lower or lower.endswith((".svelte", ".tsx", ".jsx", ".css", ".html")):
+            area = "frontend"
+            file_type = "source"
+        elif "/backend/" in lower or lower.endswith((".py", ".go", ".rs", ".java", ".rb")):
+            area = "backend"
+            file_type = "source"
+        else:
+            area = "unknown"
+            file_type = "unknown"
+
+        ext = path.rsplit(".", 1)[-1].lower() if "." in path else ""
+        language_map = {
+            "py": "python",
+            "ts": "typescript",
+            "tsx": "typescript",
+            "js": "javascript",
+            "jsx": "javascript",
+            "svelte": "svelte",
+            "go": "go",
+            "rs": "rust",
+            "java": "java",
+            "rb": "ruby",
+            "md": "markdown",
+            "sql": "sql",
+            "yaml": "yaml",
+            "yml": "yaml",
+            "json": "json",
+            "toml": "toml",
+            "sh": "shell",
+            "css": "css",
+            "html": "html",
+        }
+        language = language_map.get(ext, "")
+
+        symbol_matches = re.findall(r"\b(?:def|class|function|interface|type)\s+([A-Za-z_][A-Za-z0-9_]*)", content)
+
+        return DocumentClassificationOutput(
+            language=language,
+            area=Area(area),
+            file_type=FileType(file_type),
+            symbols=symbol_matches[:30],
+            tags=[],
+        )

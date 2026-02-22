@@ -49,8 +49,6 @@ class WhiteboxEventKind(str, Enum):
     ITERATION_STARTED = "iteration_started"
     PLAN_CHUNK = "plan_chunk"
     PLAN_DONE = "plan_done"
-    PLANNER_STARTED = "planner_started"
-    PLANNER_READY = "planner_ready"
     TOOL_CALL_STARTED = "tool_call_started"
     TOOL_CALL_FINISHED = "tool_call_finished"
     ASSISTANT_TOKEN = "assistant_token"

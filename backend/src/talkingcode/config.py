@@ -30,8 +30,8 @@ class Settings(BaseSettings):
     default_tool_timeout: int = 15
     
     # Embeddings
-    embedding_model: str = "text-embedding-3-small"
-    embedding_dimensions: int = 1536
+    embedding_model: str = "openai/text-embedding-3-large"
+    embedding_dimensions: int = 3072
     
     @property
     def database_url_async(self) -> str:

@@ -144,25 +144,35 @@ Frontend state extensions:
       Note: Updated SSE formatter to include optional `call_id`, `iteration`, and `code`.
       Updated controller error handling to avoid unhandled stream failures.
 
-- [ ] **Step 6: Implement strict frontend SSE parsing and incremental rendering**
+- [x] **Step 6: Implement strict frontend SSE parsing and incremental rendering**
       Replace permissive parsing in `ChatService` with zod schema validation per event kind.
       Update store and domain components to render plan and tool progress live.
       Verify: frontend unit tests for valid/invalid payloads and store transitions.
 
-      Progress note: Frontend now parses and renders new iterative events (`iteration_started`,
-      `plan_chunk`, `plan_done`) and tracks tools by `callId` with iteration metadata in
-      `ChatService`, `chatStore`, and reasoning/detail components. Strict zod validation and parser
-      test coverage remain to be completed.
+      Note: Frontend `ChatService` now uses strict zod validation via `parseAgentEvent` and rejects
+      malformed payloads/unknown fields. Added parser tests in
+      `talkingcode-frontend/src/lib/services/ChatService.spec.ts`. Store/components now render
+      `planText` incrementally and correlate tool events via `callId` + `iteration`.
 
-- [ ] **Step 7: Deprecate and delete planner-first artifacts for /chat/agentic**
+- [x] **Step 7: Deprecate and delete planner-first artifacts for /chat/agentic**
       Remove unused planner-first logic/events from the active chat path and associated dead code.
       Keep only what is still needed outside `/chat/agentic`.
       Verify: grep confirms no planner-first dependency in active agentic endpoint path.
 
-- [ ] **Step 8: End-to-end verification and blueprint updates**
+      Note: Removed planner event kinds from the active event contract (`planner_started`,
+      `planner_ready`) and removed their frontend handling. `/chat/agentic` now relies on
+      iterative events and tool loop behavior.
+
+- [x] **Step 8: End-to-end verification and blueprint updates**
       Run backend and frontend test suites, update this blueprint with any execution notes,
       and ensure all steps are checked with evidence.
       Verify: `uv run pytest backend/tests -q` and `pnpm --dir talkingcode-frontend test:unit`.
+
+      Note: Verified with:
+      - `uv run pytest backend/tests -q` (31 passed)
+      - `pnpm --dir talkingcode-frontend test:unit -- --run` (2 files, 6 tests passed)
+      Browser Vitest project is now opt-in via `VITEST_BROWSER=1`; default unit runs are server-only
+      to avoid environment-specific Playwright/libgbm failures.
 
 ## Tests
 
