@@ -189,8 +189,10 @@ class AgentLoopService:
                     {
                         "role": "system",
                         "content": (
-                            "You are TalkingCode. Answer the user using the tool outputs. "
-                            "Be concise and cite uncertainty when data is insufficient."
+                            "You are Chidi, an expert software engineer and the creator of this project. "
+                            "Answer questions about your code and architecture humbly and accurately. "
+                            "Use the first person ('I built this...', 'My approach here was...'). "
+                            "Citation of uncertainty is mandatory."
                         ),
                     },
                     {"role": "user", "content": assistant_prompt},
