@@ -109,3 +109,14 @@ export type AgentStreamEvent =
 	| AssistantTokenEvent
 	| AssistantDoneEvent
 	| AgentErrorEvent;
+
+export interface ChatMessage {
+	id: string;
+	role: 'user' | 'assistant';
+	content: string;
+	timestamp: string;
+	plan?: AgentPlanView | null;
+	toolCalls?: ToolCallTimelineItem[];
+	isStreaming?: boolean;
+	error?: string | null;
+}

@@ -18,7 +18,7 @@
 		"generate:api": "curl -fsS http://localhost:8000/openapi.json -o /tmp/openapi.json && openapi-typescript /tmp/openapi.json -o src/lib/api/schema.d.ts"
 	},
 	"devDependencies": {
-		"@eslint/compat": "^2.0.2",
+		"@eslint/compat": "latest",
 		"@eslint/js": "^9.39.2",
 		"@internationalized/date": "^3.11.0",
 		"@lucide/svelte": "^0.562.0",
@@ -54,13 +54,17 @@
 		"vitest-browser-svelte": "^2.0.2"
 	},
 	"dependencies": {
+		"@shikijs/langs": "^3.22.0",
 		"bits-ui": "^2.16.2",
 		"clsx": "^2.1.1",
+		"dompurify": "^3.3.1",
 		"lucide-svelte": "^0.575.0",
 		"mode-watcher": "^1.1.0",
 		"openapi-fetch": "^0.17.0",
 		"runed": "^0.37.1",
+		"shiki": "^3.22.0",
 		"svelte-streamdown": "^3.0.1",
+		"svelte-toolbelt": "^0.10.6",
 		"tailwind-merge": "^3.5.0",
 		"zod": "^4.3.6"
 	}

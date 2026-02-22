@@ -1,112 +1,178 @@
-/** Chat store with agentic turn lifecycle */
-import type { AgentStreamEvent, ToolCallTimelineItem, AgentPlanView } from '$lib/models';
+/** Chat store with multi-turn conversation support */
+import type { AgentStreamEvent, ToolCallTimelineItem, AgentPlanView, ChatMessage } from '$lib/models';
 
 type TurnPhase = 'idle' | 'planning' | 'tools' | 'streaming' | 'done' | 'error';
 
 function createChatStore() {
-	let phase = $state<TurnPhase>('idle');
-	let currentPlan = $state<AgentPlanView | null>(null);
-	let timeline = $state<ToolCallTimelineItem[]>([]);
-	let streamingContent = $state('');
-	let error = $state<string | null>(null);
-	let currentTurnId = $state<string | null>(null);
+	let messages = $state<ChatMessage[]>([]);
+	let activeMessageId = $state<string | null>(null);
+	let detailPanelMessageId = $state<string | null>(null);
+
+	function generateId(): string {
+		return crypto.randomUUID();
+	}
 
 	return {
-		get phase() {
-			return phase;
+		get messages() {
+			return messages;
 		},
-		get currentPlan() {
-			return currentPlan;
+		get activeMessageId() {
+			return activeMessageId;
 		},
-		get timeline() {
-			return timeline;
+		get detailPanelMessageId() {
+			return detailPanelMessageId;
 		},
-		get streamingContent() {
-			return streamingContent;
+		get activeMessage(): ChatMessage | null {
+			if (!activeMessageId) return null;
+			return messages.find((m) => m.id === activeMessageId) ?? null;
 		},
-		get error() {
-			return error;
+		get detailMessage(): ChatMessage | null {
+			if (!detailPanelMessageId) return null;
+			return messages.find((m) => m.id === detailPanelMessageId) ?? null;
 		},
-		get currentTurnId() {
-			return currentTurnId;
+		get isStreaming(): boolean {
+			return messages.some((m) => m.role === 'assistant' && m.isStreaming);
+		},
+		get isEmpty(): boolean {
+			return messages.length === 0;
+		},
+		get phase(): TurnPhase {
+			const active = this.activeMessage;
+			if (!active || active.role === 'user') return 'idle';
+			if (active.error) return 'error';
+			if (active.isStreaming) {
+				if (active.content) return 'streaming';
+				if (active.plan || active.toolCalls?.length) return 'tools';
+				return 'planning';
+			}
+			if (active.plan || active.toolCalls?.length) return 'done';
+			return 'idle';
 		},
 
-		startTurn() {
-			phase = 'planning';
-			currentPlan = null;
-			timeline = [];
-			streamingContent = '';
-			error = null;
+		addUserMessage(content: string): string {
+			const id = generateId();
+			const userMessage: ChatMessage = {
+				id,
+				role: 'user',
+				content,
+				timestamp: new Date().toISOString()
+			};
+			messages = [...messages, userMessage];
+			return id;
+		},
+
+		startAssistantTurn(): string {
+			const id = generateId();
+			const assistantMessage: ChatMessage = {
+				id,
+				role: 'assistant',
+				content: '',
+				timestamp: new Date().toISOString(),
+				plan: null,
+				toolCalls: [],
+				isStreaming: true,
+				error: null
+			};
+			messages = [...messages, assistantMessage];
+			activeMessageId = id;
+			return id;
 		},
 
 		handleEvent(event: AgentStreamEvent) {
+			if (!activeMessageId) return;
+
+			const idx = messages.findIndex((m) => m.id === activeMessageId);
+			if (idx < 0) return;
+
+			const current = messages[idx];
+
 			switch (event.kind) {
 				case 'planner_started':
-					phase = 'planning';
-					currentTurnId = event.turnId;
+					messages[idx] = {
+						...current,
+						plan: { intent: '', filters: { areas: [], languages: [], fileTypes: [], pathGlobs: [], repoScopes: [], symbolHints: [], tags: [] }, toolGroups: [] }
+					};
 					break;
 
 				case 'planner_ready':
-					currentPlan = {
-						intent: event.intent,
-						filters: event.filters,
-						toolGroups: []
+					messages[idx] = {
+						...current,
+						plan: {
+							intent: event.intent,
+							filters: event.filters,
+							toolGroups: []
+						}
 					};
-					phase = 'tools';
 					break;
 
-				case 'tool_call_started':
-					phase = 'tools';
-					timeline = [
-						{
-							turnId: event.turnId,
-							toolName: event.toolName,
-							visibleArgs: event.visibleArgs,
-							status: 'started',
-							timestamp: event.timestamp
-						},
-						...timeline
-					];
+				case 'tool_call_started': {
+					const newToolCall: ToolCallTimelineItem = {
+						turnId: event.turnId,
+						toolName: event.toolName,
+						visibleArgs: event.visibleArgs,
+						status: 'started',
+						timestamp: event.timestamp
+					};
+					messages[idx] = {
+						...current,
+						toolCalls: [...(current.toolCalls ?? []), newToolCall]
+					};
 					break;
+				}
 
 				case 'tool_call_finished': {
-					const idx = timeline.findIndex(
-						(t) =>
-							t.turnId === event.turnId && t.toolName === event.toolName && t.status === 'started'
+					const toolCalls = current.toolCalls?.map((t) =>
+						t.turnId === event.turnId &&
+						t.toolName === event.toolName &&
+						t.status === 'started'
+							? {
+									...t,
+									status: event.success ? 'finished' as const : 'failed' as const,
+									durationMs: event.durationMs
+								}
+							: t
 					);
-					if (idx >= 0) {
-						timeline[idx] = {
-							...timeline[idx],
-							status: event.success ? 'finished' : 'failed',
-							durationMs: event.durationMs
-						};
-					}
+					messages[idx] = { ...current, toolCalls };
 					break;
 				}
 
 				case 'assistant_token':
-					phase = 'streaming';
-					streamingContent += event.token;
+					messages[idx] = {
+						...current,
+						content: current.content + event.token,
+						isStreaming: true
+					};
 					break;
 
 				case 'assistant_done':
-					phase = 'done';
+					messages[idx] = {
+						...current,
+						isStreaming: false
+					};
 					break;
 
 				case 'agent_error':
-					phase = 'error';
-					error = event.message;
+					messages[idx] = {
+						...current,
+						isStreaming: false,
+						error: event.message
+					};
 					break;
 			}
 		},
 
+		openDetailPanel(messageId: string) {
+			detailPanelMessageId = messageId;
+		},
+
+		closeDetailPanel() {
+			detailPanelMessageId = null;
+		},
+
 		reset() {
-			phase = 'idle';
-			currentPlan = null;
-			timeline = [];
-			streamingContent = '';
-			error = null;
-			currentTurnId = null;
+			messages = [];
+			activeMessageId = null;
+			detailPanelMessageId = null;
 		}
 	};
 }
