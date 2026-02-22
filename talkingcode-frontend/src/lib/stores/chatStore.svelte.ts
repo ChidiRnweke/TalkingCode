@@ -177,11 +177,10 @@ function createChatStore() {
 			selectedModel = model;
 		},
 
-		reset() {
+		clear() {
 			messages = [];
 			activeMessageId = null;
 			detailPanelMessageId = null;
-			selectedModel = null;
 		}
 	};
 }
