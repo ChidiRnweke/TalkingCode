@@ -1,18 +1,25 @@
 """Agent loop service with streaming."""
 from dataclasses import dataclass
 from datetime import datetime
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Protocol
 
 import structlog
 
-from talkingcode.domain.models import WhiteboxEvent
-from talkingcode.domain.services import AgentTurnInput, ExecuteToolGroupInput, PlannerInput
+from talkingcode.domain.models import AgentTurnInput, ExecuteToolGroupInput, PlannerInput, WhiteboxEvent
 from talkingcode.enums import WhiteboxEventKind
 from talkingcode.services.agent.timeline_repository import TimelineRepository
 from talkingcode.services.planner.planner_service import PlannerService
 from talkingcode.services.tools.tool_registry import ToolRegistry
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+
+
+class IAgentLoopService(Protocol):
+    """Protocol for agent loop service."""
+    
+    async def run_turn(self, input_data: AgentTurnInput) -> AsyncGenerator[WhiteboxEvent, None]:
+        """Run an agentic conversation turn with streaming events."""
+        ...
 
 
 @dataclass(slots=True)
