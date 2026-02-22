@@ -97,6 +97,7 @@ async def start_ingestion(
     owner: str,
     name: str,
     factory: FactoryDep,
+    auth: IngestionAuthDep,
     body: StartIngestionRequest | None = None,
 ) -> dict[str, str | None]:
     """Start an ingestion run. Synchronous — completes when ingestion is done."""
