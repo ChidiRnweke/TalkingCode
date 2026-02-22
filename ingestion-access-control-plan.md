@@ -72,44 +72,148 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
 
 ## Plan
 
-- [ ] **Step 1: Add ingestion API key config and auth dependency**
-      Update `backend/src/talkingcode/config.py` with `ingestion_api_key` in both `Settings` and `AppConfig`, including `from_env()` wiring. Add `require_ingestion_api_key` in `backend/src/talkingcode/dependencies.py` following existing dependency style in the same file. Use FastAPI header/query extraction and return `401` on missing/invalid key. Verify by importing app modules and running unit tests.
+- [x] **Step 1: Add env setting field in `Settings`**
+      File: `backend/src/talkingcode/config.py`.
+      Add `ingestion_api_key: str = ""` under existing API key settings in `Settings`.
+      Do not remove existing fields.
+      **Verify:** run `cd backend && uv run python -c "from talkingcode.config import Settings; print(hasattr(Settings(), 'ingestion_api_key'))"` and confirm output is `True`.
 
-- [ ] **Step 2: Protect repo write endpoints and keep read/chat public**
-      In `backend/src/talkingcode/routes/repo_routes.py`, attach the new dependency to `POST /repos`, `POST /repos/{owner}/{name}/ingest`, and `POST /repos/ingest-owned`. Do not attach it to any GET routes. Confirm `backend/src/talkingcode/routes/chat_routes.py` remains unchanged/public. Verify with API tests or manual curl checks for 401 vs 200 behavior.
+- [ ] **Step 2: Add runtime config field in `AppConfig`**
+      File: `backend/src/talkingcode/config.py`.
+      Add `ingestion_api_key: str` to the `AppConfig` dataclass.
+      Keep dataclass frozen/slots exactly as-is.
+      **Verify:** run `cd backend && uv run python -c "from talkingcode.config import AppConfig; print('ingestion_api_key' in AppConfig.__annotations__)"` and confirm output is `True`.
 
-- [ ] **Step 3: Make repos UI read-only for ingestion actions**
-      Update `talkingcode-frontend/src/routes/repos/+page.svelte` and `talkingcode-frontend/src/lib/components/domain/RepoCard.svelte` to remove/disable public ingestion trigger controls while preserving repo list, `last_ingested_at`, and run history visibility. Keep design conventions from `DESIGN_SYSTEM.md` and existing component styling patterns. Verify page renders and loads repo data without attempting protected POST calls.
+- [ ] **Step 3: Wire setting into `AppConfig.from_env()`**
+      File: `backend/src/talkingcode/config.py`.
+      In `from_env()`, pass `settings.ingestion_api_key` into `AppConfig(...)`.
+      Keep argument order consistent with nearby fields.
+      **Verify:** run `cd backend && uv run python -c "from talkingcode.config import AppConfig; c=AppConfig.from_env(); print(hasattr(c,'ingestion_api_key'))"` and confirm output is `True`.
 
-- [ ] **Step 4: Add tests for access policy and document cron usage**
-      Add/update backend tests to cover: (a) protected repo write endpoints require key, (b) key works for authorized calls, (c) repo read and chat endpoints stay public. Add a short ops doc (README or backend docs) showing cron-safe calls using `X-API-Key` and/or query param to `POST /repos/ingest-owned`. Verify test suite pass and commands are copy-pastable.
+- [ ] **Step 4: Add ingestion auth dependency function**
+      File: `backend/src/talkingcode/dependencies.py`.
+      Add a new dependency function named `require_ingestion_api_key`.
+      Inputs:
+      - `config: ConfigDep`
+      - `x_api_key` from request header `X-API-Key`
+      - `api_key` from query param `api_key`
+      Behavior:
+      - choose effective key as header first, else query
+      - if no configured key in env, reject with `HTTPException(status_code=401)`
+      - if provided key mismatches configured key, reject with `HTTPException(status_code=401)`
+      - on success return `None`
+      **Verify:** run `cd backend && uv run python -m compileall src` and ensure no syntax errors.
+
+- [ ] **Step 5: Export dependency alias for clean route signatures**
+      File: `backend/src/talkingcode/dependencies.py`.
+      Add a typed alias similar to `FactoryDep`, e.g. `IngestionAuthDep = Annotated[None, Depends(require_ingestion_api_key)]`.
+      **Verify:** run `cd backend && uv run python -c "from talkingcode.dependencies import IngestionAuthDep; print(IngestionAuthDep is not None)"`.
+
+- [ ] **Step 6: Protect `POST /repos`**
+      File: `backend/src/talkingcode/routes/repo_routes.py`.
+      Import the new auth dependency alias and add it to `register_repo(...)` route parameters (unused arg is fine).
+      Do not change endpoint path or response shape.
+      **Verify:** route still imports and backend compiles: `cd backend && uv run python -m compileall src`.
+
+- [ ] **Step 7: Protect `POST /repos/{owner}/{name}/ingest`**
+      File: `backend/src/talkingcode/routes/repo_routes.py`.
+      Add auth dependency to `start_ingestion(...)` route.
+      Keep existing body behavior (`StartIngestionRequest | None`) unchanged.
+      **Verify:** same compile check as Step 6.
+
+- [ ] **Step 8: Protect `POST /repos/ingest-owned`**
+      File: `backend/src/talkingcode/routes/repo_routes.py`.
+      Add auth dependency to `start_owned_repo_ingestion(...)` route.
+      **Verify:** same compile check as Step 6.
+
+- [ ] **Step 9: Confirm read routes remain public**
+      File: `backend/src/talkingcode/routes/repo_routes.py`.
+      Ensure no auth dependency is attached to:
+      - `GET /repos`
+      - `GET /repos/{owner}/{name}`
+      - `GET /repos/{owner}/{name}/runs`
+      **Verify:** inspect file manually and ensure these signatures do not include auth dep.
+
+- [ ] **Step 10: Confirm chat routes remain unchanged/public**
+      File: `backend/src/talkingcode/routes/chat_routes.py`.
+      Do not add any ingestion-key dependency here.
+      **Verify:** `git diff -- backend/src/talkingcode/routes/chat_routes.py` shows no changes.
+
+- [ ] **Step 11: Remove public ingest action wiring from repos page**
+      File: `talkingcode-frontend/src/routes/repos/+page.svelte`.
+      Remove `onIngest` handler and any calls to `repoService.startIngestion(...)`.
+      Keep list loading and run-history refresh behavior intact.
+      **Verify:** no `startIngestion` symbol used in this file.
+
+- [ ] **Step 12: Remove ingest button from repo card UI**
+      File: `talkingcode-frontend/src/lib/components/domain/RepoCard.svelte`.
+      Remove the public "Ingest now" trigger/button and related callback prop.
+      Keep "Show history" / "Hide history" behavior unchanged.
+      Keep existing Tailwind/shadcn style patterns.
+      **Verify:** no visible control in this component that triggers ingestion POST.
+
+- [ ] **Step 13: Add backend tests for protected POST routes**
+      File: create/update test module under `backend/tests/` following existing test style.
+      Add tests for each protected POST endpoint verifying:
+      - no key => `401`
+      - wrong key => `401`
+      - correct `X-API-Key` passes auth layer
+      - correct `api_key` query passes auth layer
+      Mock downstream services if needed; this is auth-gate testing, not ingestion internals.
+      **Verify:** `cd backend && uv run pytest -q` passes.
+
+- [ ] **Step 14: Add backend tests for public routes**
+      File: same/new backend test module.
+      Verify `GET /repos` is accessible without key and chat route remains accessible without ingestion key.
+      Keep tests focused on route access policy.
+      **Verify:** `cd backend && uv run pytest -q` passes.
+
+- [ ] **Step 15: Document cron usage for protected ingestion**
+      File: update an existing docs file (`README.md` or backend README).
+      Add a short section with:
+      - env var name `INGESTION_API_KEY`
+      - curl with header auth
+      - curl with query auth
+      - note that repo list endpoints remain public/read-only
+      **Verify:** commands are copy-pastable and use real route paths.
+
+- [ ] **Step 16: End-to-end manual verification**
+      Start backend + frontend with `INGESTION_API_KEY` set.
+      Check:
+      - protected POST routes return `401` without key
+      - protected POST routes accept valid key
+      - `/repos` UI still shows repositories and ingestion history
+      - no UI button allows anonymous ingestion trigger
+      **Verify:** capture exact commands used and results in a short note under this step before checking it off.
 
 ## Tests
 
-- Backend tests to add/update:
-  - unauthorized request to protected POST route returns `401`
-  - authorized request with `X-API-Key` succeeds (or reaches business logic)
-  - authorized request with `api_key` query succeeds
-  - `GET /repos` remains accessible without key
-  - `POST /chat/agentic` remains accessible without key (or route-level test if full integration is heavy)
-- Frontend verification:
-  - repos page still renders repo cards and ingestion history controls
-  - no public ingest POST is triggered from UI interactions
-- Suggested commands:
-  - `cd backend && uv run pytest`
-  - `cd talkingcode-frontend && pnpm test` (if configured)
-  - `cd talkingcode-frontend && pnpm check` (or existing project validation command)
+- Run backend checks after Steps 10, 14, and 16:
+  - `cd backend && uv run python -m compileall src`
+  - `cd backend && uv run pytest -q`
+- Run frontend checks after Step 12:
+  - `cd talkingcode-frontend && pnpm check` (or project standard validation command)
+- Minimum behavior assertions:
+  - protected POST repo routes require valid ingestion key
+  - GET repo visibility routes stay public
+  - chat routes stay public
+  - repos UI is read-only for ingestion actions
 
 ## Verification
 
-- Set `.env` with `INGESTION_API_KEY=your-secret`.
-- Start backend and frontend.
-- Confirm without key:
-  - `GET /repos` returns data.
-  - `GET /repos/{owner}/{name}/runs` returns data (if repo exists).
-  - `POST /chat/agentic` works.
-  - Protected POST repo routes return `401`.
-- Confirm with key:
-  - `curl -X POST "http://localhost:8000/repos/ingest-owned" -H "X-API-Key: your-secret"`
-  - (optional cron-friendly query form) `curl -X POST "http://localhost:8000/repos/ingest-owned?api_key=your-secret"`
-- Open UI `/repos` and verify ingested repositories are visible while ingestion is not triggerable by anonymous users.
+- Add to `.env`:
+  - `INGESTION_API_KEY=your-secret`
+- Without key, verify `401`:
+  - `curl -i -X POST "http://localhost:8000/repos/ingest-owned"`
+  - `curl -i -X POST "http://localhost:8000/repos/chidi/chatGITpt/ingest"`
+- With valid header key, verify authorized:
+  - `curl -i -X POST "http://localhost:8000/repos/ingest-owned" -H "X-API-Key: your-secret"`
+- With valid query key, verify authorized:
+  - `curl -i -X POST "http://localhost:8000/repos/ingest-owned?api_key=your-secret"`
+- Public reads/chat without key:
+  - `curl -i "http://localhost:8000/repos"`
+  - `curl -i "http://localhost:8000/health"`
+- Frontend check:
+  - open `/repos`
+  - confirm tracked repos and ingestion timestamps are visible
+  - confirm no button/action exists for anonymous ingestion trigger

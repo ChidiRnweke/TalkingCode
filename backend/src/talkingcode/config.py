@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openai_api_key: str = ""
     github_token: str = ""
+    ingestion_api_key: str = ""
     
     # App Config
     environment: str = "development"
