@@ -1906,7 +1906,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step C.2: Create SvelteKit API proxy routes for repo management**
+- [x] **Step C.2: Create SvelteKit API proxy routes for repo management**
 
       **Files to create:**
       - `talkingcode-frontend/src/routes/api/repos/+server.ts`
@@ -1961,6 +1961,10 @@ Phase D — Integration & polish:
       something else. Be consistent.
 
       **Verify:** Run `cd talkingcode-frontend && pnpm check`. Clean. All route files compile.
+
+      Note: Added all four `/api/repos*` proxy endpoints using the same `env.BACKEND_URL`
+      pattern as the existing agentic chat proxy. `pnpm check` is still blocked by existing
+      `Badge` typing errors unrelated to the new API route files.
 
 ---
 
