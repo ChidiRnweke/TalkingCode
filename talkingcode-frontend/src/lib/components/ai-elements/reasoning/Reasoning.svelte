@@ -68,6 +68,16 @@
 				if (startTime === null) {
 					startTime = Date.now();
 				}
+				
+				const interval = setInterval(() => {
+					if (startTime !== null) {
+						let newDuration = Math.ceil((Date.now() - startTime) / MS_IN_S);
+						currentDuration = newDuration;
+						reasoningContext.duration = newDuration;
+					}
+				}, 100);
+
+				return () => clearInterval(interval);
 			} else if (startTime !== null) {
 				let newDuration = Math.ceil((Date.now() - startTime) / MS_IN_S);
 				currentDuration = newDuration;
@@ -80,12 +90,12 @@
 		}
 	);
 
-	// Auto-open when streaming starts, auto-close when streaming ends (once only)
+	// Auto-close when streaming ends (once only, respects manual toggle)
+	let userManuallyToggled = $state(false);
 	watch(
-		() => [isStreaming, isOpen, defaultOpen, hasAutoClosed] as const,
-		([isStreamingValue, isOpenValue, defaultOpenValue, hasAutoClosedValue]) => {
-			if (defaultOpenValue && !isStreamingValue && isOpenValue && !hasAutoClosedValue) {
-				// Add a small delay before closing to allow user to see the content
+		() => [isStreaming, isOpen, hasAutoClosed] as const,
+		([isStreamingValue, isOpenValue, hasAutoClosedValue]) => {
+			if (!isStreamingValue && isOpenValue && !hasAutoClosedValue && !userManuallyToggled) {
 				let timer = setTimeout(() => {
 					handleOpenChange(false);
 					hasAutoClosed = true;
@@ -96,7 +106,10 @@
 		}
 	);
 
-	let handleOpenChange = (newOpen: boolean) => {
+	let handleOpenChange = (newOpen: boolean, manual = false) => {
+		if (manual) {
+			userManuallyToggled = true;
+		}
 		isOpen = newOpen;
 		reasoningContext.setIsOpen(newOpen);
 
@@ -114,7 +127,7 @@
 <Collapsible
 	class={cn("not-prose mb-4", className)}
 	bind:open={isOpen}
-	onOpenChange={handleOpenChange}
+	onOpenChange={(newOpen) => handleOpenChange(newOpen, true)}
 	{...props}
 >
 	{@render children?.()}
