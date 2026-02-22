@@ -45,8 +45,14 @@ around the agent loop design and corresponding contracts.
 - Frontend follows `svelte-swe` strict layering.
 - UI follows `svelte-ui` + `DESIGN_SYSTEM.md` + locked `svelte-ai-elements` inventory.
 - Planner runs every turn with strict structured output.
+- Planner fallback model is `gemini-3-flash` on OpenRouter when the selected/default model
+  cannot satisfy structured-output requirements.
 - Tool loop limits: max 8 iterations, max 3 tools/turn, planner-grouped parallel execution.
+- Backend streams FastAPI SSE events using named `event:` values and JSON `data:` payloads.
+- Stream payloads are `snake_case` on the wire; frontend maps to camelCase domain models.
 - Whitebox stream shows tool names and visible args/filters only; payloads hidden.
+- OpenAPI contract is generated from the running backend via
+  `http://localhost:8000/openapi.json` and consumed by frontend type generation.
 
 ## Interfaces and Models
 
@@ -88,12 +94,14 @@ Detailed contracts live in:
 ## Verification
 
 1. `docker compose up --build -d`
-2. `pytest backend/tests/unit -q`
-3. `pytest backend/tests/integration -q`
-4. `pnpm --dir frontend check`
-5. `pnpm --dir frontend test`
-6. `pnpm --dir frontend run verify:agentic-e2e`
-7. Manual chat sanity:
+2. `curl -fsS http://localhost:8000/openapi.json -o /tmp/talkingcode-openapi.json`
+3. `test -s /tmp/talkingcode-openapi.json`
+4. `pytest backend/tests/unit -q`
+5. `pytest backend/tests/integration -q`
+6. `pnpm --dir frontend check`
+7. `pnpm --dir frontend test`
+8. `pnpm --dir frontend run verify:agentic-e2e`
+9. Manual chat sanity:
    - planner/filter event appears,
    - tool names + visible args/filters appear,
    - payloads are hidden,

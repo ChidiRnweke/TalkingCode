@@ -30,9 +30,13 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
 ## Architecture Decisions
 
 - Services parse SSE and expose domain events only.
+- Backend stream is consumed as FastAPI SSE named events with JSON payload data.
+- Service layer maps `snake_case` wire payloads to camelCase domain models.
 - Route handlers stay thin; controllers/services own orchestration.
 - UI never receives raw tool payload content.
 - Chat route/UI composition follows locked inventory from `frontend-ui-plan.md`.
+- OpenAPI types are generated from the running backend endpoint
+  `http://localhost:8000/openapi.json`.
 
 ## Interfaces and Models
 
@@ -50,6 +54,7 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
   - `assistant_token`
   - `assistant_done`
   - `agent_error`
+  - `agent_error` payload includes `turnId`, `message`, optional `code`, `timestamp`
 - `Area` union: `'backend' | 'frontend' | 'infra' | 'scripts' | 'docs' | 'tests'`
 - `FileType` union: `'source' | 'config' | 'migration' | 'test' | 'docs' | 'ci' | 'unknown'`
 
@@ -73,10 +78,22 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
   - `selectedModel`.
 - `/` chat action/endpoint consumes `AgenticAskInput` and streams `AgentStreamEvent`.
 
+### Transport contract enforcement (strict)
+
+- Consume backend stream strictly as SSE named events (`event:` + JSON `data:`).
+- Accept only these event names: `planner_started`, `planner_ready`, `tool_call_started`,
+  `tool_call_finished`, `assistant_token`, `assistant_done`, `agent_error`.
+- Treat all incoming payload fields as `snake_case` and map to camelCase domain models in
+  service-layer mappers only.
+- Reject or ignore unknown payload fields that could leak tool payload content.
+- `agent_error` frontend shape is:
+  `AgentErrorEvent { turnId: string; message: string; code?: string | null; timestamp: string }`.
+
 ## Plan
 
 - [ ] **Step 1: Scaffold/update frontend package and typed API tooling**
-      Ensure scripts and OpenAPI generation are configured and stable.
+      Ensure scripts and OpenAPI generation are configured and stable. Generation fetches
+      from `http://localhost:8000/openapi.json` after backend startup.
       Verify: install/check/generate scripts pass.
 
 - [ ] **Step 2: Implement domain models and service/controller interfaces**
@@ -84,7 +101,8 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
       Verify: type-check passes.
 
 - [ ] **Step 3: Implement chat service SSE parser for agentic events**
-      Parse backend stream into typed events and reject payload-leak fields.
+      Parse backend FastAPI SSE named events into typed events, map snake_case to camelCase,
+      and enforce `### Transport contract enforcement (strict)`.
       Verify: parser tests for all variants and malformed chunks.
 
 - [ ] **Step 4: Implement controller orchestration for turn + timeline**
@@ -117,5 +135,7 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
 ## Verification
 
 1. Start backend + frontend.
-2. Run all commands in `## Tests`.
-3. Ask a question and confirm planner/tool events render while response streams.
+2. `curl -fsS http://localhost:8000/openapi.json -o /tmp/talkingcode-openapi.json`
+3. `test -s /tmp/talkingcode-openapi.json`
+4. Run all commands in `## Tests`.
+5. Ask a question and confirm planner/tool events render while response streams.

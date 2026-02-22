@@ -40,8 +40,12 @@ The prior linear retrieve -> generate path is deprecated for chat orchestration.
 - Services never import each other.
 - Controllers orchestrate multiple services.
 - Planner uses strict structured output every turn.
+- Planner fallback model is `gemini-3-flash` via OpenRouter.
 - Loop limits: 8 iterations max, 3 tools/turn max.
 - Parallel execution only via planner-defined groups using `asyncio.TaskGroup`.
+- Chat streaming uses FastAPI SSE with named events and JSON payload data.
+- SSE payload field names are `snake_case`.
+- `agent_error` event payload includes: `turn_id`, `message`, optional `code`, and `timestamp`.
 - Whitebox stream exposes tool names + visible args/filters only, never tool payload bodies.
 
 ## Interfaces and Models
@@ -86,6 +90,41 @@ The prior linear retrieve -> generate path is deprecated for chat orchestration.
 - `document_classification_v1` strict schema with required:
   `language`, `area`, `file_type`, `symbols`, `tags`.
 - No `framework` field.
+- OpenAPI emitted by backend is the canonical frontend contract source and must be retrievable at
+  `http://localhost:8000/openapi.json` when backend is running.
+
+### Planner fallback policy (strict)
+
+- Attempt planner execution with `selected_model` when provided.
+- If `selected_model` is absent or cannot satisfy strict structured-output requirements, retry
+  planner using OpenRouter `gemini-3-flash`.
+- Fallback is planner-only behavior; tool execution and answer streaming continue in the same turn
+  after a successful fallback plan.
+- If fallback also fails, emit `agent_error` and end the turn cleanly (no silent downgrade to
+  non-agentic behavior).
+
+### Streaming contract (FastAPI SSE, wire schema)
+
+- Response media type: `text/event-stream`.
+- Event framing: named SSE events using `event: <name>` and `data: <json>`.
+- Event names are exactly:
+  - `planner_started`
+  - `planner_ready`
+  - `tool_call_started`
+  - `tool_call_finished`
+  - `assistant_token`
+  - `assistant_done`
+  - `agent_error`
+- JSON payload keys are `snake_case`.
+- Minimum event payload contract:
+  - `planner_started`: `{ "turn_id": str, "timestamp": str }`
+  - `planner_ready`: `{ "turn_id": str, "intent": str, "filters": object, "timestamp": str }`
+  - `tool_call_started`: `{ "turn_id": str, "tool_name": str, "visible_args": object, "timestamp": str }`
+  - `tool_call_finished`: `{ "turn_id": str, "tool_name": str, "success": bool, "duration_ms": int, "timestamp": str }`
+  - `assistant_token`: `{ "turn_id": str, "token": str, "timestamp": str }`
+  - `assistant_done`: `{ "turn_id": str, "timestamp": str }`
+  - `agent_error`: `{ "turn_id": str, "message": str, "code": str | null, "timestamp": str }`
+- Never include raw tool payload bodies in any event.
 
 ## Plan
 
@@ -114,7 +153,8 @@ The prior linear retrieve -> generate path is deprecated for chat orchestration.
       Verify: classification tests and ingestion integration tests pass.
 
 - [ ] **Step 7: Implement planner service (every turn)**
-      Planner emits strict plan object; include model compatibility fallback behavior.
+      Planner emits strict plan object; implement fallback policy exactly as specified in
+      `### Planner fallback policy (strict)`.
       Verify: planner schema and fallback tests pass.
 
 - [ ] **Step 8: Implement tool registry (function -> tool schema)**
@@ -134,12 +174,13 @@ The prior linear retrieve -> generate path is deprecated for chat orchestration.
       Verify: loop chaining and iteration-cap tests pass.
 
 - [ ] **Step 12: Implement whitebox streaming and timeline persistence**
-      Emit redacted `WhiteboxEvent`s and persist timeline records linked to conversation turns.
+      Emit redacted `WhiteboxEvent`s following `### Streaming contract (FastAPI SSE, wire schema)`
+      and persist timeline records linked to conversation turns.
       Verify: stream ordering + redaction tests pass.
 
 - [ ] **Step 13: Wire controllers/routes and OpenAPI contracts**
       Integrate agent loop stream and timeline retrieval into chat routes/controllers.
-      Verify: API contract tests + schema generation pass.
+      Verify: API contract tests + schema generation pass; backend serves `/openapi.json`.
 
 - [ ] **Step 14: Final backend verification**
       Run full backend test suite and fix regressions.
@@ -166,4 +207,6 @@ Required focus:
 2. `pytest backend/tests/unit -q`
 3. `pytest backend/tests/integration -q`
 4. Start backend and run a tool-calling chat turn.
-5. Confirm planner/tool whitebox events stream and payload bodies are hidden.
+5. `curl -fsS http://localhost:8000/openapi.json -o /tmp/talkingcode-openapi.json`
+6. `test -s /tmp/talkingcode-openapi.json`
+7. Confirm planner/tool whitebox events stream and payload bodies are hidden.
