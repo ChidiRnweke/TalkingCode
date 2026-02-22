@@ -5,8 +5,10 @@
 
 	const controller = AppFactory.getChatController();
 
-	async function handleSubmit(question: string) {
-		chatStore.addUserMessage(question);
+	async function handleSubmit(question: string, skipAdd = false) {
+		if (!skipAdd) {
+			chatStore.addUserMessage(question);
+		}
 		const turnId = chatStore.startAssistantTurn();
 
 		try {
@@ -29,6 +31,13 @@
 			});
 		}
 	}
+
+	// Handle initial message from Hero page or New Chat with pre-filled message
+	$effect(() => {
+		if (chatStore.messages.length === 1 && chatStore.messages[0].role === 'user' && !chatStore.isStreaming && chatStore.phase === 'idle') {
+			handleSubmit(chatStore.messages[0].content, true);
+		}
+	});
 
 	function handleOpenDetail(messageId: string) {
 		chatStore.openDetailPanel(messageId);
