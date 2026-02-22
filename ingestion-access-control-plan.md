@@ -90,7 +90,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Keep argument order consistent with nearby fields.
       **Verify:** run `cd backend && uv run python -c "from talkingcode.config import AppConfig; c=AppConfig.from_env(); print(hasattr(c,'ingestion_api_key'))"` and confirm output is `True`.
 
-- [ ] **Step 4: Add ingestion auth dependency function**
+- [x] **Step 4: Add ingestion auth dependency function**
       File: `backend/src/talkingcode/dependencies.py`.
       Add a new dependency function named `require_ingestion_api_key`.
       Inputs:

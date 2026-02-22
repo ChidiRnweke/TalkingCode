@@ -2,7 +2,7 @@
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Header, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from talkingcode.config import AppConfig
@@ -29,6 +29,30 @@ async def get_factory(
 ) -> AppFactory:
     """Get application factory."""
     return AppFactory(session=session, config=config)
+
+
+async def require_ingestion_api_key(
+    config: Annotated[AppConfig, Depends(get_config)],
+    x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+    api_key: Annotated[str | None, Query(alias="api_key")] = None,
+) -> None:
+    """Require valid ingestion API key.
+    
+    Checks X-API-Key header first, then api_key query parameter.
+    """
+    effective_key = x_api_key or api_key
+    
+    if not config.ingestion_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Ingestion API key not configured",
+        )
+        
+    if effective_key != config.ingestion_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid ingestion API key",
+        )
 
 
 ConfigDep = Annotated[AppConfig, Depends(get_config)]
