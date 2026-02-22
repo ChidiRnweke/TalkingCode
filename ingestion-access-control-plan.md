@@ -152,7 +152,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Keep existing Tailwind/shadcn style patterns.
       **Verify:** no visible control in this component that triggers ingestion POST.
 
-- [ ] **Step 13: Add backend tests for protected POST routes**
+- [x] **Step 13: Add backend tests for protected POST routes**
       File: create/update test module under `backend/tests/` following existing test style.
       Add tests for each protected POST endpoint verifying:
       - no key => `401`
