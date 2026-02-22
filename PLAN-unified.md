@@ -327,7 +327,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step A.3: Replace ChatComposer with ai-elements PromptInput + ModelSelect**
+- [x] **Step A.3: Replace ChatComposer with ai-elements PromptInput + ModelSelect**
 
       **Files to modify:**
       - `talkingcode-frontend/src/lib/components/domain/ChatComposer.svelte`
@@ -440,6 +440,9 @@ Phase D — Integration & polish:
       "Claude 3.5 Sonnet" by default. There is a send button icon. Type text and press Enter —
       it submits. Press Shift+Enter — it adds a newline. No raw `<textarea>` or `<button>`
       elements exist in the component source.
+
+      Note: ChatComposer now uses ai-elements PromptInput stack with ModelSelect and submit.
+      `pnpm check` remains blocked by pre-existing badge typing errors outside this component.
 
 ---
 

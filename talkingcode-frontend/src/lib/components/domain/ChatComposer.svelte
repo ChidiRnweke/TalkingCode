@@ -1,49 +1,67 @@
 <script lang="ts">
-	import {Button} from '$lib/components/ui/button';
-	import { Send } from 'lucide-svelte';
+	import {
+		PromptInput,
+		PromptInputBody,
+		PromptInputTextarea,
+		PromptInputToolbar,
+		PromptInputSubmit,
+		PromptInputModelSelect,
+		PromptInputModelSelectTrigger,
+		PromptInputModelSelectContent,
+		PromptInputModelSelectItem,
+		PromptInputModelSelectValue,
+		type PromptInputMessage
+	} from '$lib/components/ai-elements/prompt-input';
 
 	interface Props {
 		onSubmit: (question: string) => void;
 		disabled?: boolean;
+		selectedModel?: string | null;
+		onModelChange?: (model: string) => void;
 	}
 
-	let { onSubmit, disabled = false }: Props = $props();
+	let { onSubmit, disabled = false, selectedModel = null, onModelChange }: Props = $props();
 
-	let textarea: HTMLTextAreaElement;
-	let question = $state('');
-
-	function handleSubmit(e: Event) {
-		e.preventDefault();
-		if (question.trim() && !disabled) {
-			onSubmit(question.trim());
-			question = '';
+	function handleSubmit(message: PromptInputMessage) {
+		const text = (message.text ?? '').trim();
+		if (text && !disabled) {
+			onSubmit(text);
 		}
 	}
 
-	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			handleSubmit(e);
-		}
-	}
+	const models = [
+		{ value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
+		{ value: 'google/gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+		{ value: 'openai/gpt-4o', label: 'GPT-4o' }
+	];
 </script>
 
 <div class="border-t border-border bg-background px-[var(--page-padding)] py-4">
-	<form onsubmit={handleSubmit} class="flex flex-col gap-3">
-		<textarea
-			bind:this={textarea}
-			bind:value={question}
-			onkeydown={handleKeydown}
-			placeholder="Ask about architecture, modules, ownership, or behavior..."
-			rows="3"
-			disabled={disabled}
-			class="w-full resize-none rounded-lg border border-border/60 bg-surface-2 px-4 py-3 text-sm placeholder:text-muted-foreground/70 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
-		></textarea>
-		<div class="flex justify-end">
-			<Button type="submit" disabled={disabled || !question.trim()} variant="default">
-				<Send class="mr-2 h-4 w-4" />
-				Send
-			</Button>
-		</div>
-	</form>
+	<PromptInput
+		onSubmit={handleSubmit}
+		class="border-border/60 bg-[hsl(var(--color-surface-2))] focus-within:border-[hsl(var(--color-primary)/0.4)] focus-within:ring-2 focus-within:ring-[hsl(var(--color-primary)/0.15)]"
+	>
+		<PromptInputBody>
+			<PromptInputTextarea placeholder="Ask about architecture, modules, ownership, or behavior..." />
+		</PromptInputBody>
+		<PromptInputToolbar>
+			<PromptInputModelSelect
+				value={selectedModel || models[0].value}
+				onValueChange={(v) => onModelChange?.(v ?? models[0].value)}
+			>
+				<PromptInputModelSelectTrigger>
+					<PromptInputModelSelectValue placeholder="Select model" />
+				</PromptInputModelSelectTrigger>
+				<PromptInputModelSelectContent>
+					{#each models as model}
+						<PromptInputModelSelectItem value={model.value}>
+							{model.label}
+						</PromptInputModelSelectItem>
+					{/each}
+				</PromptInputModelSelectContent>
+			</PromptInputModelSelect>
+
+			<PromptInputSubmit disabled={disabled} />
+		</PromptInputToolbar>
+	</PromptInput>
 </div>
