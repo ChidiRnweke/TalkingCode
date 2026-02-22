@@ -62,7 +62,7 @@ frontend/src/lib/components/
 - No inline styles
 - shadcn-svelte for base component library
 - Use `svelte-ai-elements` for chat-first primitives where available (message, prompt input,
-  model selector, sources, loading components)
+  model selector, sources, loading components, actions)
 
 ### Design System Reference
 
@@ -71,7 +71,6 @@ frontend/src/lib/components/
 
 ### Feature Blueprint Reference
 
-- Baseline implementation: `PLAN.md`, `backend-python-plan.md`, `frontend-svelte-plan.md`,
+- Active implementation: `PLAN.md`, `backend-python-plan.md`, `frontend-svelte-plan.md`,
   `frontend-ui-plan.md`
-- Agentic RAG extension: `agentic-rag-plan.md`, `agentic-rag-backend-plan.md`,
-  `agentic-rag-frontend-plan.md`, `agentic-rag-ui-plan.md`
+- Agentic RAG is the only supported chat architecture; non-agentic flow is deprecated.

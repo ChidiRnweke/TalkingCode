@@ -1,128 +1,100 @@
-# Blueprint: TalkingCode V1 Master Plan
+# Blueprint: TalkingCode V1 (Agentic RAG)
 
 ## Executor Instructions
 
 You are executing this blueprint. Follow these rules:
 
-1. **Read this file first.** Every loop, re-read this file before doing anything.
-2. **Do the next unchecked step.** Find the first `- [ ]` item. Do that. Only that.
-3. **Delegate to subplans when referenced.** When a step points to a subplan file, execute that
-   subplan in order until its verification passes.
-4. **Verify before checking off.** Run the verification in this step (and referenced subplan).
-5. **Commit after each completed step.** `git add -A && git commit -m "blueprint: [step title]"`
-6. **Do not skip dependencies.** Steps are ordered intentionally.
-7. **If blocked, annotate.** Add a short blocker note under the step and continue if possible.
-8. **Keep blueprint files updated.** Mark completed items and add discovery notes for later steps.
+1. Read this file at the start of every loop.
+2. Execute only the next unchecked step.
+3. When a step references a subplan, execute that subplan fully before returning.
+4. Verify before checking off.
+5. Commit after each completed step: `git add -A && git commit -m "blueprint: [step title]"`.
+6. If blocked, add a blocker note under the step and continue where possible.
+7. Keep this file and subplans updated with discoveries needed by later steps.
 
 ## Context
 
-TalkingCode V1 is a full-stack BFF monorepo: SvelteKit frontend + FastAPI backend + Postgres with
-pgVector. The product ingests public GitHub code, embeds it with OpenAI embeddings, and serves a
-chat experience that answers questions with retrieved code context.
+TalkingCode V1 is a BFF monorepo (SvelteKit frontend + FastAPI backend) for conversational code
+understanding over a user's GitHub repositories. The chat system is **agentic-first**: planner,
+tool-calling loop, structured metadata classification, and whitebox streaming UX.
 
-This master plan orchestrates execution through three implementation blueprints: backend
-architecture (`python-swe`), frontend architecture (`svelte-swe`), and frontend design system/UI
-(`svelte-ui`). This keeps each plan granular and pattern-constrained while preserving one top-level
-dependency graph.
-
-A dedicated feature extension blueprint also exists for agentic retrieval and tool-calling:
-`agentic-rag-plan.md` plus its backend/frontend/ui subplans.
-
-User decisions captured in this planning round: full V1 scope, balanced testing strategy,
-strict frontend layering from day one, OpenAI embeddings required, and UI direction set to
-**Editorial Light**.
+The previous linear retrieve -> generate path is deprecated. All chat orchestration should be built
+around the agent loop design and corresponding contracts.
 
 ## Scope
 
 **In scope:**
 
-- Full V1 backend + frontend + UI implementation planning.
-- Agentic RAG loop extension planning and execution handoff.
-- Local development runtime via Docker Compose.
-- End-to-end integration and script-based verification.
-- Test-first mindset for critical behavior with balanced coverage depth.
+- Full-stack implementation planning for agentic RAG only.
+- Backend planner + tool loop + classification + timeline persistence.
+- Frontend architecture for agent stream events and timeline state.
+- Frontend UI with locked whitebox interaction design.
+- End-to-end scripted verification.
 
 **Out of scope:**
 
-- Auth/authorization system beyond static environment configuration.
-- Private repository ingestion.
-- Multi-user tenancy and roles.
-- Production hardening (autoscaling, full observability stack, secrets manager).
-- Retrieval upgrades beyond planned agentic loop scope (e.g., rerankers/hybrid search variants).
+- Non-agentic chat orchestration path.
+- Tool payload rendering in UI.
+- Confidence scoring subsystem.
+- Live GitHub fallback for file-details tool (cache-only in this phase).
 
 ## Architecture Decisions
 
-- Plan-of-plans approach: this file controls sequencing; subplans own implementation detail.
-- Backend follows `python-swe` layering rules strictly.
-- Backend subplan includes Phase 3 interface design with dataclass-based service IO contracts.
-- Frontend follows `svelte-swe` layering rules strictly.
-- UI implementation follows `svelte-ui` with Editorial Light design system before components.
-- Embedding provider is OpenAI (model configurable; default expected as `text-embedding-3-small`).
-- Verification emphasizes passing tests plus scriptable e2e checks across backend/frontend.
-- Agentic RAG is executed as a separate sub-blueprint after baseline chat path is stable.
+- Single source of truth plans: this file + three subplans below.
+- Backend follows `python-swe` with dataclass service IO contracts.
+- Frontend follows `svelte-swe` strict layering.
+- UI follows `svelte-ui` + `DESIGN_SYSTEM.md` + locked `svelte-ai-elements` inventory.
+- Planner runs every turn with strict structured output.
+- Tool loop limits: max 8 iterations, max 3 tools/turn, planner-grouped parallel execution.
+- Whitebox stream shows tool names and visible args/filters only; payloads hidden.
 
 ## Interfaces and Models
 
-Interface and model definitions are delegated to subplans:
+Detailed contracts live in:
 
-- `backend-python-plan.md` owns backend Protocols, dataclasses, ORM boundaries.
-- `frontend-svelte-plan.md` owns frontend service interfaces, controller contracts, stores.
-- `frontend-ui-plan.md` owns design tokens, primitive contracts, and visual conventions.
-- `agentic-rag-plan.md` owns planner + tool-calling loop extension and delegates deeper subplans.
+- `backend-python-plan.md`
+- `frontend-svelte-plan.md`
+- `frontend-ui-plan.md`
 
 ## Plan
 
-- [ ] **Step 1: Scaffold monorepo runtime and baseline structure**
-      Create runtime foundations (`docker-compose.yml`, backend/frontend skeletons, env examples,
-      package manifests, source roots). Keep structure compatible with all three subplans.
+- [ ] **Step 1: Ensure runtime and project foundations are ready**
+      Confirm compose/env/package foundations required by all subplans are present and coherent.
       Verify: `docker compose config` succeeds.
 
-- [ ] **Step 2: Execute backend blueprint to API-ready state**
-      Follow `backend-python-plan.md` from top to bottom. Complete all unchecked steps there,
-      including tests and verification, before checking this master step.
-      Verify: backend subplan verification commands pass.
+- [ ] **Step 2: Execute backend agentic blueprint**
+      Complete `backend-python-plan.md` end-to-end.
+      Verify: backend tests and verification commands in that file pass.
 
 - [ ] **Step 3: Execute frontend architecture blueprint**
-      Follow `frontend-svelte-plan.md` from top to bottom. Complete all unchecked steps there,
-      including typed API generation and architecture checks.
-      Verify: frontend architecture subplan verification commands pass.
+      Complete `frontend-svelte-plan.md` end-to-end.
+      Verify: frontend architecture tests and verification commands in that file pass.
 
-- [ ] **Step 4: Execute frontend UI blueprint (Editorial Light)**
-      Follow `frontend-ui-plan.md` from top to bottom. Implement tokens, theming, primitives, page
-      composition rules, locked `svelte-ai-elements` chat component inventory, and limited
-      component tests.
-      Verify: UI subplan verification commands pass.
+- [ ] **Step 4: Execute frontend UI blueprint**
+      Complete `frontend-ui-plan.md` end-to-end.
+      Verify: UI tests and verification commands in that file pass.
 
-- [ ] **Step 5: Integrate and run end-to-end verification scripts**
-      Add or finalize scripts that boot backend and validate API from frontend-side script calls,
-      then run full integration flow (sync repos -> run pipeline -> chat stream).
+- [ ] **Step 5: Run integrated agentic end-to-end flow**
+      Run cross-stack scripts and manual checks for planner -> tools -> streamed answer UX.
       Verify: all commands in `## Verification` pass.
-
-- [ ] **Step 6: Execute agentic RAG extension blueprint**
-      Follow `agentic-rag-plan.md` and complete `agentic-rag-backend-plan.md`,
-      `agentic-rag-frontend-plan.md`, and `agentic-rag-ui-plan.md` in dependency order.
-      Verify: agentic verification commands and scripts pass.
 
 ## Tests
 
-Required aggregate quality bar for V1:
-
-- Balanced backend unit + integration coverage of critical flows.
-- Frontend type checks and architecture-safe tests.
-- Lightweight component tests for core UI components only (avoid explosion).
-- End-to-end script checks proving cross-service integration.
-- Agentic loop tests for planner, tool execution timeline, and whitebox streaming privacy.
+- Backend planner/tool-loop/classification tests.
+- Frontend stream-parser/controller/store tests.
+- UI component tests for timeline/actions/filter visibility.
+- End-to-end script verification.
 
 ## Verification
-
-Run after all steps are checked off:
 
 1. `docker compose up --build -d`
 2. `pytest backend/tests/unit -q`
 3. `pytest backend/tests/integration -q`
 4. `pnpm --dir frontend check`
-5. `pnpm --dir frontend test` (if configured)
-6. `pnpm --dir frontend run verify:e2e` (script that calls backend APIs from frontend context)
-7. `curl http://localhost:8000/api/health`
-8. Validate flow: repos sync, pipeline run, chat response stream with sources.
-9. Validate agentic flow: planner event, tool call timeline, filters visible, payloads hidden.
+5. `pnpm --dir frontend test`
+6. `pnpm --dir frontend run verify:agentic-e2e`
+7. Manual chat sanity:
+   - planner/filter event appears,
+   - tool names + visible args/filters appear,
+   - payloads are hidden,
+   - final answer streams correctly.
