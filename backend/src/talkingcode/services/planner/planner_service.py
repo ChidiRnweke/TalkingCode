@@ -1,16 +1,23 @@
 """Planner service with structured output."""
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 import httpx
 import structlog
 
-from talkingcode.domain.models import PlannerOutput, RetrievalFilters, StopRules, ToolGroupPlan, PlannedToolCall
-from talkingcode.domain.services import PlannerInput
+from talkingcode.domain.models import PlannerInput, PlannerOutput, RetrievalFilters, StopRules, ToolGroupPlan, PlannedToolCall
 from talkingcode.enums import Area, FileType
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+
+
+class IPlannerService(Protocol):
+    """Protocol for planner service."""
+    
+    async def plan(self, input_data: PlannerInput) -> PlannerOutput:
+        """Generate a plan for the given question."""
+        ...
 
 PLANNER_SCHEMA = {
     "type": "object",
