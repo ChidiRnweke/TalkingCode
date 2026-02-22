@@ -14,7 +14,7 @@
 			const stream = controller.startAgenticTurn({
 				conversationId: null,
 				question,
-				model: null
+				model: chatStore.selectedModel
 			});
 
 			for await (const event of stream) {
@@ -50,6 +50,8 @@
 			<ChatComposer
 				onSubmit={handleSubmit}
 				disabled={chatStore.isStreaming}
+				selectedModel={chatStore.selectedModel}
+				onModelChange={(model) => chatStore.setSelectedModel(model)}
 			/>
 		</div>
 

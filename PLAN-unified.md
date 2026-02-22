@@ -446,7 +446,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step A.4: Wire model selector state through page and store**
+- [x] **Step A.4: Wire model selector state through page and store**
 
       **Files to modify:**
       - `talkingcode-frontend/src/lib/stores/chatStore.svelte.ts`
@@ -517,6 +517,10 @@ Phase D — Integration & polish:
       in the dropdown. Submit a question. Check the browser network tab — the POST to
       `/api/chat/agentic` should include `"selected_model": "google/gemini-2.5-flash"` (or
       whichever model was selected) in the request body.
+
+      Note: Added `selectedModel` store state, setter/getter, page wiring, and composer
+      `selectedModel`/`onModelChange` bindings. `pnpm check` is still blocked by pre-existing
+      badge typing errors in other components.
 
 ---
 

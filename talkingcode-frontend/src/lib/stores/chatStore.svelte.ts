@@ -7,6 +7,7 @@ function createChatStore() {
 	let messages = $state<ChatMessage[]>([]);
 	let activeMessageId = $state<string | null>(null);
 	let detailPanelMessageId = $state<string | null>(null);
+	let selectedModel = $state<string | null>(null);
 
 	function generateId(): string {
 		return crypto.randomUUID();
@@ -21,6 +22,9 @@ function createChatStore() {
 		},
 		get detailPanelMessageId() {
 			return detailPanelMessageId;
+		},
+		get selectedModel() {
+			return selectedModel;
 		},
 		get activeMessage(): ChatMessage | null {
 			if (!activeMessageId) return null;
@@ -169,10 +173,15 @@ function createChatStore() {
 			detailPanelMessageId = null;
 		},
 
+		setSelectedModel(model: string) {
+			selectedModel = model;
+		},
+
 		reset() {
 			messages = [];
 			activeMessageId = null;
 			detailPanelMessageId = null;
+			selectedModel = null;
 		}
 	};
 }
