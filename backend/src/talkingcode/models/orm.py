@@ -98,6 +98,8 @@ class DocumentChunk(Base):
     __table_args__ = (
         UniqueConstraint("document_id", "chunk_index", name="uq_chunk_doc_index"),
         Index("idx_chunk_area_type", "area", "file_type"),
+        Index("idx_chunk_symbols", "symbols_json", postgresql_using="gin"),
+        Index("idx_chunk_tags", "tags_json", postgresql_using="gin"),
     )
     
     document: Mapped[Document] = relationship(back_populates="chunks")
