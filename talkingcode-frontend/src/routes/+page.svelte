@@ -37,7 +37,7 @@
 </script>
 
 <ChatLayout>
-	<ChatHeader phase={chatStore.phase} />
+	<ChatHeader phase={chatStore.phase} currentPath="/" />
 
 	<main class="relative flex flex-1 overflow-hidden">
 		<div class="flex flex-1 flex-col overflow-hidden">

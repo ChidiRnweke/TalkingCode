@@ -1968,7 +1968,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step C.3: Create the repos page, components, and navigation**
+- [x] **Step C.3: Create the repos page, components, and navigation**
 
       **Files to create:**
       - `talkingcode-frontend/src/routes/repos/+page.svelte`
@@ -2182,6 +2182,10 @@ Phase D — Integration & polish:
       **Verify:** Run `cd talkingcode-frontend && pnpm check`. Navigate to `/repos` in browser.
       Page renders with "Repositories" heading. Navigation between Chat and Repos works.
       If no backend, the empty state shows "No repositories tracked".
+
+      Note: Implemented `/repos` page/server load, nav updates in `ChatHeader`, and new domain
+      components (`RepoCard`, `RegisterRepoForm`, `IngestionHistory`) plus exports. Added a
+      shadcn-style `ui/input` component because the project did not have one yet.
 
 ---
 

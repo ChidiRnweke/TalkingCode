@@ -4,9 +4,10 @@
 
 	interface Props {
 		phase?: string;
+		currentPath?: string;
 	}
 
-	let { phase = 'idle' }: Props = $props();
+	let { phase = 'idle', currentPath = '/' }: Props = $props();
 </script>
 
 <header
@@ -24,9 +25,23 @@
 		<nav class="flex items-center gap-1">
 			<a
 				href="/"
-				class="rounded-[var(--radius-full)] bg-[hsl(var(--color-primary)/0.12)] px-3 py-1.5 text-sm font-medium text-foreground"
+				class={`rounded-[var(--radius-full)] px-3 py-1.5 text-sm font-medium transition-colors ${
+					currentPath === '/'
+						? 'bg-[hsl(var(--color-primary)/0.12)] text-foreground'
+						: 'text-muted-foreground hover:text-foreground'
+				}`}
 			>
 				Chat
+			</a>
+			<a
+				href="/repos"
+				class={`rounded-[var(--radius-full)] px-3 py-1.5 text-sm font-medium transition-colors ${
+					currentPath === '/repos'
+						? 'bg-[hsl(var(--color-primary)/0.12)] text-foreground'
+						: 'text-muted-foreground hover:text-foreground'
+				}`}
+			>
+				Repos
 			</a>
 		</nav>
 
