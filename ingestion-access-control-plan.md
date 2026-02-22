@@ -78,7 +78,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Do not remove existing fields.
       **Verify:** run `cd backend && uv run python -c "from talkingcode.config import Settings; print(hasattr(Settings(), 'ingestion_api_key'))"` and confirm output is `True`.
 
-- [ ] **Step 2: Add runtime config field in `AppConfig`**
+- [x] **Step 2: Add runtime config field in `AppConfig`**
       File: `backend/src/talkingcode/config.py`.
       Add `ingestion_api_key: str` to the `AppConfig` dataclass.
       Keep dataclass frozen/slots exactly as-is.
