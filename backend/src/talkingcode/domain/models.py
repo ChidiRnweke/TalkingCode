@@ -229,6 +229,19 @@ class RepositoryInfo:
 
 
 @dataclass(slots=True, frozen=True)
+class RepositorySummary:
+    """Summary of an indexed repository."""
+
+    repository_id: UUID
+    owner: str
+    name: str
+    document_count: int
+    languages: list[str]
+    areas: list[str]
+    last_ingested_at: datetime | None
+
+
+@dataclass(slots=True, frozen=True)
 class RegisterRepoInput:
     """Input for registering a new repository."""
 
