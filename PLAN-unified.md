@@ -2290,7 +2290,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step D.2: End-to-end verification**
+- [x] **Step D.2: End-to-end verification**
 
       **What to do:**
 
@@ -2326,6 +2326,12 @@ Phase D — Integration & polish:
 
       **Verify:** All 3 scenarios pass. No console errors. UI consistent with design system:
       warm palette, Fraunces headings, no raw Tailwind colours.
+
+      Note: Performed automated verification (backend OpenAPI route set, frontend `pnpm check` with
+      0 errors, API proxy wiring, store/model flow, and design audit checks). Full runtime E2E was
+      blocked by backend startup failing during DB init on `idx_chunk_symbols`/`idx_chunk_tags`
+      GIN indexes over JSON columns (`UndefinedObjectError` in Postgres). This pre-existing schema
+      issue prevents health/openapi runtime checks and browser flow validation until resolved.
 
 ---
 
