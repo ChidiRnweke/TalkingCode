@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { MessageSquarePlus, type Icon as IconType } from 'lucide-svelte';
+	import { Button } from '$lib/components/ui/button';
 
 	interface Props {
 		title?: string;
@@ -29,13 +30,15 @@
 	{#if suggestions && suggestions.length > 0}
 		<div class="mt-6 flex flex-wrap justify-center gap-2">
 			{#each suggestions as suggestion}
-				<button
+				<Button
 					type="button"
+					variant="outline"
+					size="sm"
 					onclick={() => onSuggestionClick?.(suggestion)}
-					class="rounded-[var(--radius-full)] border border-border bg-[hsl(var(--color-surface-2))] px-4 py-2 text-sm text-foreground transition-colors hover:bg-[hsl(var(--color-surface-3))]"
+					class="rounded-[var(--radius-full)] border-border bg-[hsl(var(--color-surface-2))] text-foreground hover:bg-[hsl(var(--color-surface-3))]"
 				>
 					{suggestion}
-				</button>
+				</Button>
 			{/each}
 		</div>
 	{/if}

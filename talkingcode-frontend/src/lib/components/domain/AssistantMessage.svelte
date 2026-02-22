@@ -22,7 +22,7 @@
 	}
 </script>
 
-<Message from="assistant">
+<Message from="assistant" class="max-w-[72ch]">
 	{#if message.plan || message.isStreaming}
 		<InlineReasoning plan={message.plan} isStreaming={message.isStreaming && !message.content} />
 	{/if}

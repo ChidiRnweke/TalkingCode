@@ -10,7 +10,7 @@
 	let { message }: Props = $props();
 </script>
 
-<Message from="user">
+<Message from="user" class="max-w-[60ch]">
 	<MessageContent>
 		<p class="whitespace-pre-wrap">{message.content}</p>
 	</MessageContent>

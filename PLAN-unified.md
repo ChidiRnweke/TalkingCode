@@ -2236,7 +2236,7 @@ Phase D — Integration & polish:
 
 ### Phase D: Integration & Polish
 
-- [ ] **Step D.1: Design system audit**
+- [x] **Step D.1: Design system audit**
 
       **What to do:**
 
@@ -2281,6 +2281,12 @@ Phase D — Integration & polish:
       **Verify:** Re-run all grep searches. Zero matches for raw Tailwind colours in app code
       (excluding `node_modules/`, `ui/`, and `ai-elements/` directories).
       Run `cd talkingcode-frontend && pnpm check`. Clean.
+
+      Note: Completed grep audit and fixed violations by replacing raw interaction elements
+      in app code with component primitives (`Button`), adding message width constraints
+      (`AssistantMessage`/`UserMessage`), enforcing heading typography on new app headings,
+      and resolving existing `Badge` prop/type issues in reasoning/detail panels. `pnpm check`
+      now passes with warnings only (0 errors).
 
 ---
 

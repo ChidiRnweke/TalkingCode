@@ -59,7 +59,9 @@
 		<div class="min-w-0">
 			<div class="flex items-center gap-2">
 				<Github class="h-4 w-4 text-muted-foreground" />
-				<h3 class="truncate font-medium text-foreground">{repo.owner}/{repo.name}</h3>
+				<h3 class="truncate font-display font-medium tracking-tight text-foreground">
+					{repo.owner}/{repo.name}
+				</h3>
 			</div>
 			<p class="mt-2 text-xs text-muted-foreground">{relativeLastIngested(repo.last_ingested_at)}</p>
 		</div>

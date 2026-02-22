@@ -3,7 +3,7 @@
 	import ReasoningTrigger from '$lib/components/ai-elements/reasoning/ReasoningTrigger.svelte';
 	import ReasoningContent from '$lib/components/ai-elements/reasoning/ReasoningContent.svelte';
 	import Shimmer from '$lib/components/ai-elements/shimmer/Shimmer.svelte';
-	import {Badge} from '$lib/components/ui/badge';
+	import { Badge } from '$lib/components/ui/badge';
 	import type { AgentPlanView } from '$lib/models';
 
 	interface Props {
@@ -29,17 +29,17 @@
 			<div class="flex flex-wrap gap-2">
 				{#if plan.filters.areas.length > 0}
 					{#each plan.filters.areas as area}
-						<Badge variant="secondary" size="sm">{area}</Badge>
+						<Badge variant="secondary">{area}</Badge>
 					{/each}
 				{/if}
 				{#if plan.filters.languages.length > 0}
 					{#each plan.filters.languages as lang}
-						<Badge variant="secondary" size="sm">{lang}</Badge>
+						<Badge variant="secondary">{lang}</Badge>
 					{/each}
 				{/if}
 				{#if plan.filters.fileTypes.length > 0}
 					{#each plan.filters.fileTypes as ft}
-						<Badge variant="secondary" size="sm">{ft}</Badge>
+						<Badge variant="secondary">{ft}</Badge>
 					{/each}
 				{/if}
 			</div>
