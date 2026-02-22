@@ -9,6 +9,3 @@ The idea behind this project is to create a retrieval augmented generation (RAG)
 The first two components are implemented in Python using respectively Dagster and FastAPI. The frontend is implemented using Sveltekit. The project is currently deployed on my VPS and can be accessed [here](https://chat.chidinweke.be). 
 
 The project is dockerized and the relevant images are pushed to my github container registry. 
-
-
-In case you want to run the project locally, you can follow the instructions instructions listed here [here](https://chat.chidinweke.be/host-it-yourself).
