@@ -61,6 +61,8 @@ frontend/src/lib/components/
 - Design tokens defined in `frontend/src/app.css` and mapped in `tailwind.config.js`
 - No inline styles
 - shadcn-svelte for base component library
+- Use `svelte-ai-elements` for chat-first primitives where available (message, prompt input,
+  model selector, sources, loading components)
 
 ### Design System Reference
 

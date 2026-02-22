@@ -83,7 +83,8 @@ Interface and model definitions are delegated to subplans:
 
 - [ ] **Step 4: Execute frontend UI blueprint (Editorial Light)**
       Follow `frontend-ui-plan.md` from top to bottom. Implement tokens, theming, primitives, page
-      composition rules, and limited component tests.
+      composition rules, locked `svelte-ai-elements` chat component inventory, and limited
+      component tests.
       Verify: UI subplan verification commands pass.
 
 - [ ] **Step 5: Integrate and run end-to-end verification scripts**

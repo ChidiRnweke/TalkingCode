@@ -117,6 +117,37 @@ TDD-first test cases (target 3-5 per critical service):
   - Persists `running -> completed` transition and counters.
   - Persists `running -> failed` transition with error message.
 
+### Backend -> Frontend Contract Table (Locked)
+
+HTTP responses must be stable and mapped cleanly into frontend domain contracts defined in
+`frontend-svelte-plan.md` and `frontend-ui-plan.md`.
+
+| Endpoint | Backend Response Shape (transport) | Frontend Domain Contract Target | Notes |
+| --- | --- | --- | --- |
+| `GET /api/health` | `{ status: "ok" }` | n/a (infra check) | Used by verify scripts only. |
+| `GET /api/chat` | `ConversationSummaryResponse[]` | `ConversationSummary[]` | Fields: `id`, `title`, `createdAt`. |
+| `GET /api/chat/{conversation_id}` | `ConversationDetailResponse` | `ConversationDetail` -> `ChatMessageView[]` | Message rows must include `role`, `content`, `sources`, `createdAt`, optional `modelUsed`. |
+| `POST /api/chat` (SSE) | stream of chat chunk events | `ChatStreamChunk` -> incremental `ChatMessageView` updates | Chunks must be ordered, parseable, and terminate cleanly. |
+| `GET /api/repos` | `RepoResponse[]` | `RepositorySummary[]` | Include `id`, `name`, `owner`, `url`, optional `language`/`description`. |
+| `POST /api/repos/sync` | `RepoResponse[]` | `RepositorySummary[]` | Same shape as list response. |
+| `GET /api/pipeline/status` | `PipelineRunResponse | null` | `PipelineRunView | null` | Null allowed before first run. |
+| `GET /api/pipeline/history` | `PipelineRunResponse[]` | `PipelineRunView[]` | Newest-first ordering preferred. |
+| `POST /api/pipeline/run` | `PipelineRunResponse` | `PipelineRunView` | Must include status and counters. |
+| `GET /api/settings` | `SettingsResponse` | `SettingsView` + `ModelOption[]` mapping | Include default chat model and embedding model. |
+
+Transport DTO requirements (route boundary):
+
+- Define explicit Pydantic DTOs in route modules; do not return ORM/domain objects directly.
+- Use JSON-serializable primitives only at transport layer.
+- Date fields must be serialized as ISO-8601 strings.
+- SSE payload format for `POST /api/chat` must be consistent across chunks.
+
+Contract verification requirements:
+
+- Add backend integration tests that assert response keys/types for each endpoint above.
+- Add one contract test ensuring chat SSE stream emits ordered data events and completion.
+- Keep OpenAPI schema in sync so frontend `generate:api` produces stable types.
+
 ## Plan
 
 - [ ] **Step 1: Create backend project scaffold and dependencies**
@@ -174,6 +205,7 @@ TDD-first test cases (target 3-5 per critical service):
 - [ ] **Step 10: Implement controllers and routes with thin HTTP boundary**
       Create `backend/src/talkingcode/controllers/*.py` and `routes/*.py` for health/chat/repos/
       pipeline/settings. Use Pydantic schemas in route modules and delegate orchestration fully.
+      Ensure endpoint shapes satisfy `### Backend -> Frontend Contract Table (Locked)`.
       Verify: endpoint smoke curls pass for each route group.
 
 - [ ] **Step 11: Finalize factory wiring and backend test suite**

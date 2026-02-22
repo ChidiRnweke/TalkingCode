@@ -76,9 +76,21 @@ Token scale:
 - `frontend/src/lib/components/ui/` remains generated base components.
 - All app usage goes through `primitives/` wrappers for `Button`, `Input`, `Card`, `Badge`.
 - Avoid raw `<button>` and `<input>` in route components.
+- Chat UI composes `svelte-ai-elements` primitives first (`new-message`, `prompt-input`,
+  `model-selector`, `sources`, `loader`, `shimmer`) before custom replacements.
 - Lists that can be empty include an explicit empty state with icon + headline + CTA.
 - Loading states use skeletons that mirror final layout.
 - Status badges use semantic tokens; color is never the only signal.
+
+## Chat Layout Blueprint
+
+- Desktop: left nav `240px`, conversation rail `320px`, chat canvas flexible remainder.
+- Tablet: collapsible nav + single main chat column.
+- Mobile: single column; conversation rail is drawer/sheet.
+- Composer is sticky at bottom of chat canvas and always visible.
+- Message widths:
+  - assistant max `72ch`
+  - user max `60ch`
 
 ## Anti-patterns For This Project
 

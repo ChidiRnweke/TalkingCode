@@ -48,6 +48,8 @@ that applies design tokens and component conventions.
 - Controllers orchestrate multi-service operations.
 - `AppFactory` constructs concrete dependencies; no logic in factory.
 - Use Svelte runes stores as client state singletons hydrated from loader data.
+- Chat route component composition must use `svelte-ai-elements` primitives from
+  `frontend-ui-plan.md` (do not invent alternative chat UI structure unless blocked).
 
 ## Interfaces and Models
 
@@ -97,6 +99,48 @@ TDD-first test cases (balanced, high value):
 - `ChatController`
   - orchestrates repo/settings dependencies if needed for chat model defaults.
 
+### Loader/Action Contract Map (Locked to UI Blueprint)
+
+Route contracts must align with `frontend-ui-plan.md` `Component Contract Table` exactly.
+
+- `/` `+page.server.ts` `load()` returns:
+  - `conversations: ConversationSummary[]` -> consumed by `ConversationRail.svelte`
+  - `activeConversation: ConversationDetail | null` where messages map to `ChatMessageView[]`
+  - `modelOptions: ModelOption[]` -> consumed by `ChatComposer.svelte`
+  - `selectedModel: string`
+- `/` chat action (or server endpoint proxy) request body shape:
+  - `AskQuestionInput: { conversationId: string | null; question: string; model: string | null }`
+  - streaming response chunk shape -> `ChatStreamChunk` mapped to `ChatMessageView` updates
+
+- `/repos` `+page.server.ts` `load()` returns:
+  - `repos: RepositorySummary[]` -> consumed by `RepoCard.svelte`
+- `/repos` sync action returns:
+  - `repos: RepositorySummary[]`
+  - `syncedAt: string`
+
+- `/pipeline` `+page.server.ts` `load()` returns:
+  - `latest: PipelineRunView | null` -> consumed by `PipelineStatus.svelte`
+  - `history: PipelineRunView[]`
+- `/pipeline` run action returns:
+  - `run: PipelineRunView`
+
+- `/settings` `+page.server.ts` `load()` returns:
+  - `models: ModelOption[]`
+  - `selectedModel: string`
+  - `embeddingModel: string`
+
+Controller output constraints:
+
+- Controllers return only domain contracts listed above.
+- Controllers never return raw OpenAPI schema payloads.
+- Date/time values are normalized to ISO strings at controller boundary.
+
+Verification checklist for route contracts:
+
+- `frontend/src/routes/**/+page.server.ts` exports are typed against explicit route data interfaces.
+- `frontend/src/lib/models/*` contains all referenced contract interfaces.
+- `frontend/src/routes/**/+page.svelte` consumes only route data + stores, not service results.
+
 ## Plan
 
 - [ ] **Step 1: Scaffold frontend project and baseline scripts**
@@ -128,6 +172,9 @@ TDD-first test cases (balanced, high value):
 - [ ] **Step 6: Implement route loaders/actions with strict boundaries**
       Create `+layout.server.ts` and route `+page.server.ts` files for `/`, `/repos`, `/pipeline`,
       `/settings`. Keep route files thin: validation + delegation + response mapping only.
+      Ensure route data shapes match the locked UI inventory expected by `svelte-ai-elements`
+      components (message rows, sources, model selector options, streaming chunks) and satisfy
+      `### Loader/Action Contract Map (Locked to UI Blueprint)`.
       Verify: route loader/action tests or smoke checks pass.
 
 - [ ] **Step 7: Implement stores and hydrate from loader data**
