@@ -143,12 +143,12 @@ class ToolTimelineItem:
     """Tool call timeline item (redacted)."""
     turn_id: str
     tool_name: str
-    call_id: str | None = None
-    iteration: int | None = None
     visible_args: dict[str, Any]
     status: str
     duration_ms: int | None
     timestamp: datetime
+    call_id: str | None = None
+    iteration: int | None = None
     error_code: str | None = None
     error_message: str | None = None
 

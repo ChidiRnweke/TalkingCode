@@ -1,6 +1,6 @@
 """Chat routes with SSE streaming."""
 import json
-from typing import AsyncGenerator
+from typing import Any, AsyncGenerator
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -17,13 +17,22 @@ router = APIRouter()
 
 def _format_sse_event(event: WhiteboxEvent) -> str:
     """Format WhiteboxEvent as SSE."""
-    data = {
+    data: dict[str, Any] = {
         "turn_id": event.turn_id,
         "timestamp": event.timestamp.isoformat(),
     }
     
     if event.tool_name:
         data["tool_name"] = event.tool_name
+
+    if event.call_id:
+        data["call_id"] = event.call_id
+
+    if event.iteration is not None:
+        data["iteration"] = event.iteration
+
+    if event.code:
+        data["code"] = event.code
     
     if event.visible_args:
         data["visible_args"] = event.visible_args

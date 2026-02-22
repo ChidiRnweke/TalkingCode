@@ -7,10 +7,10 @@
 		<header class="space-y-6 text-center">
 			<Badge variant="outline" class="uppercase tracking-widest text-[10px] px-3 py-1">Technical Deep Dive</Badge>
 			<h1 class="font-display text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-				Sharing SOTA <br /> Agentic Techniques
+				Exploring <br /> Agentic Techniques
 			</h1>
 			<p class="text-muted-foreground text-lg md:text-xl font-medium italic">
-				A look at the patterns I've been refining for years.
+				A look at the patterns I’ve been learning and refining.
 			</p>
 		</header>
 
@@ -18,14 +18,15 @@
 
 		<section class="space-y-6">
 			<p class="text-foreground/80 leading-relaxed text-lg">
-				Hi, I'm Chidi 👋. I've been fascinated by (and building) agentic AI systems long before 
-				the current wave of popularity. I believe that the future of software development 
-				lies in systems that don't just search, but <em>reason</em> alongside us.
+				Hi, I'm Chidi 👋. I've been exploring agentic AI for a while now, mostly out of 
+				a simple curiosity about how code can reason. I believe that the future of 
+				software development lies in systems that don't just search, but <em>reason</em> alongside us.
 			</p>
 			<p class="text-foreground/80 leading-relaxed">
-				I built TalkingCode not just as a tool, but as a way to share the state-of-the-art 
-				techniques I've been refining in my daily work. My goal here is transparency: 
-				I want you to see exactly how these loops work, from planning to execution.
+				I built TalkingCode to share some of the state-of-the-art techniques I've been 
+				learning and refining in my daily work. My goal here is transparency: 
+				I want to share exactly how these loops work, from planning to execution, 
+				as a way for us to learn together.
 			</p>
 		</section>
 

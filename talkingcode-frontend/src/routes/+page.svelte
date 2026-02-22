@@ -18,16 +18,17 @@
 						Hi, I'm Chidi 👋
 					</p>
 					<h2 class="font-display text-4xl md:text-7xl font-bold tracking-tight text-foreground uppercase leading-[1.1]">
-						I've been building agentic AI <br class="hidden md:block" /> before it was a buzzword.
+						I built this to share <br class="hidden md:block" /> what I've learned.
 					</h2>
 					<div class="h-1.5 w-32 bg-primary mx-auto md:mx-0"></div>
 				</div>
 				
 				<div class="max-w-2xl space-y-6">
 					<p class="text-lg md:text-xl text-foreground/70 leading-relaxed font-medium">
-						I’ve spent years exploring the intersection of machine learning and software engineering. 
-						I built <strong>TalkingCode</strong> to share the state-of-the-art techniques I use daily—helping 
-						engineers navigate complex architectures with the same precision I strive for in my own work.
+						I’ve been exploring agentic AI for a while now, mostly out of a deep curiosity for how we can make 
+						software more helpful. <strong>TalkingCode</strong> is a project I built to share some of the 
+						state-of-the-art techniques I’ve picked up along the way, and to give you a chance to 
+						get to know me through the code I write.
 					</p>
 				</div>
 			</div>
@@ -36,7 +37,7 @@
 		</div>
 		
 		<div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce opacity-40">
-			<span class="text-[10px] uppercase tracking-widest font-bold">Explore the tech</span>
+			<span class="text-[10px] uppercase tracking-widest font-bold">Explore the techniques</span>
 			<div class="w-[1px] h-8 bg-foreground"></div>
 		</div>
 	</section>
@@ -47,11 +48,12 @@
 			<div class="grid md:grid-cols-2 gap-16 items-center">
 				<div class="space-y-8">
 					<h3 class="font-display text-4xl md:text-5xl font-bold tracking-tight uppercase leading-none">
-						Sharing <br /> <span class="text-primary">SOTA Patterns.</span>
+						Learning <br /> <span class="text-primary">In Public.</span>
 					</h3>
 					<p class="text-lg text-foreground/70 leading-relaxed">
-						This agent isn't just for searching code. It's a demonstration of multi-step reasoning, 
-						precise tool calling, and structural context—techniques I believe are the future of how we interact with software.
+						This agent is a sandbox for the techniques I find most interesting: multi-step reasoning, 
+						precise tool calling, and structural context. I’m sharing them here so we can see how they 
+						perform on real-world repository structures.
 					</p>
 					
 					<div class="space-y-6">
@@ -60,8 +62,8 @@
 								<Search class="size-5 text-primary" />
 							</div>
 							<div>
-								<h4 class="font-bold uppercase tracking-wider text-sm mb-1">Architectural Awareness</h4>
-								<p class="text-sm text-muted-foreground">Moving beyond simple text search to understand how modules and services actually connect.</p>
+								<h4 class="font-bold uppercase tracking-wider text-sm mb-1">Contextual Retrieval</h4>
+								<p class="text-sm text-muted-foreground">My attempt at making search feel more like how an engineer actually reads a codebase.</p>
 							</div>
 						</div>
 						<div class="flex gap-4">
@@ -69,8 +71,8 @@
 								<Zap class="size-5 text-primary" />
 							</div>
 							<div>
-								<h4 class="font-bold uppercase tracking-wider text-sm mb-1">Reasoning Loops</h4>
-								<p class="text-sm text-muted-foreground">The same agentic loops used in production environments, now applied to my own repositories.</p>
+								<h4 class="font-bold uppercase tracking-wider text-sm mb-1">Thoughtful Planning</h4>
+								<p class="text-sm text-muted-foreground">Using agentic loops to plan investigations before jumping to conclusions.</p>
 							</div>
 						</div>
 					</div>
@@ -80,15 +82,15 @@
 					<div class="aspect-square bg-background rounded-3xl border border-border shadow-sm p-6 flex flex-col justify-between">
 						<GitBranch class="size-8 text-primary/40" />
 						<div>
-							<span class="text-2xl font-bold font-display">Transparent</span>
-							<p class="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Open Architecture</p>
+							<span class="text-2xl font-bold font-display">Curiosity</span>
+							<p class="text-[10px] uppercase tracking-widest font-bold text-muted-foreground">Driven by Research</p>
 						</div>
 					</div>
 					<div class="aspect-square bg-primary text-primary-foreground rounded-3xl shadow-xl p-6 flex flex-col justify-between transform translate-y-8">
 						<MessageSquare class="size-8 opacity-40" />
 						<div>
-							<span class="text-2xl font-bold font-display">Honest</span>
-							<p class="text-[10px] uppercase tracking-widest font-bold opacity-70">Citations Mandatory</p>
+							<span class="text-2xl font-bold font-display">Shared</span>
+							<p class="text-[10px] uppercase tracking-widest font-bold opacity-70">Techniques & Patterns</p>
 						</div>
 					</div>
 				</div>
@@ -101,7 +103,7 @@
 		<div class="max-w-4xl mx-auto space-y-20">
 			<div class="text-center space-y-4">
 				<h3 class="font-display text-4xl md:text-6xl font-bold tracking-tight uppercase">How It Works</h3>
-				<p class="text-muted-foreground uppercase tracking-widest text-sm font-bold">The Research & Strategy Loop</p>
+				<p class="text-muted-foreground uppercase tracking-widest text-sm font-bold">The Process Behind the Agent</p>
 			</div>
 
 			<div class="grid md:grid-cols-3 gap-12 relative">
@@ -109,25 +111,25 @@
 				
 				<div class="relative bg-background p-6 space-y-4 z-10 border border-border/60 rounded-2xl shadow-sm">
 					<div class="size-10 bg-foreground text-background flex items-center justify-center rounded-full font-bold text-lg">1</div>
-					<h4 class="font-bold uppercase tracking-widest text-sm">Semantic Ingest</h4>
+					<h4 class="font-bold uppercase tracking-widest text-sm">Understanding</h4>
 					<p class="text-sm text-muted-foreground leading-relaxed">
-						Repositories are transformed into a dense vector space, preserving the structural hierarchy of the code.
+						We index repositories by preserving the structural hierarchy, making it easier for the AI to "see" the code.
 					</p>
 				</div>
 
 				<div class="relative bg-background p-6 space-y-4 z-10 border border-border/60 rounded-2xl shadow-sm">
 					<div class="size-10 bg-primary text-primary-foreground flex items-center justify-center rounded-full font-bold text-lg">2</div>
-					<h4 class="font-bold uppercase tracking-widest text-sm text-primary">Multi-Step Plan</h4>
+					<h4 class="font-bold uppercase tracking-widest text-sm text-primary">Reasoning</h4>
 					<p class="text-sm text-muted-foreground leading-relaxed">
-						The agent doesn't guess. It plans a sequence of tool calls to gather evidence before answering.
+						Instead of a direct search, the agent takes a moment to plan which parts of the code are most relevant to your question.
 					</p>
 				</div>
 
 				<div class="relative bg-background p-6 space-y-4 z-10 border border-border/60 rounded-2xl shadow-sm">
 					<div class="size-10 bg-foreground text-background flex items-center justify-center rounded-full font-bold text-lg">3</div>
-					<h4 class="font-bold uppercase tracking-widest text-sm">Grounded Answer</h4>
+					<h4 class="font-bold uppercase tracking-widest text-sm">Sharing</h4>
 					<p class="text-sm text-muted-foreground leading-relaxed">
-						Responses are built from retrieved snippets, with explicit citations to ensure technical accuracy.
+						The final answer includes citations, so you can see exactly which files and logic the agent used to reach its conclusion.
 					</p>
 				</div>
 			</div>
@@ -139,7 +141,8 @@
 		<div class="max-w-2xl mx-auto space-y-6">
 			<h3 class="font-display text-4xl font-bold uppercase tracking-tight text-primary">Let's talk code.</h3>
 			<p class="text-lg text-foreground/70 leading-relaxed font-medium">
-				I built this to be explored. Ask me about the architecture of this agent, or any of my other projects.
+				I’m always happy to talk about architecture, patterns, or the techniques used here. 
+				Feel free to explore and see how it works.
 			</p>
 			<a 
 				href="/chat" 
@@ -149,7 +152,7 @@
 			</a>
 		</div>
 		<footer class="pt-24 text-[10px] text-muted-foreground uppercase tracking-[0.3em] font-bold">
-			&copy; {new Date().getFullYear()} Chidi Nweke. Sharing what I learn.
+			&copy; {new Date().getFullYear()} Chidi Nweke. Learning and sharing.
 		</footer>
 	</section>
 </main>

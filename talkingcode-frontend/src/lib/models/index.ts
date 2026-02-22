@@ -41,6 +41,8 @@ export interface AgentPlanView {
 export interface ToolCallTimelineItem {
 	turnId: string;
 	toolName: string;
+	callId?: string;
+	iteration?: number;
 	visibleArgs: Record<string, unknown>;
 	status: ToolCallStatus;
 	durationMs?: number;
@@ -75,6 +77,8 @@ export interface ToolCallStartedEvent {
 	kind: 'tool_call_started';
 	turnId: string;
 	toolName: string;
+	callId?: string;
+	iteration?: number;
 	visibleArgs: Record<string, unknown>;
 	timestamp: string;
 }
@@ -83,8 +87,34 @@ export interface ToolCallFinishedEvent {
 	kind: 'tool_call_finished';
 	turnId: string;
 	toolName: string;
+	callId?: string;
+	iteration?: number;
 	success: boolean;
 	durationMs: number;
+	errorCode?: string;
+	timestamp: string;
+}
+
+export interface IterationStartedEvent {
+	kind: 'iteration_started';
+	turnId: string;
+	iteration: number;
+	timestamp: string;
+}
+
+export interface PlanChunkEvent {
+	kind: 'plan_chunk';
+	turnId: string;
+	iteration: number;
+	chunk: string;
+	timestamp: string;
+}
+
+export interface PlanDoneEvent {
+	kind: 'plan_done';
+	turnId: string;
+	iteration: number;
+	planText: string;
 	timestamp: string;
 }
 
@@ -102,6 +132,9 @@ export interface AssistantDoneEvent {
 }
 
 export type AgentStreamEvent =
+	| IterationStartedEvent
+	| PlanChunkEvent
+	| PlanDoneEvent
 	| PlannerStartedEvent
 	| PlannerReadyEvent
 	| ToolCallStartedEvent
@@ -116,6 +149,7 @@ export interface ChatMessage {
 	content: string;
 	timestamp: string;
 	plan?: AgentPlanView | null;
+	planText?: string;
 	toolCalls?: ToolCallTimelineItem[];
 	isStreaming?: boolean;
 	error?: string | null;
