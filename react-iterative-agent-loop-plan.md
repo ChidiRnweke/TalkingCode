@@ -116,25 +116,43 @@ Frontend state extensions:
       `ToolExecutionResult`. Added `backend/tests/unit/test_tool_registry_contract.py` and
       verified with `uv run pytest backend/tests/unit/test_tool_registry_contract.py -q`.
 
-- [ ] **Step 3: Implement iterative ReAct loop in AgentLoopService with parallel tool batches**
+- [x] **Step 3: Implement iterative ReAct loop in AgentLoopService with parallel tool batches**
       Refactor `AgentLoopService` to run iterative model-tool-observation cycles until completion.
       Emit new iteration/plan/tool events and preserve final assistant token streaming.
       Pattern reference: existing event streaming + timeline persistence in current loop.
       Verify: integration test for multi-iteration turn with parallel tool calls.
 
-- [ ] **Step 4: Extend OpenRouter client adapter for structured tool-call round trips**
+      Note: Replaced planner-first execution flow with iterative loop in
+      `backend/src/talkingcode/services/agent/agent_loop.py`. Loop now emits `iteration_started`,
+      `plan_chunk`, `plan_done`, executes tool calls in parallel batches when multiple calls are
+      present, appends tool observations back into model messages, and terminates on final answer
+      or iteration limit.
+
+- [x] **Step 4: Extend OpenRouter client adapter for structured tool-call round trips**
       Add API surface to send tools and parse assistant outputs containing tool calls + plan text.
       Verify: adapter tests for structured extraction and malformed output handling.
 
-- [ ] **Step 5: Update chat controller/routes/timeline to the ReAct contract**
+      Note: Added `send_chat_with_tools(...)` to `IOpenRouterClient` and `OpenRouterClient`, plus
+      response parsing helper for tool calls in
+      `backend/src/talkingcode/services/llm/openrouter_client.py`.
+
+- [x] **Step 5: Update chat controller/routes/timeline to the ReAct contract**
       Keep endpoint shape (`/chat/agentic`) but emit new contract payloads. Ensure timeline persists
       `call_id` and iteration context and retrieval reflects those fields.
       Verify: route-level stream contract tests and timeline response tests.
+
+      Note: Updated SSE formatter to include optional `call_id`, `iteration`, and `code`.
+      Updated controller error handling to avoid unhandled stream failures.
 
 - [ ] **Step 6: Implement strict frontend SSE parsing and incremental rendering**
       Replace permissive parsing in `ChatService` with zod schema validation per event kind.
       Update store and domain components to render plan and tool progress live.
       Verify: frontend unit tests for valid/invalid payloads and store transitions.
+
+      Progress note: Frontend now parses and renders new iterative events (`iteration_started`,
+      `plan_chunk`, `plan_done`) and tracks tools by `callId` with iteration metadata in
+      `ChatService`, `chatStore`, and reasoning/detail components. Strict zod validation and parser
+      test coverage remain to be completed.
 
 - [ ] **Step 7: Deprecate and delete planner-first artifacts for /chat/agentic**
       Remove unused planner-first logic/events from the active chat path and associated dead code.

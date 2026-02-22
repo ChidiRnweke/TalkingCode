@@ -20,54 +20,94 @@
 
 {#if message}
 	<aside
-		class="fixed right-0 top-14 h-[calc(100dvh-3.5rem)] w-80 transform border-l border-border bg-background shadow-xl transition-transform duration-200 ease-in-out xl:relative xl:top-0 xl:h-full xl:w-80 xl:translate-x-0"
+		class="fixed right-0 top-14 h-[calc(100dvh-3.5rem)] w-96 transform border-l border-border bg-background shadow-xl transition-transform duration-200 ease-in-out xl:relative xl:top-0 xl:h-full xl:w-96 xl:translate-x-0"
 		class:translate-x-full={!message}
 	>
-		<div class="flex h-14 items-center justify-between border-b border-border px-4">
-			<h3 class="font-display text-lg tracking-tight">Turn Details</h3>
+		<div class="flex h-14 items-center justify-between border-b border-border px-4 bg-surface-2/30">
+			<div class="flex flex-col">
+				<h3 class="font-display text-sm font-bold uppercase tracking-widest text-foreground">Turn Details</h3>
+				{#if message.thoughtDurationS}
+					<span class="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Thought for {message.thoughtDurationS}s</span>
+				{/if}
+			</div>
 			<Button variant="ghost" size="icon-sm" onclick={onClose} aria-label="Close panel">
-				<X class="h-5 w-5" />
+				<X class="h-4 w-4" />
 			</Button>
 		</div>
 
-		<div class="flex flex-col gap-6 overflow-y-auto p-4">
+		<div class="flex flex-col gap-8 overflow-y-auto p-6 pb-20">
 			{#if message.plan || message.planText}
-				<section>
-					<h4 class="mb-2 font-display text-sm font-medium tracking-tight text-muted-foreground uppercase">
-						Plan
-					</h4>
-					<p class="text-sm text-foreground">{message.planText || message.plan?.intent}</p>
+				<section class="space-y-4">
+					<div class="flex items-center gap-2">
+						<div class="h-1 w-1 rounded-full bg-primary"></div>
+						<h4 class="font-display text-xs font-bold tracking-widest text-muted-foreground uppercase">
+							Reasoning & Plan
+						</h4>
+					</div>
+					
+					{#if message.planText}
+						<div class="rounded-lg bg-surface-2 p-4 text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap border border-border/40">
+							{message.planText}
+						</div>
+					{:else if message.plan?.intent}
+						<div class="rounded-lg bg-surface-2 p-4 text-sm text-foreground/90 border border-border/40">
+							{message.plan.intent}
+						</div>
+					{/if}
+
 					{#if message.plan && (message.plan.filters.areas.length > 0 || message.plan.filters.languages.length > 0 || message.plan.filters.fileTypes.length > 0)}
-						<div class="mt-3 flex flex-wrap gap-1.5">
-							{#each message.plan.filters.areas as area}
-								<Badge variant="secondary">{area}</Badge>
-							{/each}
-							{#each message.plan.filters.languages as lang}
-								<Badge variant="secondary">{lang}</Badge>
-							{/each}
-							{#each message.plan.filters.fileTypes as ft}
-								<Badge variant="secondary">{ft}</Badge>
-							{/each}
+						<div class="space-y-2">
+							<p class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Retrieval Filters</p>
+							<div class="flex flex-wrap gap-1.5">
+								{#each message.plan.filters.areas as area}
+									<Badge variant="outline" class="text-[9px] uppercase font-bold text-primary border-primary/20">{area}</Badge>
+								{/each}
+								{#each message.plan.filters.languages as lang}
+									<Badge variant="outline" class="text-[9px] uppercase font-bold text-accent border-accent/20">{lang}</Badge>
+								{/each}
+								{#each message.plan.filters.fileTypes as ft}
+									<Badge variant="outline" class="text-[9px] uppercase font-bold">{ft}</Badge>
+								{/each}
+							</div>
 						</div>
 					{/if}
 				</section>
 			{/if}
 
 			{#if message.toolCalls && message.toolCalls.length > 0}
-				<section>
-					<h4 class="mb-2 font-display text-sm font-medium tracking-tight text-muted-foreground uppercase">
-						Tools
-					</h4>
-					<ul class="flex flex-col gap-2">
+				<section class="space-y-4">
+					<div class="flex items-center gap-2">
+						<div class="h-1 w-1 rounded-full bg-primary"></div>
+						<h4 class="font-display text-xs font-bold tracking-widest text-muted-foreground uppercase">
+							Tools & Research
+						</h4>
+					</div>
+					<ul class="flex flex-col gap-3">
 						{#each message.toolCalls as tool}
-							<li class="flex items-center justify-between rounded-md border border-border/50 bg-surface-2/50 p-2">
-								<span class="text-sm font-mono text-foreground">{tool.toolName}</span>
-								<div class="flex items-center gap-2">
-									{#if tool.durationMs}
-										<span class="text-xs text-muted-foreground">{tool.durationMs}ms</span>
-									{/if}
-									<Badge variant={statusColors[tool.status]}>{tool.status}</Badge>
+							<li class="group flex flex-col gap-2 rounded-xl border border-border/60 bg-background p-3 shadow-sm hover:shadow-md transition-shadow">
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-2">
+										<span class="text-xs font-mono font-bold text-foreground">{tool.toolName}</span>
+										{#if tool.iteration}
+											<Badge variant="outline" class="text-[9px] h-4">Iter {tool.iteration}</Badge>
+										{/if}
+									</div>
+									<Badge variant={statusColors[tool.status]} class="text-[9px] font-bold uppercase tracking-tighter px-1.5 h-4">
+										{tool.status}
+									</Badge>
 								</div>
+								
+								{#if tool.visibleArgs && Object.keys(tool.visibleArgs).length > 0}
+									<div class="text-[10px] bg-surface-2/50 rounded-md p-2 font-mono text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">
+										{JSON.stringify(tool.visibleArgs)}
+									</div>
+								{/if}
+
+								{#if tool.durationMs}
+									<div class="text-[9px] text-muted-foreground font-medium text-right italic">
+										Took {tool.durationMs}ms
+									</div>
+								{/if}
 							</li>
 						{/each}
 					</ul>
@@ -75,11 +115,14 @@
 			{/if}
 
 			{#if message.error}
-				<section>
-					<h4 class="mb-2 font-display text-sm font-medium tracking-tight text-muted-foreground uppercase">
-						Error
-					</h4>
-					<div class="rounded-md bg-destructive/12 p-3 text-sm text-destructive">
+				<section class="space-y-4">
+					<div class="flex items-center gap-2">
+						<div class="h-1 w-1 rounded-full bg-destructive"></div>
+						<h4 class="font-display text-xs font-bold tracking-widest text-destructive uppercase">
+							Error
+						</h4>
+					</div>
+					<div class="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive leading-relaxed font-medium">
 						{message.error}
 					</div>
 				</section>

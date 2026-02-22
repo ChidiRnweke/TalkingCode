@@ -8,6 +8,7 @@ function createChatStore() {
 	let activeMessageId = $state<string | null>(null);
 	let detailPanelMessageId = $state<string | null>(null);
 	let selectedModel = $state<string | null>(null);
+	let currentTurnStartTime = $state<number | null>(null);
 
 	function generateId(): string {
 		return crypto.randomUUID();
@@ -67,6 +68,7 @@ function createChatStore() {
 
 		startAssistantTurn(): string {
 			const id = generateId();
+			currentTurnStartTime = Date.now();
 			const assistantMessage: ChatMessage = {
 				id,
 				role: 'assistant',
@@ -112,24 +114,6 @@ function createChatStore() {
 					};
 					break;
 
-				case 'planner_started':
-					messages[idx] = {
-						...current,
-						plan: { intent: '', filters: { areas: [], languages: [], fileTypes: [], pathGlobs: [], repoScopes: [], symbolHints: [], tags: [] }, toolGroups: [] }
-					};
-					break;
-
-				case 'planner_ready':
-					messages[idx] = {
-						...current,
-						plan: {
-							intent: event.intent,
-							filters: event.filters,
-							toolGroups: []
-						}
-					};
-					break;
-
 				case 'tool_call_started': {
 					const newToolCall: ToolCallTimelineItem = {
 						turnId: event.turnId,
@@ -164,20 +148,32 @@ function createChatStore() {
 					break;
 				}
 
-				case 'assistant_token':
-					messages[idx] = {
-						...current,
+				case 'assistant_token': {
+					const update: Partial<ChatMessage> = {
 						content: current.content + event.token,
 						isStreaming: true
 					};
-					break;
 
-				case 'assistant_done':
-					messages[idx] = {
-						...current,
-						isStreaming: false
-					};
+					if (!current.content && currentTurnStartTime) {
+						update.thoughtDurationS = Math.max(1, Math.round((Date.now() - currentTurnStartTime) / 1000));
+						currentTurnStartTime = null;
+					}
+
+					messages[idx] = { ...current, ...update };
 					break;
+				}
+
+				case 'assistant_done': {
+					const update: Partial<ChatMessage> = { isStreaming: false };
+
+					if (!current.thoughtDurationS && currentTurnStartTime) {
+						update.thoughtDurationS = Math.max(1, Math.round((Date.now() - currentTurnStartTime) / 1000));
+						currentTurnStartTime = null;
+					}
+
+					messages[idx] = { ...current, ...update };
+					break;
+				}
 
 				case 'agent_error':
 					messages[idx] = {
@@ -185,6 +181,7 @@ function createChatStore() {
 						isStreaming: false,
 						error: event.message
 					};
+					currentTurnStartTime = null;
 					break;
 			}
 		},

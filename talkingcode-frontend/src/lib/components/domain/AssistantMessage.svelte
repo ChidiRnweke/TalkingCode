@@ -2,9 +2,7 @@
 	import Message from '$lib/components/ai-elements/new-message/Message.svelte';
 	import MessageContent from '$lib/components/ai-elements/new-message/MessageContent.svelte';
 	import Response from '$lib/components/ai-elements/response/Response.svelte';
-	import InlineReasoning from './InlineReasoning.svelte';
-	import InlineTool from './InlineTool.svelte';
-	import Shimmer from '$lib/components/ai-elements/shimmer/Shimmer.svelte';
+	import { Reasoning, ReasoningTrigger } from '$lib/components/ai-elements/reasoning';
 	import { Actions, Action } from '$lib/components/ai-elements/action';
 	import { Copy, PanelRight, RotateCcw } from 'lucide-svelte';
 	import type { ChatMessage } from '$lib/models';
@@ -28,29 +26,26 @@
 			onRetry(question);
 		}
 	}
+
+	let isThinking = $derived(message.isStreaming && !message.content);
+	let hasThought = $derived(!!(message.plan || (message.toolCalls && message.toolCalls.length > 0)));
 </script>
 
-<Message from="assistant" class="max-w-none">
-	{#if message.plan || message.isStreaming}
-		<InlineReasoning
-			plan={message.plan}
-			planText={message.planText}
-			isStreaming={message.isStreaming && !message.content}
-		/>
-	{/if}
-
-	{#if message.toolCalls && message.toolCalls.length > 0}
-		{#each message.toolCalls as tool (tool.callId || tool.toolName + tool.timestamp)}
-			<InlineTool {tool} />
-		{/each}
+<Message from="assistant" class="max-w-none text-base">
+	{#if isThinking || hasThought}
+		<Reasoning 
+			isStreaming={isThinking} 
+			duration={message.thoughtDurationS}
+			class="mb-2"
+		>
+			<ReasoningTrigger onclick={() => onOpenDetail?.(message.id)} />
+		</Reasoning>
 	{/if}
 
 	{#if message.content}
 		<MessageContent>
 			<Response content={message.content} />
 		</MessageContent>
-	{:else if message.isStreaming}
-		<Shimmer>Thinking...</Shimmer>
 	{/if}
 
 	{#if message.error}

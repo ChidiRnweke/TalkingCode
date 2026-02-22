@@ -59,20 +59,6 @@ export interface AgentErrorEvent {
 	timestamp: string;
 }
 
-export interface PlannerStartedEvent {
-	kind: 'planner_started';
-	turnId: string;
-	timestamp: string;
-}
-
-export interface PlannerReadyEvent {
-	kind: 'planner_ready';
-	turnId: string;
-	intent: string;
-	filters: RetrievalFilterView;
-	timestamp: string;
-}
-
 export interface ToolCallStartedEvent {
 	kind: 'tool_call_started';
 	turnId: string;
@@ -135,8 +121,6 @@ export type AgentStreamEvent =
 	| IterationStartedEvent
 	| PlanChunkEvent
 	| PlanDoneEvent
-	| PlannerStartedEvent
-	| PlannerReadyEvent
 	| ToolCallStartedEvent
 	| ToolCallFinishedEvent
 	| AssistantTokenEvent
@@ -152,6 +136,7 @@ export interface ChatMessage {
 	planText?: string;
 	toolCalls?: ToolCallTimelineItem[];
 	isStreaming?: boolean;
+	thoughtDurationS?: number;
 	error?: string | null;
 }
 
