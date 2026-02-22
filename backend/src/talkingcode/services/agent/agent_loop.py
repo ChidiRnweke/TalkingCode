@@ -1,12 +1,17 @@
 """Agent loop service with streaming."""
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import AsyncGenerator, Protocol
 from uuid import UUID, uuid4
 
 import structlog
-
-from talkingcode.domain.models import AgentTurnInput, ExecuteToolGroupInput, PlannerInput, WhiteboxEvent
+from talkingcode.domain.models import (
+    AgentTurnInput,
+    ExecuteToolGroupInput,
+    PlannerInput,
+    WhiteboxEvent,
+)
 from talkingcode.enums import WhiteboxEventKind
 from talkingcode.services.agent.timeline_repository import TimelineRepository
 from talkingcode.services.planner.planner_service import PlannerService
@@ -17,8 +22,10 @@ logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
 class IAgentLoopService(Protocol):
     """Protocol for agent loop service."""
-    
-    async def run_turn(self, input_data: AgentTurnInput) -> AsyncGenerator[WhiteboxEvent, None]:
+
+    async def run_turn(
+        self, input_data: AgentTurnInput
+    ) -> AsyncGenerator[WhiteboxEvent, None]:
         """Run an agentic conversation turn with streaming events."""
         ...
 
@@ -26,14 +33,14 @@ class IAgentLoopService(Protocol):
 @dataclass(slots=True)
 class AgentLoopService:
     """Agent loop with planner and tool execution."""
-    
+
     planner: PlannerService
     tool_registry: ToolRegistry
     timeline_repository: TimelineRepository
     max_iterations: int = 8
     max_tools_per_turn: int = 3
     default_tool_timeout: int = 15
-    
+
     async def run_turn(
         self,
         input_data: AgentTurnInput,
@@ -41,7 +48,7 @@ class AgentLoopService:
         """Run agent turn with streaming events."""
         turn_uuid = uuid4()
         turn_id = str(turn_uuid)
-        
+
         # Emit planner started
         yield WhiteboxEvent(
             kind=WhiteboxEventKind.PLANNER_STARTED,
@@ -51,7 +58,7 @@ class AgentLoopService:
             visible_args=None,
             timestamp=datetime.utcnow(),
         )
-        
+
         try:
             # Get plan from planner
             planner_input = PlannerInput(
@@ -60,7 +67,7 @@ class AgentLoopService:
                 selected_model=input_data.selected_model,
             )
             plan = await self.planner.plan(planner_input)
-            
+
             # Emit planner ready
             yield WhiteboxEvent(
                 kind=WhiteboxEventKind.PLANNER_READY,
@@ -77,25 +84,26 @@ class AgentLoopService:
                 },
                 timestamp=datetime.utcnow(),
             )
-            
+
             # Execute tool groups
             tool_count = 0
             sequence_no = 0
-            for group in plan.tool_groups[:self.max_tools_per_turn]:
+            for group in plan.tool_groups[: self.max_tools_per_turn]:
                 if tool_count >= self.max_tools_per_turn:
                     break
-                
+
                 # Create timeline entries for each tool
                 timeline_ids = []
                 for call in group.calls:
                     if tool_count >= self.max_tools_per_turn:
                         break
-                    
+
                     visible_args = {
-                        k: v for k, v in call.arguments.items()
+                        k: v
+                        for k, v in call.arguments.items()
                         if k not in ["content", "payload", "data"]
                     }
-                    
+
                     # Persist timeline entry
                     timeline_id = await self.timeline_repository.create_timeline_entry(
                         turn_id=UUID(turn_id) if len(turn_id) == 36 else uuid4(),
@@ -106,7 +114,7 @@ class AgentLoopService:
                     )
                     timeline_ids.append((timeline_id, call))
                     sequence_no += 1
-                    
+
                     yield WhiteboxEvent(
                         kind=WhiteboxEventKind.TOOL_CALL_STARTED,
                         turn_id=turn_id,
@@ -116,7 +124,7 @@ class AgentLoopService:
                         timestamp=datetime.utcnow(),
                     )
                     tool_count += 1
-                
+
                 # Execute group
                 group_input = ExecuteToolGroupInput(
                     group_name=group.name,
@@ -131,9 +139,9 @@ class AgentLoopService:
                     parallel=group.parallel,
                     timeout_seconds=self.default_tool_timeout,
                 )
-                
+
                 results = await self.tool_registry.execute_group(group_input)
-                
+
                 # Emit tool call finished and update timeline
                 for (timeline_id, call), result in zip(timeline_ids, results):
                     await self.timeline_repository.complete_timeline_entry(
@@ -143,16 +151,19 @@ class AgentLoopService:
                         error_code=result.error[:50] if result.error else None,
                         error_message=result.error,
                     )
-                    
+
                     yield WhiteboxEvent(
                         kind=WhiteboxEventKind.TOOL_CALL_FINISHED,
                         turn_id=turn_id,
                         tool_name=result.tool_name,
                         message=f"Completed {result.tool_name}",
-                        visible_args={"success": result.success, "duration_ms": result.duration_ms},
+                        visible_args={
+                            "success": result.success,
+                            "duration_ms": result.duration_ms,
+                        },
                         timestamp=datetime.utcnow(),
                     )
-            
+
             # Emit assistant streaming tokens (mock for now)
             yield WhiteboxEvent(
                 kind=WhiteboxEventKind.ASSISTANT_TOKEN,
@@ -162,7 +173,7 @@ class AgentLoopService:
                 visible_args=None,
                 timestamp=datetime.utcnow(),
             )
-            
+
             # Emit done
             yield WhiteboxEvent(
                 kind=WhiteboxEventKind.ASSISTANT_DONE,
@@ -172,7 +183,7 @@ class AgentLoopService:
                 visible_args=None,
                 timestamp=datetime.utcnow(),
             )
-            
+
         except Exception as e:
             logger.error("Agent turn failed", error=str(e))
             yield WhiteboxEvent(

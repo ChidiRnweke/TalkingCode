@@ -162,7 +162,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Mock downstream services if needed; this is auth-gate testing, not ingestion internals.
       **Verify:** `cd backend && uv run pytest -q` passes.
 
-- [ ] **Step 14: Add backend tests for public routes**
+- [x] **Step 14: Add backend tests for public routes**
       File: same/new backend test module.
       Verify `GET /repos` is accessible without key and chat route remains accessible without ingestion key.
       Keep tests focused on route access policy.

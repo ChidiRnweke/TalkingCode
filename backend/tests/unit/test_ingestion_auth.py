@@ -23,10 +23,16 @@ def mock_config():
 def mock_factory():
     """Mock application factory."""
     factory = MagicMock()
-    controller = MagicMock()
-    factory.get_ingestion_controller.return_value = controller
     
-    # Mock return values for controller methods
+    # Ingestion Controller
+    ingestion_controller = MagicMock()
+    factory.get_ingestion_controller.return_value = ingestion_controller
+    
+    # Chat Controller
+    chat_controller = MagicMock()
+    factory.get_chat_controller.return_value = chat_controller
+    
+    # Mock return values for ingestion controller methods
     now = datetime.now(timezone.utc)
     
     repo = RepositoryInfo(
@@ -38,9 +44,9 @@ def mock_factory():
         last_ingested_at=None,
         created_at=now,
     )
-    controller.register_repo = AsyncMock(return_value=repo)
-    controller.get_repo = AsyncMock(return_value=repo)
-    controller.list_repos = AsyncMock(return_value=[repo])
+    ingestion_controller.register_repo = AsyncMock(return_value=repo)
+    ingestion_controller.get_repo = AsyncMock(return_value=repo)
+    ingestion_controller.list_repos = AsyncMock(return_value=[repo])
     
     run = IngestionRunInfo(
         id=1,
@@ -50,9 +56,9 @@ def mock_factory():
         completed_at=None,
         error_message=None,
     )
-    controller.start_ingestion = AsyncMock(return_value=run)
-    controller.start_owned_repo_ingestion = AsyncMock(return_value=[run])
-    controller.list_ingestion_runs = AsyncMock(return_value=[run])
+    ingestion_controller.start_ingestion = AsyncMock(return_value=run)
+    ingestion_controller.start_owned_repo_ingestion = AsyncMock(return_value=[run])
+    ingestion_controller.list_ingestion_runs = AsyncMock(return_value=[run])
     
     return factory
 
@@ -63,7 +69,40 @@ def client(mock_config, mock_factory):
     app = create_app()
     app.dependency_overrides[get_config] = lambda: mock_config
     app.dependency_overrides[get_factory] = lambda: mock_factory
+    # Mock DB session for chat routes that require it
+    from talkingcode.dependencies import get_db_session
+    app.dependency_overrides[get_db_session] = lambda: MagicMock()
     return TestClient(app)
+
+
+def test_public_routes_allow_anonymous(client):
+    """Test that public routes allow anonymous access."""
+    routes = [
+        ("GET", "/repos"),
+        ("GET", "/repos/test-owner/test-repo"),
+        ("GET", "/repos/test-owner/test-repo/runs"),
+        ("GET", "/health"),
+    ]
+    
+    for method, path in routes:
+        resp = client.request(method, path)
+        assert resp.status_code == 200, f"{method} {path} should be 200 (public)"
+
+    # Chat routes should not fail with 401 Ingestion key error
+    # They might fail with 422 (validation) or 500 (other mocks), but NOT 401
+    # Actually, if we mock correctly they might return 200 or 500.
+    # We just want to ensure NO ingestion auth dependency is triggered.
+    
+    # We can check that the ingestion auth dependency is NOT in the dependencies for these routes.
+    # But integration test is better: call it and ensure it doesn't ask for key.
+    
+    # POST /chat/agentic requires body
+    resp = client.post("/chat/agentic", json={"question": "hi"})
+    assert resp.status_code != 401, "/chat/agentic should not require ingestion key"
+    
+    # GET /chat/timeline requires query param
+    resp = client.get("/chat/timeline?conversation_id=123e4567-e89b-12d3-a456-426614174000")
+    assert resp.status_code != 401, "/chat/timeline should not require ingestion key"
 
 
 def test_protected_routes_require_auth(client):
