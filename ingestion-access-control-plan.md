@@ -121,7 +121,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Keep existing body behavior (`StartIngestionRequest | None`) unchanged.
       **Verify:** same compile check as Step 6.
 
-- [ ] **Step 8: Protect `POST /repos/ingest-owned`**
+- [x] **Step 8: Protect `POST /repos/ingest-owned`**
       File: `backend/src/talkingcode/routes/repo_routes.py`.
       Add auth dependency to `start_owned_repo_ingestion(...)` route.
       **Verify:** same compile check as Step 6.

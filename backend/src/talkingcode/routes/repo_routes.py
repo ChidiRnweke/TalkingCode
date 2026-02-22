@@ -110,6 +110,7 @@ async def start_ingestion(
 @router.post("/repos/ingest-owned")
 async def start_owned_repo_ingestion(
     factory: FactoryDep,
+    auth: IngestionAuthDep,
     body: StartIngestionRequest | None = None,
 ) -> list[dict[str, str | None]]:
     """Ingest all repositories owned by the authenticated user (excluding forks)."""
