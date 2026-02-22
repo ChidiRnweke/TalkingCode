@@ -1146,7 +1146,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step B.6: Create embedding generator service**
+- [x] **Step B.6: Create embedding generator service**
 
       **Files to create:**
       - `backend/src/talkingcode/services/ingestion/embedder.py`
