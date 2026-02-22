@@ -126,7 +126,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Add auth dependency to `start_owned_repo_ingestion(...)` route.
       **Verify:** same compile check as Step 6.
 
-- [ ] **Step 9: Confirm read routes remain public**
+- [x] **Step 9: Confirm read routes remain public**
       File: `backend/src/talkingcode/routes/repo_routes.py`.
       Ensure no auth dependency is attached to:
       - `GET /repos`
