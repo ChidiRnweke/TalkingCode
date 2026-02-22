@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from talkingcode.dependencies import FactoryDep
+from talkingcode.dependencies import FactoryDep, IngestionAuthDep
 from talkingcode.domain.models import IngestionRunInfo, RegisterRepoInput, RepositoryInfo
 
 router = APIRouter()
@@ -59,7 +59,11 @@ def _serialize_run(run: IngestionRunInfo) -> dict[str, str | None]:
 
 
 @router.post("/repos")
-async def register_repo(body: RegisterRepoRequest, factory: FactoryDep) -> dict[str, str | None]:
+async def register_repo(
+    body: RegisterRepoRequest,
+    factory: FactoryDep,
+    auth: IngestionAuthDep,
+) -> dict[str, str | None]:
     """Register a GitHub repository for ingestion."""
     controller = factory.get_ingestion_controller()
     repo = await controller.register_repo(

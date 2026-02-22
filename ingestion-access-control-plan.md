@@ -109,7 +109,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Add a typed alias similar to `FactoryDep`, e.g. `IngestionAuthDep = Annotated[None, Depends(require_ingestion_api_key)]`.
       **Verify:** run `cd backend && uv run python -c "from talkingcode.dependencies import IngestionAuthDep; print(IngestionAuthDep is not None)"`.
 
-- [ ] **Step 6: Protect `POST /repos`**
+- [x] **Step 6: Protect `POST /repos`**
       File: `backend/src/talkingcode/routes/repo_routes.py`.
       Import the new auth dependency alias and add it to `register_repo(...)` route parameters (unused arg is fine).
       Do not change endpoint path or response shape.
