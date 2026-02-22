@@ -272,55 +272,55 @@ Required indexes for retrieval:
       `dependencies.py` (FastAPI Depends), `factory.py` (AppFactory dataclass).
       Verify: app starts and health route responds.
 
-- [x] **Step 3: Implement domain + ORM + Alembic foundations**
+- [ ] **Step 3: Implement domain + ORM + Alembic foundations**
       Added domain dataclasses (slots=True, frozen=True), ORM models in `models/orm.py`
       (repositories, documents, chunks, embeddings, conversation_turns, timeline).
       Verify: autogenerate revision works.
 
-- [x] **Step 4: Add repositories and baseline ingestion/search services**
+- [ ] **Step 4: Add repositories and baseline ingestion/search services**
       Implemented ConversationRepository, DocumentRepository with search and save methods.
       Verify: repo methods work with ORM.
 
-- [x] **Step 5: Add metadata persistence for classification and timeline**
+- [ ] **Step 5: Add metadata persistence for classification and timeline**
       Added TimelineRepository for tool call timeline persistence.
       Verify: timeline CRUD works.
 
-- [x] **Step 6: Implement document classifier service (structured outputs)**
+- [ ] **Step 6: Implement document classifier service (structured outputs)**
       DocumentClassifier with OpenAI structured outputs, strict JSON schema for classification.
       Verify: classification service returns proper output.
 
-- [x] **Step 7: Implement planner service (every turn)**
+- [ ] **Step 7: Implement planner service (every turn)**
       PlannerService with OpenRouter integration, strict structured output schema,
       fallback policy: one retry then gemini-3-flash fallback.
       Verify: planner schema and fallback behavior work.
 
-- [x] **Step 8: Implement tool registry (function -> tool schema)**
+- [ ] **Step 8: Implement tool registry (function -> tool schema)**
       ToolRegistry with register_tool, get_tool_definitions, execute_group with TaskGroup.
       Verify: registry converts and executes tools.
 
-- [x] **Step 9: Implement tools (`run_retriever`, `get_file_details_from_github`)**
+- [ ] **Step 9: Implement tools (`run_retriever`, `get_file_details_from_github`)**
       RetrieverTool with dataclass IO, schema generation, cache-only file details.
       Verify: tool execution works.
 
-- [x] **Step 10: Implement grouped tool executor with TaskGroup**
+- [ ] **Step 10: Implement grouped tool executor with TaskGroup**
       execute_group in ToolRegistry with sequential/parallel execution using TaskGroup,
       3 tools/turn cap enforced.
       Verify: parallel execution works, failures handled properly.
 
-- [x] **Step 11: Implement agent loop service**
+- [ ] **Step 11: Implement agent loop service**
       AgentLoopService with run_turn async generator, planner every turn, stop rules enforcement.
       Verify: loop streams events correctly.
 
-- [x] **Step 12: Implement whitebox streaming and timeline persistence**
+- [ ] **Step 12: Implement whitebox streaming and timeline persistence**
       WhiteboxEvent streaming with all event types, timeline entries created during execution.
       Verify: stream ordering correct, payload bodies hidden.
 
-- [x] **Step 13: Wire controllers/routes and OpenAPI contracts**
+- [ ] **Step 13: Wire controllers/routes and OpenAPI contracts**
       ChatController with start_agentic_turn and get_timeline, FastAPI routes at /chat/agentic
       (SSE) and /chat/timeline.
       Verify: API serves OpenAPI spec at /openapi.json.
 
-- [x] **Step 14: Final backend verification**
+- [ ] **Step 14: Final backend verification**
       All backend components integrated, docker-compose configured.
       Verify: docker compose config succeeds, health endpoint responds.
 

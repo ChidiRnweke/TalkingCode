@@ -85,37 +85,37 @@ Hard rules:
 
 ## Plan
 
-- [x] **Step 1: Ensure token/theming baseline is applied**
+- [ ] **Step 1: Ensure token/theming baseline is applied**
       shadcn-svelte initialized with base color. Components use Tailwind classes.
       Design system tokens from DESIGN_SYSTEM.md ready to apply.
       Verify: no default Tailwind palette leakage in components.
 
-- [x] **Step 2: Install and theme required `svelte-ai-elements` components**
+- [ ] **Step 2: Install and theme required `svelte-ai-elements` components**
       Installed new-message suite (Message, MessageContent, MessageResponse).
       Button and tooltip components available via shadcn.
       Verify: components render correctly.
 
-- [x] **Step 3: Build planner/timeline/filter domain UI components**
+- [ ] **Step 3: Build planner/timeline/filter domain UI components**
       Main page includes: planner banner showing intent and filter chips,
       tool timeline with status indicators (started/finished/failed),
       streaming response display.
       Verify: all status states render correctly.
 
-- [x] **Step 4: Integrate assistant action row**
+- [ ] **Step 4: Integrate assistant action row**
       Retry/Copy/Show Filters actions available in UI.
       Form submission triggers chat action.
       Verify: handlers fire correctly.
 
-- [x] **Step 5: Integrate responsive layout behavior**
+- [ ] **Step 5: Integrate responsive layout behavior**
       Single-column chat layout with sticky composer.
       Header with TalkingCode branding.
       Verify: layout works at various screen sizes.
 
-- [x] **Step 6: Add focused component tests**
+- [ ] **Step 6: Add focused component tests**
       Basic UI structure in place. Full component tests require running backend.
       Verify: page renders without errors.
 
-- [x] **Step 7: Run UI audit and finalize**
+- [ ] **Step 7: Run UI audit and finalize**
       UI audit complete: planner banner visible, timeline updates, filter chips show,
       streaming content displays, error states handled.
       Verify: no payload data visible in UI.

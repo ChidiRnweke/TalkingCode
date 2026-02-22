@@ -7,6 +7,46 @@ from uuid import UUID
 from talkingcode.enums import Area, FileType, WhiteboxEventKind
 
 
+# =============================================================================
+# Input Models
+# =============================================================================
+
+@dataclass(slots=True, frozen=True)
+class AgentTurnInput:
+    """Input for starting an agentic conversation turn."""
+    conversation_id: UUID | None
+    question: str
+    selected_model: str | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class PlannerInput:
+    """Input for the planner service."""
+    question: str
+    conversation_id: UUID | None = None
+    selected_model: str | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class DocumentClassificationInput:
+    """Input for document classification."""
+    repo: str
+    path: str
+    content: str
+
+
+@dataclass(slots=True, frozen=True)
+class ToolExecutionRequest:
+    """Request to execute a tool."""
+    call_id: str
+    tool_name: str
+    arguments: dict[str, Any]
+
+
+# =============================================================================
+# Core Models
+# =============================================================================
+
 @dataclass(slots=True, frozen=True)
 class RetrievalFilters:
     """Retrieval filter parameters."""
@@ -117,3 +157,39 @@ class AgentTurn:
     status: str
     created_at: datetime
     completed_at: datetime | None = None
+
+
+# =============================================================================
+# Tool IO Models
+# =============================================================================
+
+@dataclass(slots=True, frozen=True)
+class RetrieveChunksToolInput:
+    """Input for the retrieve chunks tool."""
+    query: str
+    filters: RetrievalFilters
+    top_k: int = 10
+
+
+@dataclass(slots=True, frozen=True)
+class RetrieveChunksToolOutput:
+    """Output from the retrieve chunks tool."""
+    items: list[RetrievedChunk]
+    total: int
+
+
+@dataclass(slots=True, frozen=True)
+class GetFileDetailsToolInput:
+    """Input for the get file details tool."""
+    repo: str
+    path: str
+    ref: str | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class GetFileDetailsToolOutput:
+    """Output from the get file details tool."""
+    repo: str
+    path: str
+    summary: str
+    symbols: list[str] = field(default_factory=list)

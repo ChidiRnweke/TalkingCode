@@ -11,7 +11,7 @@ This implementation uses official CLI tools for project scaffolding:
 
 ## Environment & Credentials
 
-1. **OpenRouter API Key**: Required for LLM operations (planner, classification, embeddings). Assumes user will provide `OPENROUTER_API_KEY` in environment.
+1. **OpenRouter API Key**: Required for planner/generation operations. Assumes user will provide `OPENROUTER_API_KEY` in environment.
 
 2. **Database**: Uses PostgreSQL 15+ with pgVector extension. Docker Compose will provision this.
 
@@ -19,7 +19,7 @@ This implementation uses official CLI tools for project scaffolding:
 
 4. **Default Model**: Uses OpenRouter with `anthropic/claude-3.5-sonnet` as default if no model specified.
 
-5. **Embedding Model**: Uses OpenAI `text-embedding-3-small` for chunk embeddings.
+5. **Embedding Model**: Intended model is OpenAI `text-embedding-3-small` for chunk embeddings, but end-to-end embedding generation/retrieval wiring is not fully complete yet.
 
 ## Technical Decisions
 
@@ -43,9 +43,9 @@ This implementation uses official CLI tools for project scaffolding:
 
 2. **File Details Tool**: Implements cache-only lookup as specified (no live GitHub fallback).
 
-3. **Chunking Strategy**: Uses simple token-based chunking (~500 tokens) with overlap for V1.
+3. **Chunking Strategy**: Planned strategy is simple token-based chunking (~500 tokens) with overlap for V1; ingestion pipeline implementation is still incomplete.
 
-4. **Vector Search**: Basic cosine similarity on pgVector without advanced reranking.
+4. **Vector Search**: Target is basic cosine similarity on pgVector without advanced reranking; current repository search path is still placeholder and must be completed.
 
 5. **Conversation Storage**: Minimal conversation metadata (no full message history persistence beyond timeline).
 
@@ -67,31 +67,39 @@ This implementation uses official CLI tools for project scaffolding:
 
 ## Implementation Status
 
-**All blueprint steps completed:**
+**Current status (corrected):**
 
 - [x] Step 1: Project scaffolding with uv and sv CLI
-- [x] Step 2: Backend agentic implementation (14 steps)
-- [x] Step 3: Frontend architecture (8 steps)
-- [x] Step 4: Frontend UI (7 steps)
-- [x] Step 5: Integration ready for verification
+- [ ] Step 2: Backend agentic implementation (in progress)
+- [ ] Step 3: Frontend architecture (in progress)
+- [ ] Step 4: Frontend UI (in progress)
+- [ ] Step 5: Integration and verification (not complete)
 
 **Project Structure:**
 - `backend/` - FastAPI with SQLAlchemy, planner, tools, streaming
 - `talkingcode-frontend/` - SvelteKit with agentic UI
 - `docker-compose.yml` - Development stack
 
-**Key Features Implemented:**
-- Agentic chat loop with planner and tool execution
-- SSE streaming with whitebox events (planner, tools, streaming)
-- Structured output classification and planning
-- Timeline persistence with redacted metadata
-- Reactive frontend store with turn lifecycle
-- Tool registry with TaskGroup parallel execution
+**Key Features Partially Implemented:**
+- Agentic chat loop skeleton with planner and tool execution path
+- SSE whitebox event stream framework
+- Structured output schema usage for classification and planning
+- Timeline persistence model/repository foundations
+- Reactive frontend store baseline for turn lifecycle
+- Tool registry with TaskGroup-based parallel execution support
 
-**Ready for Testing:**
-1. Copy backend/.env.example to backend/.env and add API keys
-2. Run: `docker compose up --build -d`
-3. Access: http://localhost:3000
+**Not Yet Ready for Full Contract Verification:**
+1. Complete backend retrieval/timeline/streaming contract gaps
+2. Complete frontend strict parser and contract-safe orchestration gaps
+3. Run end-to-end contract verification after these gaps are closed
+
+## Rectification Plan
+
+- [ ] Re-baseline blueprint and assumptions documents to reflect actual state.
+- [ ] Complete data ingestion/retrieval path (chunking, embeddings, pgVector query flow).
+- [ ] Finish backend timeline retrieval and strict tool contract enforcement.
+- [ ] Enforce strict frontend SSE payload validation (including unknown-field rejection).
+- [ ] Replace placeholder/demo verification with contract-driven tests and e2e checks.
 
 ## Verification Dependencies
 

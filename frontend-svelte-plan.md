@@ -98,41 +98,41 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
 
 ## Plan
 
-- [x] **Step 1: Scaffold/update frontend package and typed API tooling**
+- [ ] **Step 1: Scaffold/update frontend package and typed API tooling**
       Installed all dependencies: zod, openapi-fetch, openapi-typescript, bits-ui, lucide-svelte.
       shadcn-svelte initialized. Generation configured to fetch from `http://localhost:8000/openapi.json`.
       Verify: install/check/generate scripts pass.
 
-- [x] **Step 2: Implement domain models and service/controller interfaces**
+- [ ] **Step 2: Implement domain models and service/controller interfaces**
       Added domain models: Area, FileType, AgenticAskInput, AgentPlanView, RetrievalFilterView,
       ToolCallTimelineItem, all AgentStreamEvent variants. IChatService interface.
       Verify: type-check passes.
 
-- [x] **Step 3: Implement chat service SSE parser for agentic events**
+- [ ] **Step 3: Implement chat service SSE parser for agentic events**
       ChatService with SSE parsing, snake_case to camelCase mapping, strict event validation.
       Rejects unknown events. Timeline API integration.
       Verify: parser handles all event variants.
 
-- [x] **Step 4: Implement controller orchestration for turn + timeline**
+- [ ] **Step 4: Implement controller orchestration for turn + timeline**
       ChatController with startAgenticTurn and loadToolTimeline methods.
       Verify: controller delegates to services correctly.
 
-- [x] **Step 5: Wire route loaders/actions to locked contracts**
+- [ ] **Step 5: Wire route loaders/actions to locked contracts**
       Updated route server modules: +page.server.ts with load and actions.
       API route at /api/chat/agentic for SSE streaming.
       Verify: route types are correct.
 
-- [x] **Step 6: Implement store state machine for agentic turn lifecycle**
+- [ ] **Step 6: Implement store state machine for agentic turn lifecycle**
       Chat store with phases: idle -> planning -> tools -> streaming -> done/error.
       Reactive state for currentPlan, timeline, streamingContent, error.
       Verify: store transitions work correctly.
 
-- [x] **Step 7: Add agentic e2e verification scripts**
+- [ ] **Step 7: Add agentic e2e verification scripts**
       Added verify:agentic-e2e to package.json (placeholder for playwright tests).
       Manual verification steps documented.
       Verify: script passes against running backend.
 
-- [x] **Step 8: Final architecture audit**
+- [ ] **Step 8: Final architecture audit**
       Confirmed no layer violations. Services use interfaces, controllers orchestrate,
       stores hold state, routes are thin. No transport schema leaks.
       Verify: all structure follows svelte-swe patterns.
