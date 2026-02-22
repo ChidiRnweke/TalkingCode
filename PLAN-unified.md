@@ -2335,7 +2335,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step D.3: Final cleanup**
+- [x] **Step D.3: Final cleanup**
 
       **What to do:**
 
@@ -2357,6 +2357,12 @@ Phase D — Integration & polish:
       4. Check for any TODO comments left in code and resolve or document them.
 
       **Verify:** Both type checks pass clean. `AGENTS.md` is up to date.
+
+      Note: Final checks run (`uv run ruff check src/`, `pnpm check` with 0 errors),
+      `AGENTS.md` updated for repos API/routes and frontend component structure, legacy plan files
+      removed (`PLAN.md`, `backend-python-plan.md`, `frontend-svelte-plan.md`,
+      `frontend-ui-plan.md`, `talkingcode-frontend/PLAN-ui-rebuild.md`), and no unresolved TODOs
+      remain in app code.
 
 ---
 

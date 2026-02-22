@@ -15,9 +15,14 @@ Monorepo — Pattern B (BFF): SvelteKit frontend + Python FastAPI backend.
 
 ## Monorepo layout
 
-- `frontend/` — SvelteKit app (pnpm)
+- `talkingcode-frontend/` — SvelteKit app (pnpm)
 - `backend/` — Python FastAPI app, src layout (`backend/src/talkingcode/`)
 - `docker-compose.yml` — local dev stack (postgres, backend, frontend)
+
+Backend API surface now includes:
+- Chat routes: `/chat/agentic`, `/chat/timeline`
+- Repo management routes: `/repos`, `/repos/{owner}/{name}`,
+  `/repos/{owner}/{name}/ingest`, `/repos/{owner}/{name}/runs`
 
 ## Key conventions
 
@@ -52,7 +57,7 @@ frontend/src/lib/components/
 ├── ui/          # shadcn-svelte auto-generated base components
 ├── primitives/  # Themed wrappers around ui/ components
 ├── layout/      # Page-level structure (Sidebar, Header, MainContent)
-└── domain/      # Feature-specific (ChatMessage, RepoCard, PipelineStatus)
+└── domain/      # Feature-specific (ChatThread, RepoCard, RegisterRepoForm, IngestionHistory)
 ```
 
 ### Conventions
@@ -71,6 +76,5 @@ frontend/src/lib/components/
 
 ### Feature Blueprint Reference
 
-- Active implementation: `PLAN.md`, `backend-python-plan.md`, `frontend-svelte-plan.md`,
-  `frontend-ui-plan.md`
+- Active implementation: `PLAN-unified.md`
 - Agentic RAG is the only supported chat architecture; non-agentic flow is deprecated.
