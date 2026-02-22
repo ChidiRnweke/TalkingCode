@@ -91,7 +91,7 @@ Frontend state extensions:
 
 ## Plan
 
-- [ ] **Step 1: Introduce ReAct SSE event and contract models across backend + frontend**
+- [x] **Step 1: Introduce ReAct SSE event and contract models across backend + frontend**
       Add new event enums/types (`iteration_started`, `plan_chunk`, `plan_done`) and call identity
       fields (`call_id`, `iteration`) in backend and frontend model contracts without changing the
       execution loop yet. Keep code compiling while both old and new event kinds are representable.
@@ -99,11 +99,22 @@ Frontend state extensions:
       `talkingcode-frontend/src/lib/models/index.ts`.
       Verify: backend and frontend type checks pass.
 
-- [ ] **Step 2: Add strict tool contract validation and timeout enforcement in ToolRegistry**
+      Note: Added new backend event kinds and optional `iteration/call_id/code` support on
+      `WhiteboxEvent`, extended tool execution/timeline models for contract evolution, expanded
+      frontend stream event unions and timeline items with `callId/iteration`, and updated SSE
+      formatter to include new optional fields. Verification passed with
+      `uv run pytest backend/tests/unit/test_enums.py -q` and `pnpm check`.
+
+- [x] **Step 2: Add strict tool contract validation and timeout enforcement in ToolRegistry**
       Validate tool existence and arguments against registered schemas before execution. Enforce
       per-call timeout with `asyncio.wait_for`. Return structured error codes.
       Pattern reference: existing `ToolRegistry` execution path.
       Verify: new backend unit tests for unknown tools, invalid args, timeout.
+
+      Note: Added `ToolContractError`, argument schema validation (required/type/unknown keys),
+      timeout enforcement via `asyncio.wait_for`, and structured `error_code` population in
+      `ToolExecutionResult`. Added `backend/tests/unit/test_tool_registry_contract.py` and
+      verified with `uv run pytest backend/tests/unit/test_tool_registry_contract.py -q`.
 
 - [ ] **Step 3: Implement iterative ReAct loop in AgentLoopService with parallel tool batches**
       Refactor `AgentLoopService` to run iterative model-tool-observation cycles until completion.

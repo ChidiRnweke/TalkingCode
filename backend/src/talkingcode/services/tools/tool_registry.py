@@ -12,6 +12,14 @@ logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 ToolFunction = Callable[..., Coroutine[Any, Any, dict[str, Any]]]
 
 
+class ToolContractError(Exception):
+    """Tool contract validation error."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 class IToolRegistry(Protocol):
     """Protocol for tool registry."""
     
@@ -72,9 +80,103 @@ class ToolRegistry:
     async def execute_tool(self, tool_name: str, arguments: dict) -> dict:
         """Execute a single tool."""
         if tool_name not in self._tools:
-            raise ValueError(f"Unknown tool: {tool_name}")
-        
+            raise ToolContractError("unknown_tool", f"Unknown tool: {tool_name}")
+
+        self._validate_tool_arguments(tool_name, arguments)
+
         return await self._tools[tool_name](**arguments)
+
+    def _validate_tool_arguments(self, tool_name: str, arguments: dict[str, Any]) -> None:
+        """Validate tool call arguments against registered schema."""
+        schema = self._schemas.get(tool_name, {})
+        parameters = schema.get("parameters", {})
+
+        if not parameters:
+            return
+
+        self._validate_value_against_schema(
+            value=arguments,
+            schema=parameters,
+            path="arguments",
+            strict_unknown=True,
+        )
+
+    def _validate_value_against_schema(
+        self,
+        *,
+        value: Any,
+        schema: dict[str, Any],
+        path: str,
+        strict_unknown: bool,
+    ) -> None:
+        expected_type = schema.get("type")
+
+        if expected_type == "object":
+            if not isinstance(value, dict):
+                raise ToolContractError(
+                    "invalid_tool_arguments",
+                    f"{path} must be an object",
+                )
+
+            properties = schema.get("properties", {})
+            required = schema.get("required", [])
+
+            for key in required:
+                if key not in value:
+                    raise ToolContractError(
+                        "invalid_tool_arguments",
+                        f"Missing required argument: {path}.{key}",
+                    )
+
+            if strict_unknown or schema.get("additionalProperties") is False:
+                unknown_keys = [k for k in value if k not in properties]
+                if unknown_keys:
+                    raise ToolContractError(
+                        "invalid_tool_arguments",
+                        f"Unknown argument(s): {', '.join(f'{path}.{k}' for k in unknown_keys)}",
+                    )
+
+            for key, child_schema in properties.items():
+                if key in value:
+                    self._validate_value_against_schema(
+                        value=value[key],
+                        schema=child_schema,
+                        path=f"{path}.{key}",
+                        strict_unknown=True,
+                    )
+            return
+
+        if expected_type == "array":
+            if not isinstance(value, list):
+                raise ToolContractError(
+                    "invalid_tool_arguments",
+                    f"{path} must be an array",
+                )
+
+            item_schema = schema.get("items")
+            if isinstance(item_schema, dict):
+                for idx, item in enumerate(value):
+                    self._validate_value_against_schema(
+                        value=item,
+                        schema=item_schema,
+                        path=f"{path}[{idx}]",
+                        strict_unknown=True,
+                    )
+            return
+
+        if expected_type == "string" and not isinstance(value, str):
+            raise ToolContractError("invalid_tool_arguments", f"{path} must be a string")
+
+        if expected_type == "integer" and (not isinstance(value, int) or isinstance(value, bool)):
+            raise ToolContractError("invalid_tool_arguments", f"{path} must be an integer")
+
+        if expected_type == "number" and (
+            (not isinstance(value, (int, float))) or isinstance(value, bool)
+        ):
+            raise ToolContractError("invalid_tool_arguments", f"{path} must be a number")
+
+        if expected_type == "boolean" and not isinstance(value, bool):
+            raise ToolContractError("invalid_tool_arguments", f"{path} must be a boolean")
     
     async def execute_group(
         self,
@@ -94,9 +196,13 @@ class ToolRegistry:
             
             start = time.time()
             try:
-                result = await self.execute_tool(tool_name, arguments)
+                timeout_seconds = self._timeouts.get(tool_name, input_data.timeout_seconds)
+                result = await asyncio.wait_for(
+                    self.execute_tool(tool_name, arguments),
+                    timeout=timeout_seconds,
+                )
                 duration_ms = int((time.time() - start) * 1000)
-                
+
                 return ToolExecutionResult(
                     call_id=call_id,
                     tool_name=tool_name,
@@ -113,6 +219,18 @@ class ToolRegistry:
                     payload_json="{}",
                     duration_ms=duration_ms,
                     error="Tool execution timeout",
+                    error_code="tool_timeout",
+                )
+            except ToolContractError as e:
+                duration_ms = int((time.time() - start) * 1000)
+                return ToolExecutionResult(
+                    call_id=call_id,
+                    tool_name=tool_name,
+                    success=False,
+                    payload_json="{}",
+                    duration_ms=duration_ms,
+                    error=str(e),
+                    error_code=e.code,
                 )
             except Exception as e:
                 duration_ms = int((time.time() - start) * 1000)
@@ -123,6 +241,7 @@ class ToolRegistry:
                     payload_json="{}",
                     duration_ms=duration_ms,
                     error=str(e),
+                    error_code="tool_execution_error",
                 )
         
         if input_data.parallel:

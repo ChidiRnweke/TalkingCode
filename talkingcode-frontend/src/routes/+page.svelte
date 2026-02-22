@@ -2,11 +2,33 @@
 	import HeroComposer from '$lib/components/domain/HeroComposer.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import { GitBranch, MessageSquare, Search, Zap } from 'lucide-svelte';
+	import { onMount } from 'svelte';
+	import { fade, fly } from 'svelte/transition';
+
+	let showStickyBar = $state(false);
+	let heroRef = $state<HTMLElement | null>(null);
+
+	onMount(() => {
+		if (!heroRef) return;
+		
+		const observer = new IntersectionObserver(
+			([entry]) => {
+				showStickyBar = !entry.isIntersecting;
+			},
+			{ threshold: 0.1 }
+		);
+
+		observer.observe(heroRef);
+		return () => observer.disconnect();
+	});
 </script>
 
 <main class="flex-1 flex flex-col bg-background">
 	<!-- Hero Section -->
-	<section class="min-h-screen flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden">
+	<section 
+		bind:this={heroRef}
+		class="min-h-screen flex flex-col items-center justify-center px-6 py-20 relative overflow-hidden"
+	>
 		<!-- Background Accents -->
 		<div class="absolute top-1/4 -left-20 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
 		<div class="absolute bottom-1/4 -right-20 w-96 h-96 bg-accent/5 rounded-full blur-3xl"></div>
@@ -155,6 +177,20 @@
 			&copy; {new Date().getFullYear()} Chidi Nweke. Learning and sharing.
 		</footer>
 	</section>
+
+	<!-- Sticky Chat Bar -->
+	{#if showStickyBar}
+		<div 
+			transition:fly={{ y: 50, duration: 300 }}
+			class="fixed bottom-0 left-0 right-0 z-50 p-4 pointer-events-none"
+		>
+			<div class="mx-auto max-w-2xl w-full pointer-events-auto">
+				<div class="bg-background/80 backdrop-blur-xl border border-border/60 shadow-2xl rounded-2xl p-2">
+					<HeroComposer compact />
+				</div>
+			</div>
+		</div>
+	{/if}
 </main>
 
 <style>
