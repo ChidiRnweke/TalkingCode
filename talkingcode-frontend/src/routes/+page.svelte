@@ -84,8 +84,8 @@
 								<Search class="size-5 text-primary" />
 							</div>
 							<div>
-								<h4 class="font-bold uppercase tracking-wider text-sm mb-1">Contextual Retrieval</h4>
-								<p class="text-sm text-muted-foreground">My attempt at making search feel more like how an engineer actually reads a codebase.</p>
+								<h4 class="font-bold uppercase tracking-wider text-sm mb-1">Reasoning over Data</h4>
+								<p class="text-sm text-muted-foreground">Using my GitHub code as a rich dataset to demonstrate how agents can navigate and interpret complex information.</p>
 							</div>
 						</div>
 						<div class="flex gap-4">
@@ -93,8 +93,8 @@
 								<Zap class="size-5 text-primary" />
 							</div>
 							<div>
-								<h4 class="font-bold uppercase tracking-wider text-sm mb-1">Thoughtful Planning</h4>
-								<p class="text-sm text-muted-foreground">Using agentic loops to plan investigations before jumping to conclusions.</p>
+								<h4 class="font-bold uppercase tracking-wider text-sm mb-1">Multi-Step Planning</h4>
+								<p class="text-sm text-muted-foreground">The core of the project: agentic loops that plan, research, and synthesize answers through iterative reasoning.</p>
 							</div>
 						</div>
 					</div>

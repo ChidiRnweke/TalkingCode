@@ -31,13 +31,13 @@
 		</div>
 
 		<div class="flex flex-col gap-6 overflow-y-auto p-4">
-			{#if message.plan}
+			{#if message.plan || message.planText}
 				<section>
 					<h4 class="mb-2 font-display text-sm font-medium tracking-tight text-muted-foreground uppercase">
-						Planner
+						Plan
 					</h4>
-					<p class="text-sm text-foreground">{message.plan.intent}</p>
-					{#if message.plan.filters.areas.length > 0 || message.plan.filters.languages.length > 0 || message.plan.filters.fileTypes.length > 0}
+					<p class="text-sm text-foreground">{message.planText || message.plan?.intent}</p>
+					{#if message.plan && (message.plan.filters.areas.length > 0 || message.plan.filters.languages.length > 0 || message.plan.filters.fileTypes.length > 0)}
 						<div class="mt-3 flex flex-wrap gap-1.5">
 							{#each message.plan.filters.areas as area}
 								<Badge variant="secondary">{area}</Badge>

@@ -32,11 +32,15 @@
 
 <Message from="assistant" class="max-w-none">
 	{#if message.plan || message.isStreaming}
-		<InlineReasoning plan={message.plan} isStreaming={message.isStreaming && !message.content} />
+		<InlineReasoning
+			plan={message.plan}
+			planText={message.planText}
+			isStreaming={message.isStreaming && !message.content}
+		/>
 	{/if}
 
 	{#if message.toolCalls && message.toolCalls.length > 0}
-		{#each message.toolCalls as tool (tool.toolName + tool.timestamp)}
+		{#each message.toolCalls as tool (tool.callId || tool.toolName + tool.timestamp)}
 			<InlineTool {tool} />
 		{/each}
 	{/if}
