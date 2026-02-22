@@ -1,7 +1,6 @@
 """Chat controller with SSE streaming."""
 import json
 from dataclasses import dataclass
-from datetime import datetime
 from typing import AsyncGenerator
 from uuid import UUID
 
@@ -14,7 +13,6 @@ from talkingcode.config import AppConfig
 from talkingcode.dependencies import get_config, get_db_session
 from talkingcode.domain.models import ToolTimelineItem, WhiteboxEvent
 from talkingcode.domain.services import AgentTurnInput as AgentTurnInputDTO
-from talkingcode.enums import WhiteboxEventKind
 from talkingcode.repository.conversation_repository import ConversationRepository
 from talkingcode.services.agent.agent_loop import AgentLoopService
 from talkingcode.services.agent.timeline_repository import TimelineRepository

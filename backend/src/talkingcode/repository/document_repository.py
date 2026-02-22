@@ -88,7 +88,7 @@ class DocumentRepository:
             },
         )
         
-        result = await self.session.execute(stmt)
+        await self.session.execute(stmt)
         await self.session.flush()
         
         # Get the document ID

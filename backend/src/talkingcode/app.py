@@ -8,10 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from talkingcode.config import AppConfig
-from talkingcode.controllers.chat_controller import ChatController
 from talkingcode.errors import TalkingCodeError
-from talkingcode.factory import AppFactory
-from talkingcode.models.orm import Base
 from talkingcode.repository.database import get_engine, init_db
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)

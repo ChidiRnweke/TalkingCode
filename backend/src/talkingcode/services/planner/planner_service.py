@@ -9,7 +9,6 @@ import structlog
 from talkingcode.domain.models import PlannerOutput, RetrievalFilters, StopRules, ToolGroupPlan, PlannedToolCall
 from talkingcode.domain.services import PlannerInput
 from talkingcode.enums import Area, FileType
-from talkingcode.errors import PlannerError
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 

@@ -65,8 +65,8 @@ class GetFileDetailsToolOutput:
 @dataclass(slots=True, frozen=True)
 class AgentTurnInput:
     """Input to agent loop service."""
-    conversation_id: UUID | None = None
     question: str
+    conversation_id: UUID | None = None
     selected_model: str | None = None
 
 

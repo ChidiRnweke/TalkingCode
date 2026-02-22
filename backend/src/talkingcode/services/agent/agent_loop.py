@@ -1,17 +1,12 @@
 """Agent loop service with streaming."""
-import asyncio
-import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import AsyncGenerator
-from uuid import UUID
 
 import structlog
 
 from talkingcode.domain.models import (
     AgentTurnInput,
-    PlannerOutput,
-    ToolExecutionResult,
     WhiteboxEvent,
 )
 from talkingcode.domain.services import ExecuteToolGroupInput, PlannerInput

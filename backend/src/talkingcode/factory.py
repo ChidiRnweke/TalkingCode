@@ -1,6 +1,6 @@
 """Application factory."""
 from dataclasses import dataclass
-from uuid import UUID
+from typing import TYPE_CHECKING
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,9 @@ from talkingcode.services.classification.document_classifier import DocumentClas
 from talkingcode.services.planner.planner_service import PlannerService
 from talkingcode.services.tools.retriever_tool import RetrieverTool
 from talkingcode.services.tools.tool_registry import ToolRegistry
+
+if TYPE_CHECKING:
+    from talkingcode.controllers.chat_controller import ChatController
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 

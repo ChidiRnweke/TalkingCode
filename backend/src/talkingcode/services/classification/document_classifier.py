@@ -1,7 +1,6 @@
 """Document classifier using structured output."""
 import json
 from dataclasses import dataclass
-from typing import Any
 
 import httpx
 import structlog

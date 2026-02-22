@@ -4,8 +4,6 @@ from typing import Any
 
 import structlog
 
-from talkingcode.domain.models import RetrievedChunk
-from talkingcode.domain.services import RetrieveChunksToolInput, RetrieveChunksToolOutput
 from talkingcode.repository.document_repository import DocumentRepository
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
