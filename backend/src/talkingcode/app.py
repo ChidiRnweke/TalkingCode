@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from talkingcode.config import AppConfig
-from talkingcode.errors import TalkingCodeError
+from talkingcode.errors import AppError, InfraError, NotFoundError
 from talkingcode.repository.database import get_engine, init_db
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
@@ -53,28 +53,31 @@ def create_app() -> FastAPI:
     )
     
     # Error handlers
-    @app.exception_handler(TalkingCodeError)
-    async def talkingcode_error_handler(request: Request, exc: TalkingCodeError) -> JSONResponse:
+    @app.exception_handler(AppError)
+    async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
         status_code = 400
-        if exc.code == "not_found":
+        error_code = "unknown_error"
+        message = str(exc)
+        
+        if isinstance(exc, NotFoundError):
             status_code = 404
-        elif exc.code == "timeout":
-            status_code = 504
-        elif exc.code in ("llm_error", "planner_error"):
+            error_code = "not_found"
+            message = f"{exc.resource} not found"
+        elif isinstance(exc, InfraError):
             status_code = 502
+            error_code = "infrastructure_error"
         
         return JSONResponse(
             status_code=status_code,
             content={
-                "error": exc.code,
-                "message": exc.message,
-                "details": exc.details,
+                "error": error_code,
+                "message": message,
             },
         )
     
     # Include routers
-    from talkingcode.controllers import chat_controller
-    app.include_router(chat_controller.router, prefix="/chat", tags=["chat"])
+    from talkingcode.routes import chat_routes
+    app.include_router(chat_routes.router, prefix="/chat", tags=["chat"])
     
     @app.get("/health")
     async def health_check() -> dict[str, str]:
