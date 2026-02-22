@@ -1,15 +1,23 @@
 """Document classifier using structured output."""
 import json
 from dataclasses import dataclass
+from typing import Protocol
 
 import httpx
 import structlog
 
-from talkingcode.domain.models import DocumentClassificationOutput
-from talkingcode.domain.services import DocumentClassificationInput
+from talkingcode.domain.models import DocumentClassificationInput, DocumentClassificationOutput
 from talkingcode.enums import Area, FileType
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+
+
+class IDocumentClassifier(Protocol):
+    """Protocol for document classifier."""
+    
+    async def classify(self, input_data: DocumentClassificationInput) -> DocumentClassificationOutput:
+        """Classify a document."""
+        ...
 
 CLASSIFICATION_SCHEMA = {
     "type": "object",
