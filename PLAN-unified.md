@@ -714,7 +714,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step B.3: Create RepoRepository for repository + ingestion run management**
+- [x] **Step B.3: Create RepoRepository for repository + ingestion run management**
 
       **Files to create:**
       - `backend/src/talkingcode/repository/repo_repository.py`
