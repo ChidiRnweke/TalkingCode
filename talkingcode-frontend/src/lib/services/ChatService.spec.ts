@@ -43,7 +43,7 @@ describe('parseAgentEvent', () => {
 			JSON.stringify({
 				turn_id: 'turn-1',
 				timestamp: '2026-01-01T00:00:00Z',
-				tool_name: 'run_retriever',
+				tool_name: 'search_github',
 				visible_args: { success: true }
 			})
 		);
@@ -85,22 +85,49 @@ describe('parseAgentEvent', () => {
 		});
 	});
 
+	it('accepts tool_call_finished with null error_code', () => {
+		const event = parseAgentEvent(
+			'tool_call_finished',
+			JSON.stringify({
+				turn_id: 'turn-1',
+				timestamp: '2026-01-01T00:00:00Z',
+				tool_name: 'search_github',
+				call_id: 'call-1',
+				iteration: 1,
+				message: 'Completed search_github',
+				visible_args: { success: true, duration_ms: 1234, error_code: null }
+			})
+		);
+
+		expect(event).toEqual({
+			kind: 'tool_call_finished',
+			turnId: 'turn-1',
+			toolName: 'search_github',
+			callId: 'call-1',
+			iteration: 1,
+			success: true,
+			durationMs: 1234,
+			errorCode: undefined,
+			timestamp: '2026-01-01T00:00:00Z'
+		});
+	});
+
 	it('accepts backend-style tool_call_started without visible_args', () => {
 		const event = parseAgentEvent(
 			'tool_call_started',
 			JSON.stringify({
 				turn_id: 'turn-1',
 				timestamp: '2026-01-01T00:00:00Z',
-				tool_name: 'run_retriever',
+				tool_name: 'search_github',
 				call_id: 'call-1',
-				message: 'Starting run_retriever'
+				message: 'Starting search_github'
 			})
 		);
 
 		expect(event).toEqual({
 			kind: 'tool_call_started',
 			turnId: 'turn-1',
-			toolName: 'run_retriever',
+			toolName: 'search_github',
 			callId: 'call-1',
 			iteration: undefined,
 			visibleArgs: {},

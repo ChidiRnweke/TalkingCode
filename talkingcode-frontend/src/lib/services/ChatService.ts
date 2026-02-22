@@ -51,13 +51,11 @@ const toolCallFinishedSchema = baseSchema
 		iteration: z.number().int().positive().optional(),
 		call_id: z.string().min(1).optional(),
 		tool_name: z.string().min(1),
-		visible_args: z
-			.object({
-				success: z.boolean(),
-				duration_ms: z.number().int().nonnegative(),
-				error_code: z.string().optional()
-			})
-			.strict(),
+		visible_args: z.object({
+			success: z.boolean(),
+			duration_ms: z.number().int().nonnegative(),
+			error_code: z.string().nullish()
+		}),
 		code: z.string().optional()
 	})
 	.strict();
@@ -137,7 +135,7 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 				iteration: result.data.iteration,
 				success: result.data.visible_args.success,
 				durationMs: result.data.visible_args.duration_ms,
-				errorCode: result.data.visible_args.error_code || result.data.code,
+				errorCode: result.data.visible_args.error_code ?? result.data.code ?? undefined,
 				timestamp: result.data.timestamp
 			};
 		}

@@ -132,19 +132,27 @@ function createChatStore() {
 				}
 
 				case 'tool_call_finished': {
-					const toolCalls = current.toolCalls?.map((t) =>
-						t.turnId === event.turnId &&
-						t.toolName === event.toolName &&
-						(event.callId ? t.callId === event.callId : true) &&
-						t.status === 'started'
-							? {
-								...t,
-									status: event.success ? 'finished' as const : 'failed' as const,
-									durationMs: event.durationMs
-								}
-							: t
-					);
-					messages[idx] = { ...current, toolCalls };
+					const toolCalls = current.toolCalls ?? [];
+					const idxToUpdate = toolCalls.findLastIndex((t) => {
+						if (event.callId && t.callId) {
+							return t.callId === event.callId;
+						}
+						return (
+							t.turnId === event.turnId &&
+							t.toolName === event.toolName &&
+							t.status === 'started'
+						);
+					});
+
+					if (idxToUpdate !== -1) {
+						const newToolCalls = [...toolCalls];
+						newToolCalls[idxToUpdate] = {
+							...newToolCalls[idxToUpdate],
+							status: event.success ? 'finished' : 'failed',
+							durationMs: event.durationMs
+						};
+						messages[idx] = { ...current, toolCalls: newToolCalls };
+					}
 					break;
 				}
 
