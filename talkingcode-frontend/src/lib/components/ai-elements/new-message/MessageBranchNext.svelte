@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { cn } from "$lib/utils";
-	import { getMessageBranchContext } from "./message-context.svelte.js";
-	import { Button, type ButtonProps } from "$lib/components/ui/button/index.js";
-	import ChevronRight from "@lucide/svelte/icons/chevron-right";
-	import type { Snippet } from "svelte";
+	import { cn } from '$lib/utils';
+	import { getMessageBranchContext } from './message-context.svelte.js';
+	import { Button, type ButtonProps } from '$lib/components/ui/button/index.js';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import type { Snippet } from 'svelte';
 
-	interface Props extends Omit<ButtonProps, "children"> {
+	interface Props extends Omit<ButtonProps, 'children'> {
 		class?: string;
 		children?: Snippet;
 	}
@@ -24,7 +24,7 @@
 	size="icon"
 	type="button"
 	variant="ghost"
-	class={cn("size-7", className)}
+	class={cn('size-7', className)}
 	{...restProps}
 >
 	{#if children}

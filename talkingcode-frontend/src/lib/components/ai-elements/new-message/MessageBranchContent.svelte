@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { cn } from "$lib/utils";
-	import { getMessageBranchContext } from "./message-context.svelte.js";
-	import type { Snippet } from "svelte";
-	import { watch } from "runed";
+	import { cn } from '$lib/utils';
+	import { getMessageBranchContext } from './message-context.svelte.js';
+	import type { Snippet } from 'svelte';
+	import { watch } from 'runed';
 
 	type ContentItem = { id: string; content: string };
 
@@ -47,8 +47,8 @@
 	{#each children as branch, index (index)}
 		<div
 			class={cn(
-				"grid gap-2 overflow-hidden [&>div]:pb-0",
-				index === branchContext.currentBranch ? "block" : "hidden",
+				'grid gap-2 overflow-hidden [&>div]:pb-0',
+				index === branchContext.currentBranch ? 'block' : 'hidden',
 				className
 			)}
 			{...restProps}
@@ -61,8 +61,8 @@
 	{#each content as item, index (item.id)}
 		<div
 			class={cn(
-				"grid gap-2 overflow-hidden [&>div]:pb-0",
-				index === branchContext.currentBranch ? "block" : "hidden",
+				'grid gap-2 overflow-hidden [&>div]:pb-0',
+				index === branchContext.currentBranch ? 'block' : 'hidden',
 				className
 			)}
 			{...restProps}

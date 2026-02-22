@@ -71,7 +71,8 @@ function createChatStore() {
 
 				case 'tool_call_finished': {
 					const idx = timeline.findIndex(
-						(t) => t.turnId === event.turnId && t.toolName === event.toolName && t.status === 'started'
+						(t) =>
+							t.turnId === event.turnId && t.toolName === event.toolName && t.status === 'started'
 					);
 					if (idx >= 0) {
 						timeline[idx] = {
@@ -83,16 +84,16 @@ function createChatStore() {
 					break;
 				}
 
-			case 'assistant_token':
+				case 'assistant_token':
 					phase = 'streaming';
 					streamingContent += event.token;
 					break;
 
-			case 'assistant_done':
+				case 'assistant_done':
 					phase = 'done';
 					break;
 
-			case 'agent_error':
+				case 'agent_error':
 					phase = 'error';
 					error = event.message;
 					break;

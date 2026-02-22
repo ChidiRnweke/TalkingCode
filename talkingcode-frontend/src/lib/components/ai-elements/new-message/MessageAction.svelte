@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { cn } from "$lib/utils";
-	import { Button, type ButtonProps } from "$lib/components/ui/button/index.js";
-	import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-	import type { Snippet } from "svelte";
+	import { cn } from '$lib/utils';
+	import { Button, type ButtonProps } from '$lib/components/ui/button/index.js';
+	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
+	import type { Snippet } from 'svelte';
 
-	interface Props extends Omit<ButtonProps, "children"> {
+	interface Props extends Omit<ButtonProps, 'children'> {
 		tooltip?: string;
 		label?: string;
 		class?: string;
@@ -14,8 +14,8 @@
 	let {
 		tooltip,
 		label,
-		variant = "ghost",
-		size = "icon",
+		variant = 'ghost',
+		size = 'icon',
 		class: className,
 		children,
 		...restProps
@@ -32,7 +32,7 @@
 						{size}
 						type="button"
 						{variant}
-						class={cn("size-7", className)}
+						class={cn('size-7', className)}
 						{...restProps}
 					>
 						{@render children?.()}
@@ -46,7 +46,7 @@
 		</Tooltip.Root>
 	</Tooltip.Provider>
 {:else}
-	<Button {size} type="button" {variant} class={cn("size-7", className)} {...restProps}>
+	<Button {size} type="button" {variant} class={cn('size-7', className)} {...restProps}>
 		{@render children?.()}
 		{#if label}
 			<span class="sr-only">{label}</span>

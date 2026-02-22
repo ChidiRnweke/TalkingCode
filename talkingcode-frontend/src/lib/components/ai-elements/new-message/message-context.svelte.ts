@@ -1,5 +1,5 @@
-import { getContext, setContext } from "svelte";
-import type { Snippet } from "svelte";
+import { getContext, setContext } from 'svelte';
+import type { Snippet } from 'svelte';
 
 // Message Branch Context Types
 export type MessageBranchContextType = {
@@ -11,7 +11,7 @@ export type MessageBranchContextType = {
 	setBranches: (branches: Snippet[]) => void;
 };
 
-const MESSAGE_BRANCH_CONTEXT_KEY = Symbol("message-branch-context");
+const MESSAGE_BRANCH_CONTEXT_KEY = Symbol('message-branch-context');
 
 // MessageBranch Class for state management
 export class MessageBranchClass {
@@ -58,11 +58,11 @@ export function getMessageBranchContext(): MessageBranchClass {
 	const context = getContext<MessageBranchClass>(MESSAGE_BRANCH_CONTEXT_KEY);
 
 	if (!context) {
-		throw new Error("MessageBranch components must be used within MessageBranch");
+		throw new Error('MessageBranch components must be used within MessageBranch');
 	}
 
 	return context;
 }
 
 // Message Role Type
-export type MessageRole = "user" | "assistant" | "system" | "function" | "data" | "tool";
+export type MessageRole = 'user' | 'assistant' | 'system' | 'function' | 'data' | 'tool';

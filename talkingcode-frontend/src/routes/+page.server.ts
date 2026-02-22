@@ -24,7 +24,7 @@ export const actions = {
 		}
 
 		// Return the question data for the client to process
-		return { 
+		return {
 			success: true,
 			question,
 			conversationId,

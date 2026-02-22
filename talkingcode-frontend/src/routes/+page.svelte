@@ -1,7 +1,10 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import type { AgentStreamEvent, Area, FileType } from '$lib/models';
+	import { Card, Badge, Button, Textarea } from '$lib/components/primitives';
+	import { EmptyState, LoadingState } from '$lib/components/layout';
+	import { PlanCard, ToolTimeline } from '$lib/components/domain';
 	import { chatStore } from '$lib/stores';
+	import type { AgentStreamEvent, Area, FileType } from '$lib/models';
+	import { Send, Bot, Sparkles, AlertCircle } from 'lucide-svelte';
 
 	let question = $state('');
 	let isSending = $state(false);
@@ -21,13 +24,13 @@
 					turnId,
 					intent: typeof visible.intent === 'string' ? visible.intent : 'Analyze request',
 					filters: {
-						areas: ((filterRoot.areas as Area[]) || []),
-						languages: ((filterRoot.languages as string[]) || []),
-						fileTypes: ((filterRoot.file_types as FileType[]) || []),
-						pathGlobs: ((filterRoot.path_globs as string[]) || []),
-						repoScopes: ((filterRoot.repo_scopes as string[]) || []),
-						symbolHints: ((filterRoot.symbol_hints as string[]) || []),
-						tags: ((filterRoot.tags as string[]) || [])
+						areas: (filterRoot.areas as Area[]) || [],
+						languages: (filterRoot.languages as string[]) || [],
+						fileTypes: (filterRoot.file_types as FileType[]) || [],
+						pathGlobs: (filterRoot.path_globs as string[]) || [],
+						repoScopes: (filterRoot.repo_scopes as string[]) || [],
+						symbolHints: (filterRoot.symbol_hints as string[]) || [],
+						tags: (filterRoot.tags as string[]) || []
 					},
 					timestamp
 				};
@@ -37,7 +40,7 @@
 					kind: 'tool_call_started',
 					turnId,
 					toolName: typeof raw.tool_name === 'string' ? raw.tool_name : 'unknown_tool',
-					visibleArgs: ((raw.visible_args as Record<string, unknown>) || {}),
+					visibleArgs: (raw.visible_args as Record<string, unknown>) || {},
 					timestamp
 				};
 			case 'tool_call_finished': {
@@ -147,134 +150,198 @@
 	const showEmptyState = $derived(chatStore.phase === 'idle' && !chatStore.streamingContent);
 	const canSubmit = $derived(
 		!isSending &&
-		(chatStore.phase === 'idle' || chatStore.phase === 'done' || chatStore.phase === 'error')
+			(chatStore.phase === 'idle' || chatStore.phase === 'done' || chatStore.phase === 'error')
 	);
+	const hasResponse = $derived(Boolean(chatStore.streamingContent) || chatStore.phase === 'done');
+
+	const phaseBadge = $derived.by(() => {
+		switch (chatStore.phase) {
+			case 'planning':
+				return { variant: 'warning' as const, label: 'Planning' };
+			case 'tools':
+				return { variant: 'primary' as const, label: 'Running Tools' };
+			case 'streaming':
+				return { variant: 'accent' as const, label: 'Streaming' };
+			case 'done':
+				return { variant: 'success' as const, label: 'Complete' };
+			case 'error':
+				return { variant: 'danger' as const, label: 'Error' };
+			default:
+				return { variant: 'default' as const, label: 'Idle' };
+		}
+	});
 </script>
 
-<div class="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-10">
-	<header class="mb-6 rounded-[var(--radius-xl)] border border-border/90 bg-card/90 p-6 shadow-sm backdrop-blur">
-		<p class="mb-2 text-xs uppercase tracking-[0.14em] text-muted-foreground">Editorial Light / Agentic RAG</p>
-		<div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-			<div>
-				<h1 class="text-3xl tracking-tight text-foreground sm:text-4xl">TalkingCode</h1>
-				<p class="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
-					Ask questions about your repository and watch planning, tool calls, and answer streaming in one whitebox timeline.
-				</p>
+<div class="mx-auto flex min-h-screen w-full max-w-[92rem] flex-col px-[var(--page-padding)] py-8 lg:py-10">
+	<!-- Header -->
+	<header class="mb-7 lg:mb-9">
+		<Card padding="lg" elevated class="relative overflow-hidden">
+			<div class="absolute inset-0 opacity-60">
+				<div class="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-accent/12 blur-3xl"></div>
+				<div
+					class="absolute -bottom-20 -left-20 h-48 w-48 rounded-full bg-primary/12 blur-3xl"
+				></div>
 			</div>
-			<div class="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">
-				Phase: <span class="font-semibold text-foreground">{chatStore.phase}</span>
+			<div class="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+				<div>
+					<div class="mb-3 flex items-center gap-2">
+						<div
+							class="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] border border-primary/20 bg-primary/12"
+						>
+							<Bot class="h-4 w-4 text-primary" />
+						</div>
+						<p class="text-xs tracking-[var(--tracking-wider)] text-muted-foreground uppercase">
+							Editorial Light / Agentic RAG Canvas
+						</p>
+					</div>
+					<h1 class="font-display text-4xl tracking-tight text-foreground sm:text-5xl">
+						TalkingCode
+					</h1>
+					<p class="mt-3 max-w-2xl text-base leading-relaxed text-muted-foreground">
+						Research your codebase in a Claude-like workspace: planning context on the left, streamed
+						answers in the center, and tool evidence alongside each turn.
+					</p>
+				</div>
+				<div class="flex items-center gap-3 self-start lg:self-auto">
+					<Badge variant={phaseBadge.variant} size="md">
+						{phaseBadge.label}
+					</Badge>
+					<Badge variant={hasResponse ? 'success' : 'default'} size="md">
+						{hasResponse ? 'Conversation Active' : 'Waiting For Prompt'}
+					</Badge>
+				</div>
 			</div>
-		</div>
+		</Card>
 	</header>
 
-	<div class="grid flex-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
-		<aside class="space-y-4">
-			<section class="rounded-[var(--radius-lg)] border border-border bg-card/95 p-4 shadow-sm">
-				<p class="mb-3 text-xs uppercase tracking-[0.12em] text-muted-foreground">Planner</p>
-				{#if chatStore.currentPlan}
-					<p class="text-sm font-medium text-foreground">{chatStore.currentPlan.intent}</p>
-					<div class="mt-3 flex flex-wrap gap-2">
-						{#each chatStore.currentPlan.filters.areas as area}
-							<span class="rounded-full border border-border bg-secondary px-2.5 py-1 text-xs text-secondary-foreground">
-								{area}
-							</span>
-						{/each}
-						{#each chatStore.currentPlan.filters.languages as language}
-							<span class="rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground">
-								{language}
-							</span>
-						{/each}
-					</div>
-				{:else}
-					<p class="text-sm text-muted-foreground">
-						Planner details appear here as soon as a turn starts.
-					</p>
-				{/if}
+	<!-- Main Content Grid -->
+	<div class="grid flex-1 gap-6 xl:grid-cols-[320px_1fr]">
+		<!-- Left Sidebar -->
+		<aside class="order-2 space-y-5 xl:order-1">
+			<!-- Planner Section -->
+			<section>
+				<div class="mb-3 flex items-center gap-2">
+					<Sparkles class="h-4 w-4 text-primary" />
+					<p class="text-xs tracking-[var(--tracking-wider)] text-muted-foreground uppercase">Planner</p>
+				</div>
+				<PlanCard plan={chatStore.currentPlan} />
 			</section>
 
-			<section class="rounded-[var(--radius-lg)] border border-border bg-card/95 p-4 shadow-sm">
-				<p class="mb-3 text-xs uppercase tracking-[0.12em] text-muted-foreground">Tool Timeline</p>
-				{#if chatStore.timeline.length === 0}
-					<p class="text-sm text-muted-foreground">No tool calls yet.</p>
-				{:else}
-					<div class="space-y-2">
-						{#each chatStore.timeline as item}
-							<div class="rounded-[var(--radius-md)] border border-border bg-background p-3">
-								<div class="flex items-center justify-between gap-2">
-									<p class="truncate text-sm font-medium text-foreground" title={item.toolName}>{item.toolName}</p>
-									<span
-										class="rounded-full px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide"
-										class:text-amber-900={item.status === 'started'}
-										class:bg-amber-200={item.status === 'started'}
-										class:text-emerald-900={item.status === 'finished'}
-										class:bg-emerald-200={item.status === 'finished'}
-										class:text-rose-900={item.status === 'failed'}
-										class:bg-rose-200={item.status === 'failed'}
-									>
-										{item.status}
-									</span>
-								</div>
-								{#if item.durationMs}
-									<p class="mt-1 text-xs text-muted-foreground">{item.durationMs}ms</p>
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
+			<!-- Tool Timeline Section -->
+			<section>
+				<div class="mb-3 flex items-center gap-2">
+					<svg
+						class="h-4 w-4 text-primary"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+					>
+						<path
+							d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+						/>
+					</svg>
+					<p class="text-xs tracking-[var(--tracking-wider)] text-muted-foreground uppercase">Tool Timeline</p>
+				</div>
+				<Card padding="md">
+					<ToolTimeline items={chatStore.timeline} />
+				</Card>
 			</section>
 		</aside>
 
-		<section class="flex min-h-[520px] flex-col rounded-[var(--radius-xl)] border border-border bg-card/95 p-4 shadow-sm sm:p-6">
-			<div class="mb-4 border-b border-border pb-4">
-				<p class="text-xs uppercase tracking-[0.12em] text-muted-foreground">Assistant Output</p>
+		<!-- Main Chat Area -->
+		<Card padding="none" class="order-1 flex min-h-[640px] flex-col xl:order-2">
+			<div class="border-b border-border/80 px-6 py-4">
+				<div class="flex items-center gap-2">
+					<div
+						class="flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] border border-primary/20 bg-primary/10"
+					>
+						<Bot class="h-3.5 w-3.5 text-primary" />
+					</div>
+					<p class="text-xs tracking-[var(--tracking-wider)] text-muted-foreground uppercase">Assistant Output</p>
+				</div>
 			</div>
 
-			<div class="flex-1 overflow-auto pb-4">
+			<div class="flex-1 overflow-auto px-6 py-6">
 				{#if showEmptyState}
-					<div class="flex h-full flex-col items-center justify-center rounded-[var(--radius-lg)] border border-dashed border-border bg-background/60 px-6 text-center">
-						<h2 class="text-2xl text-foreground">Ask your first repository question</h2>
-						<p class="mt-3 max-w-lg text-sm text-muted-foreground">
-							The assistant will show planning context, tool activity, and a streamed answer without exposing payload bodies.
-						</p>
-					</div>
+					<EmptyState
+						title="Stock your coding context"
+						description="Ask for architecture walkthroughs, ownership mapping, or bug triage. Planning and tool activity will stay visible while the answer streams."
+					/>
+				{:else if chatStore.phase === 'planning'}
+					<LoadingState phase="planning" />
+				{:else if chatStore.phase === 'tools'}
+					<LoadingState phase="tools" />
 				{:else}
-					<div class="max-w-[72ch] rounded-[var(--radius-lg)] border border-border bg-background p-4 sm:p-5">
+					<div class="max-w-[72ch]">
 						{#if chatStore.streamingContent}
-							<div class="prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:rounded-md prose-code:text-[0.9em]">
+							<Card
+								padding="lg"
+								variant="subtle"
+								class="prose prose-sm prose-p:leading-relaxed prose-pre:rounded-[var(--radius-lg)] prose-code:text-[0.9em] max-w-none"
+							>
 								{@html chatStore.streamingContent}
-							</div>
-						{:else if chatStore.phase === 'planning' || chatStore.phase === 'tools'}
-							<p class="text-sm text-muted-foreground">Working through planner and tool execution...</p>
+							</Card>
+						{:else if chatStore.phase === 'streaming'}
+							<LoadingState phase="streaming" showSkeleton={false} />
 						{:else if chatStore.phase === 'done'}
-							<p class="text-sm text-muted-foreground">Turn completed.</p>
+							<div class="flex items-center gap-2 text-sm text-muted-foreground">
+								<div class="h-2 w-2 rounded-full bg-[hsl(var(--color-success))]"></div>
+								Turn completed
+							</div>
 						{/if}
 					</div>
 				{/if}
 
 				{#if chatStore.error}
-					<div class="mt-4 rounded-[var(--radius-md)] border border-destructive/35 bg-destructive/10 p-3 text-sm text-foreground">
-						{chatStore.error}
+					<div
+						class="mt-6 flex items-start gap-3 rounded-[var(--radius-lg)] border border-destructive/30 bg-destructive/12 p-4"
+					>
+						<AlertCircle class="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+						<div>
+							<p class="text-sm font-medium text-destructive">Error</p>
+							<p class="mt-1 text-sm text-destructive/80">{chatStore.error}</p>
+						</div>
 					</div>
 				{/if}
 			</div>
 
-			<form onsubmit={handleSubmit} class="mt-2 border-t border-border pt-4">
-				<div class="rounded-[var(--radius-lg)] border border-border bg-background p-3">
-					<textarea
-						name="question"
-						bind:value={question}
-						rows="3"
-						placeholder="Ask about architecture, modules, ownership, or behavior..."
-						class="w-full resize-none border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
-					></textarea>
-					<div class="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3">
-						<p class="text-xs text-muted-foreground">Assistant responses stream in real time</p>
-						<Button type="submit" disabled={!canSubmit} class="min-w-24">
-							{isSending ? 'Sending...' : 'Send'}
-						</Button>
-					</div>
-				</div>
-			</form>
-		</section>
+			<!-- Composer -->
+			<div class="sticky bottom-0 border-t border-border/80 bg-[hsl(var(--color-surface)/0.85)] px-6 py-5 backdrop-blur-sm">
+				<form onsubmit={handleSubmit}>
+					<Card
+						padding="md"
+						variant="subtle"
+						class="transition-all focus-within:border-primary/30 focus-within:shadow-[var(--shadow-md)]"
+					>
+						<Textarea
+							name="question"
+							bind:value={question}
+							rows="3"
+							placeholder="Ask about architecture, modules, ownership, or behavior..."
+							class="border-0 bg-transparent p-0 shadow-none focus:ring-0"
+						/>
+						<div
+							class="mt-4 flex items-center justify-between gap-4 border-t border-border/50 pt-4"
+						>
+							<p class="text-xs text-muted-foreground">
+								Assistant responses stream in real time with tool evidence.
+							</p>
+							<Button type="submit" disabled={!canSubmit} class="min-w-[120px] gap-2">
+								{#if isSending}
+									<span
+										class="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+									></span>
+									Sending...
+								{:else}
+									<Send class="h-4 w-4" />
+									Send
+								{/if}
+							</Button>
+						</div>
+					</Card>
+				</form>
+			</div>
+		</Card>
 	</div>
 </div>
