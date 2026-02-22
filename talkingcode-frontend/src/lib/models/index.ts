@@ -120,3 +120,32 @@ export interface ChatMessage {
 	isStreaming?: boolean;
 	error?: string | null;
 }
+
+// =============================================================================
+// Repository Management
+// =============================================================================
+
+export interface RepositoryInfo {
+	id: string;
+	provider: string;
+	owner: string;
+	name: string;
+	default_branch: string;
+	last_ingested_at: string | null;
+	created_at: string;
+}
+
+export interface IngestionRunInfo {
+	id: string;
+	repository_id: string;
+	status: 'running' | 'done' | 'failed';
+	started_at: string;
+	completed_at: string | null;
+	error_message: string | null;
+}
+
+export interface RegisterRepoInput {
+	owner: string;
+	name: string;
+	defaultBranch?: string;
+}

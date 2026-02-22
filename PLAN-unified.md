@@ -1782,7 +1782,7 @@ Phase D — Integration & polish:
 
 ### Phase C: Frontend Repo Management
 
-- [ ] **Step C.1: Add frontend types and service for repo management**
+- [x] **Step C.1: Add frontend types and service for repo management**
 
       **Files to modify:**
       - `talkingcode-frontend/src/lib/models/index.ts`
@@ -1899,6 +1899,10 @@ Phase D — Integration & polish:
          The API proxy routes will be created in Step C.2.
 
       **Verify:** Run `cd talkingcode-frontend && pnpm check`. Clean. No type errors.
+
+      Note: Added repo management model types and `IRepoService`/`RepoService` implementation.
+      `pnpm check` remains blocked by the same pre-existing `Badge` typing errors in existing
+      chat detail components.
 
 ---
 
