@@ -193,3 +193,12 @@ class GetFileDetailsToolOutput:
     path: str
     summary: str
     symbols: list[str] = field(default_factory=list)
+
+
+@dataclass(slots=True, frozen=True)
+class ExecuteToolGroupInput:
+    """Input for executing a group of tool calls."""
+    group_name: str
+    calls: list[dict[str, Any]]
+    parallel: bool = False
+    timeout_seconds: int = 15

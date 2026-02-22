@@ -1,16 +1,31 @@
 """Tool registry and executor."""
 import asyncio
 from dataclasses import dataclass, field
-from typing import Any, Callable, Coroutine
+from typing import Any, Callable, Coroutine, Protocol
 
 import structlog
 
-from talkingcode.domain.models import ToolExecutionResult
-from talkingcode.domain.services import ExecuteToolGroupInput
+from talkingcode.domain.models import ToolExecutionResult, ExecuteToolGroupInput
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
 ToolFunction = Callable[..., Coroutine[Any, Any, dict[str, Any]]]
+
+
+class IToolRegistry(Protocol):
+    """Protocol for tool registry."""
+    
+    def register_tool(self, tool_instance: Any, timeout: int = 15) -> None:
+        """Register a tool."""
+        ...
+    
+    def get_tool_definitions(self) -> list[dict]:
+        """Get tool definitions for OpenRouter."""
+        ...
+    
+    async def execute_group(self, input_data: ExecuteToolGroupInput) -> list[ToolExecutionResult]:
+        """Execute a group of tool calls."""
+        ...
 
 
 @dataclass(slots=True)
