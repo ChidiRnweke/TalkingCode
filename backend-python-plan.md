@@ -41,13 +41,18 @@ The prior linear retrieve -> generate path is deprecated for chat orchestration.
 - Services never import each other.
 - Controllers orchestrate multiple services.
 - Planner uses strict structured output every turn.
+- Planner retries once on the selected/default model when strict output parsing fails, then falls
+  back to `gemini-3-flash`.
 - Planner fallback model is `gemini-3-flash` via OpenRouter.
 - Loop limits: 8 iterations max, 3 tools/turn max.
+- Tool-call timeout default is 15 seconds per call unless a specific tool override is declared.
 - Parallel execution only via planner-defined groups using `asyncio.TaskGroup`.
 - Chat streaming uses FastAPI SSE with named events and JSON payload data.
 - SSE payload field names are `snake_case`.
 - `agent_error` event payload includes: `turn_id`, `message`, optional `code`, and `timestamp`.
 - Whitebox stream exposes tool names + visible args/filters only, never tool payload bodies.
+- Non-blocking tool-call failures are non-fatal: they are persisted and surfaced as redacted
+  failure metadata and passed back into planner context, while the turn continues.
 
 ## Interfaces and Models
 
@@ -96,7 +101,77 @@ All dataclasses in this section and below are `slots=True, frozen=True`.
 - OpenAPI emitted by backend is the canonical frontend contract source and must be retrievable at
   `http://localhost:8000/openapi.json` when backend is running.
 
+### Route contracts (V1)
+
+- `POST /chat/agentic`
+  - request body maps to `AgentTurnInput`
+  - response is SSE stream conforming to `### Streaming contract (FastAPI SSE, wire schema)`
+- `GET /chat/timeline?conversation_id=<uuid>`
+  - response is redacted timeline metadata only (tool name, visible args, status, duration,
+    timestamps, and safe error metadata)
+  - no raw tool payload bodies are returned
+
 ### Persistence schema (V1)
+
+### ETL and retrieval schema (V1, full detail)
+
+The implementation must include explicit ingestion/retrieval persistence beyond turn/timeline
+tracking. Minimum required tables and constraints:
+
+- `repositories`
+  - `id` (UUID, PK)
+  - `provider` (`github`)
+  - `owner` (text)
+  - `name` (text)
+  - `default_branch` (text)
+  - `last_ingested_at` (timestamptz, nullable)
+  - `created_at` (timestamptz)
+  - unique `(provider, owner, name)`
+- `documents`
+  - `id` (UUID, PK)
+  - `repository_id` (UUID, FK to `repositories.id`)
+  - `path` (text)
+  - `git_ref` (text)
+  - `content_sha` (text)
+  - `language` (text)
+  - `area` (enum/text aligned to `Area`)
+  - `file_type` (enum/text aligned to `FileType`)
+  - `symbols_json` (jsonb)
+  - `tags_json` (jsonb)
+  - `created_at` (timestamptz)
+  - `updated_at` (timestamptz)
+  - unique `(repository_id, path, git_ref)`
+- `document_chunks`
+  - `id` (UUID, PK)
+  - `document_id` (UUID, FK to `documents.id`)
+  - `chunk_index` (int)
+  - `content` (text)
+  - `token_count` (int)
+  - inherited metadata fields: `language`, `area`, `file_type`, `symbols_json`, `tags_json`
+  - `start_line` (int, nullable)
+  - `end_line` (int, nullable)
+  - `created_at` (timestamptz)
+  - unique `(document_id, chunk_index)`
+- `chunk_embeddings`
+  - `id` (UUID, PK)
+  - `chunk_id` (UUID, FK to `document_chunks.id`, unique)
+  - `embedding_model` (text)
+  - `embedding` (vector)
+  - `created_at` (timestamptz)
+- `ingestion_runs`
+  - `id` (UUID, PK)
+  - `repository_id` (UUID, FK to `repositories.id`)
+  - `status` (`running | done | failed`)
+  - `started_at` (timestamptz)
+  - `completed_at` (timestamptz, nullable)
+  - `error_message` (text, nullable)
+
+Required indexes for retrieval:
+
+- `(repository_id, path)` on `documents`
+- `(area, file_type)` on `document_chunks`
+- GIN index for `symbols_json` and `tags_json` on `document_chunks`
+- vector index on `chunk_embeddings.embedding` suitable for pgVector similarity search
 
 - `conversation_turns` table:
   - `id` (UUID, PK)
@@ -139,16 +214,28 @@ All dataclasses in this section and below are `slots=True, frozen=True`.
   - subsequent groups are skipped,
   - an `agent_error` is emitted with a safe message.
 - Non-blocking calls are allowed only when explicitly flagged in the planner output.
+- Non-blocking call failures:
+  - do not stop the execution group,
+  - are recorded in `tool_call_timeline` with failure metadata,
+  - are included in planner/tool-context summaries as redacted failure signals,
+  - do not expose raw payload content.
 
 ### Planner fallback policy (strict)
 
 - Attempt planner execution with `selected_model` when provided.
-- If `selected_model` is absent or cannot satisfy strict structured-output requirements, retry
-  planner using OpenRouter `gemini-3-flash`.
+- If strict output parsing fails on the selected/default model, retry once on that same model.
+- If that retry fails (or no selected model is provided and default fails), retry planner using
+  OpenRouter `gemini-3-flash`.
 - Fallback is planner-only behavior; tool execution and answer streaming continue in the same turn
   after a successful fallback plan.
 - If fallback also fails, emit `agent_error` and end the turn cleanly (no silent downgrade to
   non-agentic behavior).
+
+### Tool timeout policy (V1)
+
+- Default timeout is 15 seconds per tool call.
+- A tool may declare an explicit timeout override in registry metadata.
+- Timeout is treated as a tool failure and follows blocking/non-blocking policy by call mode.
 
 ### Streaming contract (FastAPI SSE, wire schema)
 
@@ -185,7 +272,8 @@ All dataclasses in this section and below are `slots=True, frozen=True`.
       Verify: app starts and health route responds.
 
 - [ ] **Step 3: Implement domain + ORM + Alembic foundations**
-      Add domain models, ORM models, metadata wiring, and initial migration path.
+      Add domain models, ORM models, metadata wiring, and initial migration path for turn/timeline
+      plus ETL/retrieval schema in `### ETL and retrieval schema (V1, full detail)`.
       Verify: autogenerate revision works.
 
 - [ ] **Step 4: Add repositories and baseline ingestion/search services**
@@ -228,6 +316,7 @@ All dataclasses in this section and below are `slots=True, frozen=True`.
 
 - [ ] **Step 13: Wire controllers/routes and OpenAPI contracts**
       Integrate agent loop stream and timeline retrieval into chat routes/controllers.
+      Timeline retrieval is the only required non-streaming backend chat endpoint for V1.
       Verify: API contract tests + schema generation pass; backend serves `/openapi.json`.
 
 - [ ] **Step 14: Final backend verification**
@@ -243,8 +332,11 @@ All dataclasses in this section and below are `slots=True, frozen=True`.
 Required focus:
 
 - planner strict schema + model fallback,
+- planner one-retry-then-fallback behavior,
 - tool registry conversion and dataclass arg parsing,
 - grouped tool execution behavior,
+- tool timeout behavior (default + overrides),
+- non-blocking failure continuation + redacted failure propagation,
 - loop stop conditions,
 - classification inheritance,
 - whitebox payload redaction.

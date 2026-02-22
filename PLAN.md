@@ -18,6 +18,9 @@ TalkingCode V1 is a BFF monorepo (SvelteKit frontend + FastAPI backend) for conv
 understanding over a user's GitHub repositories. The chat system is **agentic-first**: planner,
 tool-calling loop, structured metadata classification, and whitebox streaming UX.
 
+This repository currently contains blueprint documents only, so implementation starts by
+scaffolding runtime/project foundations before feature wiring and verification.
+
 The previous linear retrieve -> generate path is deprecated. All chat orchestration should be built
 around the agent loop design and corresponding contracts.
 
@@ -46,11 +49,15 @@ around the agent loop design and corresponding contracts.
 - Frontend follows `svelte-swe` strict layering.
 - UI follows `svelte-ui` + `DESIGN_SYSTEM.md` + locked `svelte-ai-elements` inventory.
 - Planner runs every turn with strict structured output.
+- Planner retry policy: one retry on the selected/default model, then fallback to `gemini-3-flash`.
 - Planner fallback model is `gemini-3-flash` on OpenRouter when the selected/default model
   cannot satisfy structured-output requirements.
 - Tool loop limits: max 8 iterations, max 3 tools/turn, planner-grouped parallel execution.
 - Tool registry/arg contracts are strict (schema from dataclass IO; unknown args rejected).
+- Tool timeout default is 15 seconds per call unless a tool declares an explicit override.
 - Default tool execution is blocking; non-blocking tool calls require explicit planner flag.
+- Non-blocking tool-call failures are recorded and exposed as redacted timeline metadata, but do
+  not abort the turn.
 - Backend streams FastAPI SSE events using named `event:` values and JSON `data:` payloads.
 - Stream payloads are `snake_case` on the wire; frontend maps to camelCase domain models.
 - Frontend chat stream is served from SvelteKit API route `POST /api/chat/agentic`; loaders/actions handle
@@ -62,6 +69,8 @@ around the agent loop design and corresponding contracts.
   exposed to frontend contracts.
 - OpenAPI contract is generated from the running backend via
   `http://localhost:8000/openapi.json` and consumed by frontend type generation.
+- For non-streaming V1 backend contracts, only timeline retrieval is required; conversation/model
+  selection concerns remain outside this blueprint's backend API scope.
 
 ## Interfaces and Models
 
@@ -73,8 +82,9 @@ Detailed contracts live in:
 
 ## Plan
 
-- [ ] **Step 1: Ensure runtime and project foundations are ready**
-      Confirm compose/env/package foundations required by all subplans are present and coherent.
+- [ ] **Step 1: Scaffold runtime and project foundations**
+      Create baseline monorepo runtime assets required by all subplans (backend/frontend skeletons,
+      env examples, and `docker-compose.yml`), then validate coherence.
       Verify: `docker compose config` succeeds.
 
 - [ ] **Step 2: Execute backend agentic blueprint**
@@ -102,15 +112,16 @@ Detailed contracts live in:
 
 ## Verification
 
-1. `docker compose up --build -d`
-2. `curl -fsS http://localhost:8000/openapi.json -o /tmp/talkingcode-openapi.json`
-3. `test -s /tmp/talkingcode-openapi.json`
-4. `pytest backend/tests/unit -q`
-5. `pytest backend/tests/integration -q`
-6. `pnpm --dir frontend check`
-7. `pnpm --dir frontend test`
-8. `pnpm --dir frontend run verify:agentic-e2e`
-9. Manual chat sanity:
+1. `docker compose config`
+2. `docker compose up --build -d`
+3. `curl -fsS http://localhost:8000/openapi.json -o /tmp/talkingcode-openapi.json`
+4. `test -s /tmp/talkingcode-openapi.json`
+5. `pytest backend/tests/unit -q`
+6. `pytest backend/tests/integration -q`
+7. `pnpm --dir frontend check`
+8. `pnpm --dir frontend test`
+9. `pnpm --dir frontend run verify:agentic-e2e`
+10. Manual chat sanity:
    - planner/filter event appears,
    - tool names + visible args/filters appear,
    - payloads are hidden,

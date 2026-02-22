@@ -35,6 +35,7 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
 - Route handlers stay thin; controllers/services own orchestration.
 - Chat streaming is exposed via a dedicated SvelteKit API endpoint (`src/routes/api/chat/agentic/+server.ts`).
 - Route actions/loaders handle non-streaming orchestration (conversation selection, timeline/model loading).
+- For backend non-streaming contracts in V1, timeline retrieval is the only required API surface.
 - UI never receives tool payload bodies or tool result content; only tool name + visible args + status metadata.
 - Chat route/UI composition follows locked inventory from `frontend-ui-plan.md`.
 - OpenAPI types are generated from the running backend endpoint
@@ -73,13 +74,13 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
 ### Route contract map
 
 - `/` `load()` returns:
-  - `conversations`,
   - `activeConversation`,
   - `timeline`,
-  - `modelOptions`,
   - `selectedModel`.
 - `POST /api/chat/agentic` consumes `AgenticAskInput` and streams `AgentStreamEvent` as SSE.
-- `/` actions handle non-streaming mutations only (create/select conversation, model updates).
+- `GET /chat/timeline` (backend) returns redacted timeline metadata for a conversation.
+- `/` actions handle non-streaming mutations only and must not depend on additional V1 backend
+  contract surfaces beyond timeline retrieval.
 
 ### Transport contract enforcement (strict)
 
@@ -88,9 +89,8 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
   `tool_call_finished`, `assistant_token`, `assistant_done`, `agent_error`.
 - Treat all incoming payload fields as `snake_case` and map to camelCase domain models in
   service-layer mappers only.
-- Reject or ignore unknown payload fields that could leak tool payload content.
-- Reject events that contain unknown payload fields; drop the offending event and surface a client parse
-  error path without exposing raw payload content.
+- Reject events that contain unknown payload fields; drop the offending event and surface a client
+  parse error path without exposing raw payload content. Continue processing subsequent valid events.
 - Timeline API responses must follow the same rule: no raw tool payload content, only redacted
   metadata (`toolName`, `visibleArgs`, status, duration, timestamp, errors).
 - `agent_error` frontend shape is:
@@ -117,7 +117,8 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
       Verify: controller tests with mocked services.
 
 - [ ] **Step 5: Wire route loaders/actions to locked contracts**
-      Update route server modules to return only route contract shapes.
+      Update route server modules to return only route contract shapes. Ensure the only required
+      non-streaming backend API dependency for V1 is timeline retrieval.
       Verify: route type tests/smoke tests pass.
 
 - [ ] **Step 6: Implement store state machine for agentic turn lifecycle**
