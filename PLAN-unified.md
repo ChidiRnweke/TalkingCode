@@ -1465,7 +1465,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step B.8: Create ingestion controller**
+- [x] **Step B.8: Create ingestion controller**
 
       **Files to create:**
       - `backend/src/talkingcode/controllers/ingestion_controller.py`
