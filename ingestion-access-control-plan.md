@@ -104,7 +104,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       - on success return `None`
       **Verify:** run `cd backend && uv run python -m compileall src` and ensure no syntax errors.
 
-- [ ] **Step 5: Export dependency alias for clean route signatures**
+- [x] **Step 5: Export dependency alias for clean route signatures**
       File: `backend/src/talkingcode/dependencies.py`.
       Add a typed alias similar to `FactoryDep`, e.g. `IngestionAuthDep = Annotated[None, Depends(require_ingestion_api_key)]`.
       **Verify:** run `cd backend && uv run python -c "from talkingcode.dependencies import IngestionAuthDep; print(IngestionAuthDep is not None)"`.

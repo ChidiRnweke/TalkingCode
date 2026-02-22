@@ -57,3 +57,4 @@ async def require_ingestion_api_key(
 
 ConfigDep = Annotated[AppConfig, Depends(get_config)]
 FactoryDep = Annotated[AppFactory, Depends(get_factory)]
+IngestionAuthDep = Annotated[None, Depends(require_ingestion_api_key)]
