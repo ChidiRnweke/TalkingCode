@@ -627,7 +627,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step B.2: Create domain models for ingestion**
+- [x] **Step B.2: Create domain models for ingestion**
 
       **Files to modify:**
       - `backend/src/talkingcode/domain/models.py`

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from talkingcode.enums import Area, FileType, WhiteboxEventKind
+from talkingcode.enums import Area, FileType, IngestionStatus, WhiteboxEventKind
 
 
 # =============================================================================
@@ -202,3 +202,70 @@ class ExecuteToolGroupInput:
     calls: list[dict[str, Any]]
     parallel: bool = False
     timeout_seconds: int = 15
+
+
+# =============================================================================
+# Ingestion Models
+# =============================================================================
+
+@dataclass(slots=True, frozen=True)
+class RepositoryInfo:
+    """Domain model for a tracked repository."""
+
+    id: UUID
+    provider: str
+    owner: str
+    name: str
+    default_branch: str
+    last_ingested_at: datetime | None
+    created_at: datetime
+
+
+@dataclass(slots=True, frozen=True)
+class RegisterRepoInput:
+    """Input for registering a new repository."""
+
+    owner: str
+    name: str
+    default_branch: str = "main"
+    provider: str = "github"
+
+
+@dataclass(slots=True, frozen=True)
+class IngestionRunInfo:
+    """Domain model for an ingestion run."""
+
+    id: UUID
+    repository_id: UUID
+    status: IngestionStatus
+    started_at: datetime
+    completed_at: datetime | None
+    error_message: str | None
+
+
+@dataclass(slots=True, frozen=True)
+class StartIngestionInput:
+    """Input for starting an ingestion run."""
+
+    repository_id: UUID
+    git_ref: str | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class GitHubFileContent:
+    """A single file fetched from GitHub."""
+
+    path: str
+    content: str
+    sha: str
+
+
+@dataclass(slots=True, frozen=True)
+class ChunkResult:
+    """A single chunk produced by the chunker."""
+
+    content: str
+    chunk_index: int
+    token_count: int
+    start_line: int
+    end_line: int
