@@ -121,6 +121,7 @@ class ToolExecutionResult:
     payload_json: str
     duration_ms: int
     error: str | None = None
+    error_code: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -132,6 +133,9 @@ class WhiteboxEvent:
     message: str
     visible_args: dict[str, Any] | None
     timestamp: datetime
+    iteration: int | None = None
+    call_id: str | None = None
+    code: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -139,6 +143,8 @@ class ToolTimelineItem:
     """Tool call timeline item (redacted)."""
     turn_id: str
     tool_name: str
+    call_id: str | None = None
+    iteration: int | None = None
     visible_args: dict[str, Any]
     status: str
     duration_ms: int | None

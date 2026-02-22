@@ -46,6 +46,9 @@ class ToolCallStatus(str, Enum):
 
 class WhiteboxEventKind(str, Enum):
     """Whitebox streaming event types."""
+    ITERATION_STARTED = "iteration_started"
+    PLAN_CHUNK = "plan_chunk"
+    PLAN_DONE = "plan_done"
     PLANNER_STARTED = "planner_started"
     PLANNER_READY = "planner_ready"
     TOOL_CALL_STARTED = "tool_call_started"
