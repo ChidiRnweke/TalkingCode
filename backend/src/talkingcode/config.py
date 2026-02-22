@@ -68,6 +68,7 @@ class AppConfig:
             openrouter_api_key=settings.openrouter_api_key,
             openai_api_key=settings.openai_api_key,
             github_token=settings.github_token,
+            ingestion_api_key=settings.ingestion_api_key,
             environment=settings.environment,
             log_level=settings.log_level,
             default_model=settings.default_model,

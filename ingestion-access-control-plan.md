@@ -84,7 +84,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Keep dataclass frozen/slots exactly as-is.
       **Verify:** run `cd backend && uv run python -c "from talkingcode.config import AppConfig; print('ingestion_api_key' in AppConfig.__annotations__)"` and confirm output is `True`.
 
-- [ ] **Step 3: Wire setting into `AppConfig.from_env()`**
+- [x] **Step 3: Wire setting into `AppConfig.from_env()`**
       File: `backend/src/talkingcode/config.py`.
       In `from_env()`, pass `settings.ingestion_api_key` into `AppConfig(...)`.
       Keep argument order consistent with nearby fields.
