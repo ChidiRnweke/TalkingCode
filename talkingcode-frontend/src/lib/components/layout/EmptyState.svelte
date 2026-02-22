@@ -4,15 +4,17 @@
 	interface Props {
 		title?: string;
 		description?: string;
-		suggestion?: string;
 		icon?: typeof IconType;
+		suggestions?: string[];
+		onSuggestionClick?: (suggestion: string) => void;
 	}
 
 	let {
 		title = 'Ask your first question',
 		description = 'Research your codebase — ask about architecture, ownership, or behaviour.',
-		suggestion = 'Try: "Summarize auth flow" or "Find flaky tests"',
-		icon: Icon = MessageSquarePlus
+		icon: Icon = MessageSquarePlus,
+		suggestions = [],
+		onSuggestionClick
 	}: Props = $props();
 </script>
 
@@ -24,7 +26,17 @@
 	</div>
 	<h2 class="font-display text-2xl tracking-tight text-foreground">{title}</h2>
 	<p class="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">{description}</p>
-	<p class="mt-5 text-xs tracking-[var(--tracking-wider)] text-muted-foreground uppercase">
-		{suggestion}
-	</p>
+	{#if suggestions && suggestions.length > 0}
+		<div class="mt-6 flex flex-wrap justify-center gap-2">
+			{#each suggestions as suggestion}
+				<button
+					type="button"
+					onclick={() => onSuggestionClick?.(suggestion)}
+					class="rounded-[var(--radius-full)] border border-border bg-[hsl(var(--color-surface-2))] px-4 py-2 text-sm text-foreground transition-colors hover:bg-[hsl(var(--color-surface-3))]"
+				>
+					{suggestion}
+				</button>
+			{/each}
+		</div>
+	{/if}
 </div>

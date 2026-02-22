@@ -44,6 +44,7 @@
 			<ChatThread
 				messages={chatStore.messages}
 				onOpenDetail={handleOpenDetail}
+				onSuggestionClick={handleSubmit}
 			/>
 
 			<ChatComposer
