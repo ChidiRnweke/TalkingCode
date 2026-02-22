@@ -42,13 +42,16 @@ frontend architecture work depends on it.
 
 ## Architecture Decisions
 
-- Use `@dataclass(slots=True, frozen=True)` for service/controller/factory implementations.
+- Use `@dataclass(slots=True)` for service/controller/factory implementations; use
+  `frozen=True` only for immutable value objects.
 - Use Protocols for repository/service interfaces; avoid ABC inheritance.
 - ORM models live only in repository layer; domain dataclasses are returned upward.
 - Services never import each other; composition happens via constructor injection and controllers.
 - Controllers orchestrate multi-service workflows; routes stay thin and HTTP-focused.
 - Error hierarchy stays domain-level; HTTP status mapping occurs at FastAPI edge only.
 - OpenAI is required embedding provider.
+- Service contracts use dataclass models for both inputs and outputs; avoid dict/primitive payload
+  signatures at service boundaries.
 
 ## Interfaces and Models
 
@@ -59,6 +62,60 @@ Core interfaces/models expected:
 - Services: `IGitHubService`, `IEmbeddingService`, `IChunkingService`, `ISearchService`,
   `ILLMService`, `IChatService`, `IPipelineService`.
 - Controllers: chat/repo/pipeline/settings orchestration dataclasses.
+
+### Interface Design (Phase 3, agreed)
+
+Service contracts should use these dataclass IO models (minimal set):
+
+- `RepoRefInput(owner: str, name: str)`
+- `SearchQueryInput(query: str, limit: int = 5)`
+- `EmbedTextsInput(texts: list[str])`
+- `EmbedSingleInput(text: str)`
+- `ChunkFileInput(file_path: str, content: str)`
+- `LLMMessage(role: str, content: str)`
+- `GenerateStreamInput(messages: list[LLMMessage], model: str | None = None)`
+- `AskQuestionInput(conversation_id: UUID | None, question: str, model: str | None = None)`
+- `ChatStreamEvent(kind: str, content: str, done: bool = False)`
+- `RunIngestionInput(force_refresh: bool = True)`
+- `IngestionResult(run: PipelineRun, repos_processed: int, chunks_created: int)`
+
+Protocol shape guidance:
+
+- `IGitHubService.fetch_user_repos() -> list[Repository]`
+- `IGitHubService.fetch_repo_files(input: RepoRefInput) -> list[GitHubFile]`
+- `IEmbeddingService.embed_texts(input: EmbedTextsInput) -> list[list[float]]`
+- `IEmbeddingService.embed_single(input: EmbedSingleInput) -> list[float]`
+- `IChunkingService.chunk_file(input: ChunkFileInput) -> list[FileChunk]`
+- `ISearchService.search(input: SearchQueryInput) -> list[RankedChunk]`
+- `ILLMService.generate_stream(input: GenerateStreamInput) -> AsyncGenerator[ChatStreamEvent, None]`
+- `IChatService.ask(input: AskQuestionInput) -> AsyncGenerator[ChatStreamEvent, None]`
+- `IPipelineService.run_ingestion(input: RunIngestionInput) -> IngestionResult`
+
+TDD-first test cases (target 3-5 per critical service):
+
+- `GitHubService`
+  - Returns mapped `Repository` models across pagination.
+  - Filters binary/oversized/vendor files in `fetch_repo_files`.
+  - Raises `ExternalAPIError` on non-retriable upstream failure.
+- `EmbeddingService`
+  - Splits `EmbedTextsInput` into expected batch sizes.
+  - Retries transient rate-limit failures and succeeds.
+  - Raises `ExternalAPIError` after retry exhaustion.
+- `SearchService`
+  - Calls embedding first, then similarity search repository.
+  - Returns ranked results preserving score ordering.
+- `LLMService`
+  - Parses SSE chunks into `ChatStreamEvent` content events.
+  - Ignores terminal `[DONE]` marker and emits `done` event.
+  - Raises `ExternalAPIError` on malformed/upstream stream failure.
+- `ChatService`
+  - Creates conversation when input has `conversation_id=None`.
+  - Persists user + assistant messages with source metadata.
+  - Streams `ChatStreamEvent` sequence while accumulating final answer.
+  - Handles no-search-results path without failing.
+- `PipelineService`
+  - Persists `running -> completed` transition and counters.
+  - Persists `running -> failed` transition with error message.
 
 ## Plan
 
@@ -99,12 +156,13 @@ Core interfaces/models expected:
 - [ ] **Step 7: Implement ingestion/retrieval service layer**
       Implement GitHub, embedding, chunking, and search services in
       `backend/src/talkingcode/services/` with module-level structlog loggers, retries,
-      and bounded concurrency where needed.
+      and bounded concurrency where needed. Use only dataclass inputs/outputs for service method
+      signatures as defined in `## Interfaces and Models`.
       Verify: service unit tests for happy path + error path pass.
 
 - [ ] **Step 8: Implement LLM and chat orchestration services**
       Implement OpenRouter streaming parser in LLM service and chat orchestration flow that stores
-      user/assistant messages, retrieves context, and emits stream chunks.
+      user/assistant messages, retrieves context, and emits `ChatStreamEvent` dataclass chunks.
       Verify: unit tests for streaming parse and chat orchestration pass.
 
 - [ ] **Step 9: Implement pipeline orchestration and CLI runner**

@@ -42,6 +42,7 @@ targeted component tests for critical UI behavior.
 ## Architecture Decisions
 
 - UI tokens are single source of truth in CSS custom properties.
+- Root `DESIGN_SYSTEM.md` is the canonical UI spec and must be referenced from `AGENTS.md`.
 - Typography pairing avoids Inter/Roboto/Arial as primary fonts.
 - Neutrals are warm-tinted, not pure white/gray defaults.
 - shadcn components are themed immediately; default style is not accepted.
@@ -59,10 +60,13 @@ UI contract expectations:
 ## Plan
 
 - [ ] **Step 1: Establish Editorial Light design tokens**
+      Create/update root `DESIGN_SYSTEM.md` first with visual direction, palette, typography,
+      spacing, radius, conventions, and anti-patterns. Ensure `AGENTS.md` references this file.
       Define token blocks in `frontend/src/app.css`: warm surfaces, editorial text palette,
       accent color, semantic colors, type scale, spacing scale, radius, and shadow tokens.
       Set fonts in `frontend/src/app.html` (display + body + mono).
-      Verify: app loads with fonts and token references; no default Tailwind blue reliance.
+      Verify: `DESIGN_SYSTEM.md` exists in root, `AGENTS.md` references it, app loads with fonts
+      and token references, and no default Tailwind blue reliance.
 
 - [ ] **Step 2: Map Tailwind and shadcn semantics to tokens**
       Configure Tailwind extensions and remap shadcn variables (`--background`, `--foreground`,

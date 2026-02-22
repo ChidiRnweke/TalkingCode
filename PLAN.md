@@ -50,6 +50,7 @@ strict frontend layering from day one, OpenAI embeddings required, and UI direct
 
 - Plan-of-plans approach: this file controls sequencing; subplans own implementation detail.
 - Backend follows `python-swe` layering rules strictly.
+- Backend subplan includes Phase 3 interface design with dataclass-based service IO contracts.
 - Frontend follows `svelte-swe` layering rules strictly.
 - UI implementation follows `svelte-ui` with Editorial Light design system before components.
 - Embedding provider is OpenAI (model configurable; default expected as `text-embedding-3-small`).

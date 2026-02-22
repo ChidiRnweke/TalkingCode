@@ -40,11 +40,10 @@ Monorepo — Pattern B (BFF): SvelteKit frontend + Python FastAPI backend.
 
 ### Status
 
-Design system not yet established. Invoke the `svelte-ui` skill when building frontend to define:
-- Color palette
-- Typography scale
-- Spacing tokens
-- Component conventions
+Design system established for V1 (Editorial Light).
+
+- Canonical spec: `DESIGN_SYSTEM.md`
+- UI implementation and audits must follow this file.
 
 ### Component Structure
 
@@ -59,6 +58,11 @@ frontend/src/lib/components/
 ### Conventions
 
 - All components use Tailwind utility classes
-- Design tokens defined in `tailwind.config.js`
+- Design tokens defined in `frontend/src/app.css` and mapped in `tailwind.config.js`
 - No inline styles
 - shadcn-svelte for base component library
+
+### Design System Reference
+
+- `DESIGN_SYSTEM.md` is the source of truth for palette, typography, spacing, radius,
+  primitive conventions, and anti-patterns.

@@ -60,6 +60,43 @@ Expected frontend contracts:
 - `src/lib/stores/*.svelte.ts` state containers.
 - `src/lib/api/client.ts` + generated `schema.d.ts`.
 
+### Interface Design (Phase 3, agreed)
+
+Frontend service interfaces should be explicit and minimal:
+
+- `IChatService`
+  - `getConversations(): Promise<ConversationSummary[]>`
+  - `getConversation(input: GetConversationInput): Promise<ConversationDetail>`
+  - `askQuestion(input: AskQuestionInput): AsyncIterable<ChatStreamChunk>`
+- `IRepoService`
+  - `getRepos(): Promise<RepositorySummary[]>`
+  - `syncRepos(): Promise<RepositorySummary[]>`
+- `IPipelineService`
+  - `getHistory(): Promise<PipelineRunView[]>`
+  - `getStatus(): Promise<PipelineRunView | null>`
+  - `triggerRun(): Promise<PipelineRunView>`
+- `ISettingsService`
+  - `getSettings(): Promise<SettingsView>`
+
+Input/output model guidance:
+
+- Use frontend domain interfaces in `src/lib/models/*` for all service/controller boundaries.
+- Keep generated OpenAPI schema types inside service implementation files only.
+- Controllers return loader-friendly domain models (no raw transport shapes).
+
+TDD-first test cases (balanced, high value):
+
+- `ChatService`
+  - maps conversation list response to domain model.
+  - parses streaming chunks and yields ordered `ChatStreamChunk` events.
+  - normalizes API errors into service-level error type.
+- `RepoService`
+  - maps repo list/sync payloads consistently.
+- `PipelineService`
+  - handles null status and non-null status mapping correctly.
+- `ChatController`
+  - orchestrates repo/settings dependencies if needed for chat model defaults.
+
 ## Plan
 
 - [ ] **Step 1: Scaffold frontend project and baseline scripts**
@@ -79,7 +116,8 @@ Expected frontend contracts:
 
 - [ ] **Step 4: Implement concrete services with schema-to-domain mapping**
       Add service implementations in `src/lib/services/*Service.ts` that call typed API client,
-      map response payloads to domain models, and normalize service-level errors.
+      map response payloads to domain models, and normalize service-level errors. Keep generated
+      schema types private to service files.
       Verify: service unit tests (or focused integration mocks) pass.
 
 - [ ] **Step 5: Implement controllers and factory assembly**
