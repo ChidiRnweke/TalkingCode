@@ -2189,7 +2189,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step C.4: Wire ingestion actions on the repos page**
+- [x] **Step C.4: Wire ingestion actions on the repos page**
 
       **Files to modify:**
       - `talkingcode-frontend/src/routes/repos/+page.svelte` (if needed)
@@ -2227,6 +2227,10 @@ Phase D — Integration & polish:
       - The UI renders without crashing
       - Error states are handled (no blank screen)
       - `pnpm check` passes clean
+
+      Note: Register and ingest actions are wired and refresh the repo list; `RepoCard` now has
+      cached history loading via `repoService.listIngestionRuns()` behind a show/hide toggle.
+      Backend-off errors are logged without crashing the page.
 
 ---
 

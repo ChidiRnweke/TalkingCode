@@ -2,7 +2,9 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Github } from 'lucide-svelte';
-	import type { RepositoryInfo } from '$lib/models';
+	import { RepoService } from '$lib/services/RepoService';
+	import type { IngestionRunInfo, RepositoryInfo } from '$lib/models';
+	import IngestionHistory from './IngestionHistory.svelte';
 
 	interface Props {
 		repo: RepositoryInfo;
@@ -11,6 +13,11 @@
 	}
 
 	let { repo, onIngest, ingesting }: Props = $props();
+
+	const repoService = new RepoService();
+	let showHistory = $state(false);
+	let loadingHistory = $state(false);
+	let historyRuns = $state<IngestionRunInfo[] | null>(null);
 
 	function relativeLastIngested(timestamp: string | null): string {
 		if (!timestamp) return 'Never ingested';
@@ -22,6 +29,28 @@
 		if (hours < 24) return `Last ingested: ${hours}h ago`;
 		const days = Math.floor(hours / 24);
 		return `Last ingested: ${days}d ago`;
+	}
+
+	async function toggleHistory() {
+		if (showHistory) {
+			showHistory = false;
+			return;
+		}
+
+		showHistory = true;
+		if (historyRuns !== null) {
+			return;
+		}
+
+		loadingHistory = true;
+		try {
+			historyRuns = await repoService.listIngestionRuns(repo.owner, repo.name);
+		} catch (err) {
+			console.error(err);
+			historyRuns = [];
+		} finally {
+			loadingHistory = false;
+		}
 	}
 </script>
 
@@ -36,6 +65,9 @@
 		</div>
 		<div class="flex items-center gap-2">
 			<Badge variant="secondary">{repo.default_branch}</Badge>
+			<Button variant="outline" size="sm" onclick={toggleHistory}>
+				{showHistory ? 'Hide history' : 'Show history'}
+			</Button>
 			<Button
 				variant="default"
 				size="sm"
@@ -46,4 +78,12 @@
 			</Button>
 		</div>
 	</div>
+
+	{#if showHistory}
+		{#if loadingHistory}
+			<p class="mt-3 text-sm text-muted-foreground">Loading ingestion history...</p>
+		{:else}
+			<IngestionHistory runs={historyRuns || []} />
+		{/if}
+	{/if}
 </div>
