@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import AsyncGenerator, Protocol
+from uuid import UUID, uuid4
 
 import structlog
 
@@ -38,7 +39,8 @@ class AgentLoopService:
         input_data: AgentTurnInput,
     ) -> AsyncGenerator[WhiteboxEvent, None]:
         """Run agent turn with streaming events."""
-        turn_id = str(datetime.utcnow().timestamp())
+        turn_uuid = uuid4()
+        turn_id = str(turn_uuid)
         
         # Emit planner started
         yield WhiteboxEvent(
@@ -78,11 +80,13 @@ class AgentLoopService:
             
             # Execute tool groups
             tool_count = 0
+            sequence_no = 0
             for group in plan.tool_groups[:self.max_tools_per_turn]:
                 if tool_count >= self.max_tools_per_turn:
                     break
                 
-                # Emit tool call started for each tool
+                # Create timeline entries for each tool
+                timeline_ids = []
                 for call in group.calls:
                     if tool_count >= self.max_tools_per_turn:
                         break
@@ -91,6 +95,17 @@ class AgentLoopService:
                         k: v for k, v in call.arguments.items()
                         if k not in ["content", "payload", "data"]
                     }
+                    
+                    # Persist timeline entry
+                    timeline_id = await self.timeline_repository.create_timeline_entry(
+                        turn_id=UUID(turn_id) if len(turn_id) == 36 else uuid4(),
+                        sequence_no=sequence_no,
+                        group_name=group.name,
+                        tool_name=call.tool_name,
+                        visible_args=visible_args,
+                    )
+                    timeline_ids.append((timeline_id, call))
+                    sequence_no += 1
                     
                     yield WhiteboxEvent(
                         kind=WhiteboxEventKind.TOOL_CALL_STARTED,
@@ -111,7 +126,7 @@ class AgentLoopService:
                             "arguments": c.arguments,
                             "non_blocking": c.non_blocking,
                         }
-                        for c in group.calls
+                        for _, c in timeline_ids
                     ],
                     parallel=group.parallel,
                     timeout_seconds=self.default_tool_timeout,
@@ -119,8 +134,16 @@ class AgentLoopService:
                 
                 results = await self.tool_registry.execute_group(group_input)
                 
-                # Emit tool call finished
-                for result in results:
+                # Emit tool call finished and update timeline
+                for (timeline_id, call), result in zip(timeline_ids, results):
+                    await self.timeline_repository.complete_timeline_entry(
+                        entry_id=timeline_id,
+                        success=result.success,
+                        duration_ms=result.duration_ms,
+                        error_code=result.error[:50] if result.error else None,
+                        error_message=result.error,
+                    )
+                    
                     yield WhiteboxEvent(
                         kind=WhiteboxEventKind.TOOL_CALL_FINISHED,
                         turn_id=turn_id,
