@@ -3,11 +3,12 @@
 import base64
 from dataclasses import dataclass
 from typing import Protocol
+from urllib.parse import parse_qs, urlparse
 
 import httpx
 import structlog
 
-from talkingcode.domain.models import GitHubFileContent
+from talkingcode.domain.models import GitHubFileContent, GitHubRepository
 from talkingcode.errors import InfraError
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
@@ -40,6 +41,19 @@ INDEXABLE_EXTENSIONS = {
 # File names to index (no extension)
 INDEXABLE_NAMES = {"Dockerfile", "Makefile", "Taskfile", "Justfile"}
 
+# Low-signal files to skip even when extension is indexable
+SKIP_FILENAMES = {
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lock",
+    "bun.lockb",
+    "poetry.lock",
+    "Pipfile.lock",
+    "Cargo.lock",
+}
+
 # Directories to skip
 SKIP_DIRS = {
     ".git",
@@ -66,6 +80,9 @@ MAX_FILE_SIZE_BYTES = 100_000  # 100KB
 class IGitHubFetcher(Protocol):
     """Protocol for GitHub file fetching."""
 
+    async def list_owned_repositories(self) -> list[GitHubRepository]:
+        """List repositories owned by the authenticated GitHub user."""
+
     async def fetch_file_tree(self, owner: str, name: str, ref: str) -> list[str]:
         """Fetch list of indexable file paths in the repo."""
 
@@ -80,6 +97,61 @@ class GitHubFetcher:
     """Fetches files from GitHub REST API."""
 
     github_token: str
+
+    async def list_owned_repositories(self) -> list[GitHubRepository]:
+        """List non-fork repositories owned by the authenticated user."""
+        repos: list[GitHubRepository] = []
+        page = 1
+
+        async with httpx.AsyncClient() as client:
+            while True:
+                response = await client.get(
+                    "https://api.github.com/user/repos",
+                    headers={
+                        "Authorization": f"token {self.github_token}",
+                        "Accept": "application/vnd.github.v3+json",
+                    },
+                    params={
+                        "type": "owner",
+                        "sort": "updated",
+                        "per_page": 100,
+                        "page": page,
+                    },
+                    timeout=30.0,
+                )
+
+                if response.status_code in (403, 429):
+                    raise InfraError(f"GitHub rate limit hit: {response.status_code}")
+                response.raise_for_status()
+
+                payload = response.json()
+                if not payload:
+                    break
+
+                for item in payload:
+                    owner = item.get("owner", {}).get("login")
+                    name = item.get("name")
+                    default_branch = item.get("default_branch")
+                    is_fork = bool(item.get("fork", False))
+
+                    if not owner or not name or not default_branch or is_fork:
+                        continue
+
+                    repos.append(
+                        GitHubRepository(
+                            owner=owner,
+                            name=name,
+                            default_branch=default_branch,
+                            is_fork=is_fork,
+                        )
+                    )
+
+                if not self._has_next_page(response.headers.get("Link", "")):
+                    break
+                page += 1
+
+        logger.info("Fetched owned repositories", repo_count=len(repos))
+        return repos
 
     async def fetch_file_tree(self, owner: str, name: str, ref: str) -> list[str]:
         """Fetch list of indexable file paths using the Git Trees API."""
@@ -115,6 +187,9 @@ class GitHubFetcher:
                 continue
 
             filename = parts[-1]
+            if filename in SKIP_FILENAMES:
+                continue
+
             if filename in INDEXABLE_NAMES:
                 paths.append(path)
                 continue
@@ -163,3 +238,20 @@ class GitHubFetcher:
         sha = data.get("sha", "")
 
         return GitHubFileContent(path=path, content=content, sha=sha)
+
+    @staticmethod
+    def _has_next_page(link_header: str) -> bool:
+        """Check if a GitHub Link header includes a next page."""
+        if not link_header:
+            return False
+
+        for part in link_header.split(","):
+            if 'rel="next"' not in part:
+                continue
+
+            url = part.split(";", 1)[0].strip().strip("<>")
+            parsed = urlparse(url)
+            page = parse_qs(parsed.query).get("page")
+            return bool(page)
+
+        return False

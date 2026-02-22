@@ -9,6 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 
 # revision identifiers, used by Alembic.
@@ -53,8 +54,8 @@ def upgrade() -> None:
     sa.Column('language', sa.String(length=50), nullable=False),
     sa.Column('area', sa.String(length=50), nullable=False),
     sa.Column('file_type', sa.String(length=50), nullable=False),
-    sa.Column('symbols_json', sa.JSON(), nullable=False),
-    sa.Column('tags_json', sa.JSON(), nullable=False),
+    sa.Column('symbols_json', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('tags_json', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['repository_id'], ['repositories.id'], ),
@@ -98,8 +99,8 @@ def upgrade() -> None:
     sa.Column('language', sa.String(length=50), nullable=False),
     sa.Column('area', sa.String(length=50), nullable=False),
     sa.Column('file_type', sa.String(length=50), nullable=False),
-    sa.Column('symbols_json', sa.JSON(), nullable=False),
-    sa.Column('tags_json', sa.JSON(), nullable=False),
+    sa.Column('symbols_json', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('tags_json', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('start_line', sa.Integer(), nullable=True),
     sa.Column('end_line', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),

@@ -11,6 +11,7 @@ import structlog
 from talkingcode.domain.models import (
     DocumentClassificationInput,
     IngestionRunInfo,
+    RegisterRepoInput,
     StartIngestionInput,
 )
 from talkingcode.enums import IngestionStatus
@@ -31,6 +32,11 @@ class IIngestionService(Protocol):
     async def run_ingestion(self, input_data: StartIngestionInput) -> IngestionRunInfo:
         """Run a full ingestion pipeline for a repository."""
 
+    async def run_ingestion_for_owned_repos(
+        self, git_ref: str | None = None
+    ) -> list[IngestionRunInfo]:
+        """Ingest all non-fork repositories owned by the current GitHub user."""
+
 
 @dataclass(slots=True)
 class IngestionService:
@@ -42,6 +48,31 @@ class IngestionService:
     classifier: IDocumentClassifier
     chunker: IChunker
     embedder: IEmbedder
+
+    async def run_ingestion_for_owned_repos(
+        self, git_ref: str | None = None
+    ) -> list[IngestionRunInfo]:
+        """Register and ingest all non-fork repositories owned by the current user."""
+        repositories = await self.github_fetcher.list_owned_repositories()
+        runs: list[IngestionRunInfo] = []
+
+        logger.info("Starting owned repo ingestion", repo_count=len(repositories), ref=git_ref)
+
+        for repo in repositories:
+            registered_repo = await self.repo_repository.register(
+                RegisterRepoInput(
+                    owner=repo.owner,
+                    name=repo.name,
+                    default_branch=repo.default_branch,
+                )
+            )
+            run = await self.run_ingestion(
+                StartIngestionInput(repository_id=registered_repo.id, git_ref=git_ref)
+            )
+            runs.append(run)
+
+        logger.info("Completed owned repo ingestion", ingested_repo_count=len(runs))
+        return runs
 
     async def run_ingestion(self, input_data: StartIngestionInput) -> IngestionRunInfo:
         """Run a full ingestion pipeline."""

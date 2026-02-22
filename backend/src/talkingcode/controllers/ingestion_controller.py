@@ -56,6 +56,13 @@ class IngestionController:
             StartIngestionInput(repository_id=repo.id, git_ref=git_ref)
         )
 
+    async def start_owned_repo_ingestion(
+        self, git_ref: str | None = None
+    ) -> list[IngestionRunInfo]:
+        """Ingest all non-fork repositories owned by the authenticated user."""
+        logger.info("Starting owned repo ingestion", ref=git_ref)
+        return await self.ingestion_service.run_ingestion_for_owned_repos(git_ref=git_ref)
+
     async def list_ingestion_runs(self, owner: str, name: str) -> list[IngestionRunInfo]:
         """List ingestion runs for a repository."""
         repo = await self.repo_repository.get_by_owner_name(owner, name)

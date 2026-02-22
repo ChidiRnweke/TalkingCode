@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, ForeignKey, Index, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from talkingcode.enums import (
@@ -56,8 +56,8 @@ class Document(Base):
     language: Mapped[str] = mapped_column(String(50), default="")
     area: Mapped[str] = mapped_column(String(50), default=Area.UNKNOWN.value)
     file_type: Mapped[str] = mapped_column(String(50), default=FileType.UNKNOWN.value)
-    symbols_json: Mapped[dict] = mapped_column(JSON, default=list)
-    tags_json: Mapped[dict] = mapped_column(JSON, default=list)
+    symbols_json: Mapped[dict] = mapped_column(JSONB, default=list)
+    tags_json: Mapped[dict] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         default=datetime.utcnow, onupdate=datetime.utcnow
@@ -89,8 +89,8 @@ class DocumentChunk(Base):
     language: Mapped[str] = mapped_column(String(50), default="")
     area: Mapped[str] = mapped_column(String(50), default=Area.UNKNOWN.value)
     file_type: Mapped[str] = mapped_column(String(50), default=FileType.UNKNOWN.value)
-    symbols_json: Mapped[dict] = mapped_column(JSON, default=list)
-    tags_json: Mapped[dict] = mapped_column(JSON, default=list)
+    symbols_json: Mapped[dict] = mapped_column(JSONB, default=list)
+    tags_json: Mapped[dict] = mapped_column(JSONB, default=list)
     start_line: Mapped[int | None] = mapped_column(nullable=True)
     end_line: Mapped[int | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)

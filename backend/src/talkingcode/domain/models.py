@@ -261,6 +261,16 @@ class GitHubFileContent:
 
 
 @dataclass(slots=True, frozen=True)
+class GitHubRepository:
+    """A GitHub repository visible to the authenticated user."""
+
+    owner: str
+    name: str
+    default_branch: str
+    is_fork: bool
+
+
+@dataclass(slots=True, frozen=True)
 class ChunkResult:
     """A single chunk produced by the chunker."""
 

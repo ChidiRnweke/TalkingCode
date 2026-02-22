@@ -102,6 +102,18 @@ async def start_ingestion(
     return _serialize_run(run)
 
 
+@router.post("/repos/ingest-owned")
+async def start_owned_repo_ingestion(
+    factory: FactoryDep,
+    body: StartIngestionRequest | None = None,
+) -> list[dict[str, str | None]]:
+    """Ingest all repositories owned by the authenticated user (excluding forks)."""
+    controller = factory.get_ingestion_controller()
+    git_ref = body.git_ref if body else None
+    runs = await controller.start_owned_repo_ingestion(git_ref)
+    return [_serialize_run(run) for run in runs]
+
+
 @router.get("/repos/{owner}/{name}/runs")
 async def list_ingestion_runs(
     owner: str,
