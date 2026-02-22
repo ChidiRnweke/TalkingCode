@@ -1,54 +1,41 @@
-"""Error definitions."""
-from typing import Any
+"""Error hierarchy for TalkingCode backend.
+
+Per python-swe conventions:
+- Domain errors never contain HTTP status codes
+- Error mapping to HTTP responses happens in error_handlers.py only
+"""
 
 
-class TalkingCodeError(Exception):
-    """Base application error."""
-    
-    def __init__(self, message: str, code: str | None = None, details: dict[str, Any] | None = None):
-        super().__init__(message)
-        self.message = message
-        self.code = code or "unknown_error"
-        self.details = details or {}
+class AppError(Exception):
+    """Base for all domain errors. Never use directly."""
 
 
-class ValidationError(TalkingCodeError):
+class InputError(AppError):
     """Input validation error."""
     
-    def __init__(self, message: str, details: dict[str, Any] | None = None):
-        super().__init__(message, code="validation_error", details=details)
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
 
 
-class NotFoundError(TalkingCodeError):
+class NotFoundError(AppError):
     """Resource not found error."""
     
-    def __init__(self, message: str, resource_type: str | None = None):
-        super().__init__(message, code="not_found", details={"resource_type": resource_type})
+    def __init__(self, resource: str) -> None:
+        super().__init__(f"{resource} not found")
+        self.resource = resource
 
 
-class LLMError(TalkingCodeError):
-    """LLM API error."""
-    
-    def __init__(self, message: str, provider: str | None = None):
-        super().__init__(message, code="llm_error", details={"provider": provider})
+class InfraError(AppError):
+    """Infrastructure failure (DB down, external API timeout, etc.)."""
+    pass
 
 
-class ToolError(TalkingCodeError):
-    """Tool execution error."""
-    
-    def __init__(self, message: str, tool_name: str | None = None):
-        super().__init__(message, code="tool_error", details={"tool_name": tool_name})
+class UnauthorisedError(AppError):
+    """Authentication/authorization error."""
+    pass
 
 
-class TimeoutError(TalkingCodeError):
-    """Operation timeout error."""
-    
-    def __init__(self, message: str, operation: str | None = None):
-        super().__init__(message, code="timeout", details={"operation": operation})
-
-
-class PlannerError(TalkingCodeError):
-    """Planner execution error."""
-    
-    def __init__(self, message: str):
-        super().__init__(message, code="planner_error")
+# Keep backward compatibility aliases during migration
+TalkingCodeError = AppError
+ValidationError = InputError
