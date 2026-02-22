@@ -8,15 +8,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from talkingcode.config import AppConfig
 from talkingcode.repository.conversation_repository import ConversationRepository
 from talkingcode.repository.document_repository import DocumentRepository
+from talkingcode.repository.repo_repository import RepoRepository
 from talkingcode.services.agent.agent_loop import AgentLoopService
 from talkingcode.services.agent.timeline_repository import TimelineRepository
 from talkingcode.services.classification.document_classifier import DocumentClassifier
+from talkingcode.services.ingestion.chunker import LineChunker
+from talkingcode.services.ingestion.embedder import OpenAIEmbedder
+from talkingcode.services.ingestion.github_fetcher import GitHubFetcher
+from talkingcode.services.ingestion.ingestion_service import IngestionService
 from talkingcode.services.planner.planner_service import PlannerService
 from talkingcode.services.tools.retriever_tool import RetrieverTool
 from talkingcode.services.tools.tool_registry import ToolRegistry
 
 if TYPE_CHECKING:
     from talkingcode.controllers.chat_controller import ChatController
+    from talkingcode.controllers.ingestion_controller import IngestionController
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
@@ -92,4 +98,44 @@ class AppFactory:
             timeline_repository=timeline_repo,
             conversation_repository=conversation_repo,
             config=self.config,
+        )
+
+    def get_repo_repository(self) -> RepoRepository:
+        """Get repo repository."""
+        return RepoRepository(self.session)
+
+    def get_github_fetcher(self) -> GitHubFetcher:
+        """Get GitHub file fetcher."""
+        return GitHubFetcher(github_token=self.config.github_token)
+
+    def get_chunker(self) -> LineChunker:
+        """Get document chunker."""
+        return LineChunker()
+
+    def get_embedder(self) -> OpenAIEmbedder:
+        """Get embedding generator."""
+        return OpenAIEmbedder(
+            openai_api_key=self.config.openai_api_key,
+            model=self.config.embedding_model,
+            dimensions=self.config.embedding_dimensions,
+        )
+
+    def get_ingestion_service(self) -> IngestionService:
+        """Get ingestion orchestrator service."""
+        return IngestionService(
+            repo_repository=self.get_repo_repository(),
+            document_repository=self.get_document_repository(),
+            github_fetcher=self.get_github_fetcher(),
+            classifier=self.get_document_classifier(),
+            chunker=self.get_chunker(),
+            embedder=self.get_embedder(),
+        )
+
+    def get_ingestion_controller(self) -> "IngestionController":
+        """Get ingestion controller."""
+        from talkingcode.controllers.ingestion_controller import IngestionController
+
+        return IngestionController(
+            repo_repository=self.get_repo_repository(),
+            ingestion_service=self.get_ingestion_service(),
         )

@@ -1683,7 +1683,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step B.10: Wire ingestion into AppFactory**
+- [x] **Step B.10: Wire ingestion into AppFactory**
 
       **Files to modify:**
       - `backend/src/talkingcode/factory.py`
