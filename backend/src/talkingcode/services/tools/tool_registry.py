@@ -28,6 +28,14 @@ class IToolRegistry(Protocol):
         ...
 
 
+class IToolExecutor(Protocol):
+    """Protocol for tool executor."""
+    
+    async def execute_group(self, input_data: ExecuteToolGroupInput) -> list[ToolExecutionResult]:
+        """Execute a group of tool calls with parallel/sequential handling."""
+        ...
+
+
 @dataclass(slots=True)
 class ToolRegistry:
     """Registry for tool definitions."""
