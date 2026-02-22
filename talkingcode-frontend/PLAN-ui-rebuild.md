@@ -231,7 +231,7 @@ export interface ChatMessage {
 
 ## Plan
 
-- [ ] **Step 1: Fix components.json and install svelte-ai-elements components**
+- [x] **Step 1: Fix components.json and install svelte-ai-elements components**
 
       The `components.json` currently points `tailwind.css` to `src/routes/layout.css` which
       was deleted. Update it to point to `src/app.css`.
@@ -269,7 +269,7 @@ export interface ChatMessage {
       **Verify**: Run `pnpm check` from the `talkingcode-frontend` directory. No type errors
       related to the newly installed components.
 
-- [ ] **Step 2: Extend models and rewrite chatStore for multi-turn conversation**
+- [x] **Step 2: Extend models and rewrite chatStore for multi-turn conversation**
 
       **2a. Extend models (`src/lib/models/index.ts`)**:
 
@@ -317,7 +317,7 @@ export interface ChatMessage {
 
       **Verify**: Run `pnpm check`. No type errors. The store exports the expected shape.
 
-- [ ] **Step 3: Create layout components (ChatLayout, ChatHeader)**
+- [x] **Step 3: Create layout components (ChatLayout, ChatHeader)**
 
       **3a. Create `src/lib/components/layout/ChatLayout.svelte`**:
 
@@ -358,7 +358,7 @@ export interface ChatMessage {
 
       **Verify**: Run `pnpm check`. No type errors.
 
-- [ ] **Step 4: Create domain message components (UserMessage, AssistantMessage, InlineTool, InlineReasoning)**
+- [x] **Step 4: Create domain message components (UserMessage, AssistantMessage, InlineTool, InlineReasoning)**
 
       **4a. Create `src/lib/components/domain/UserMessage.svelte`**:
 
@@ -450,7 +450,7 @@ export interface ChatMessage {
 
       **Verify**: Run `pnpm check`. No type errors.
 
-- [ ] **Step 5: Create ChatThread and ChatComposer domain components**
+- [x] **Step 5: Create ChatThread and ChatComposer domain components**
 
       **5a. Create `src/lib/components/domain/ChatThread.svelte`**:
 
@@ -528,7 +528,7 @@ export interface ChatMessage {
 
       **Verify**: Run `pnpm check`. No type errors.
 
-- [ ] **Step 6: Rewrite the page and layout**
+- [x] **Step 6: Rewrite the page and layout**
 
       **6a. Rewrite `src/routes/+layout.svelte`**:
 
@@ -638,7 +638,7 @@ export interface ChatMessage {
       **Verify**: Run `pnpm check`. Run `pnpm dev` and confirm the page renders without
       errors. The empty state should show when no messages exist.
 
-- [ ] **Step 7: Wire streaming end-to-end and verify the full flow**
+- [x] **Step 7: Wire streaming end-to-end and verify the full flow**
 
       **7a. Verify the ChatService → ChatController → Page → Store pipeline**:
 
@@ -682,7 +682,7 @@ export interface ChatMessage {
       - Typing in the composer and submitting adds a user message to the thread
       - The error handler catches and displays errors gracefully
 
-- [ ] **Step 8: Design system audit and polish**
+- [x] **Step 8: Design system audit and polish**
 
       Run through the anti-pattern checklist from DESIGN_SYSTEM.md:
 
