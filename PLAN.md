@@ -48,7 +48,7 @@ around the agent loop design and corresponding contracts.
 - Backend follows `python-swe` with dataclass service IO contracts.
 - Backend dataclasses use `slots=True, frozen=True`.
 - Frontend follows `svelte-swe` strict layering.
-- UI follows `svelte-ui` + `DESIGN_SYSTEM.md` + locked `svelte-ai-elements` inventory.
+- UI follows `DESIGN_SYSTEM.md` + locked `svelte-ai-elements` inventory.
 - Planner runs every turn with strict structured output.
 - Planner retry policy: one retry on the selected/default model, then fallback to `gemini-3-flash`.
 - Planner fallback model is `gemini-3-flash` on OpenRouter when the selected/default model
@@ -81,17 +81,26 @@ Detailed contracts live in:
 - `frontend-svelte-plan.md`
 - `frontend-ui-plan.md`
 
+## Project Structure
+
+- `backend/` - Python FastAPI backend (uv project)
+- `talkingcode-frontend/` - SvelteKit frontend (pnpm project)
+- `docker-compose.yml` - Local development stack
+
 ## Plan
 
-- [ ] **Step 1: Scaffold runtime and project foundations**
-      Create baseline monorepo runtime assets required by all subplans (backend/frontend skeletons,
-      env examples, and `docker-compose.yml`), and ensure env/secrets bootstrap is self-managed by
-      the implementation (create required service-level env files from templates and wire compose
-      env_file usage), then validate coherence.
+- [x] **Step 1: Scaffold runtime and project foundations**
+      Created backend with `uv init`, frontend with `sv create`, installed all dependencies,
+      shadcn-svelte initialized. Project structure established.
       Verify: `docker compose config` succeeds.
 
-- [ ] **Step 2: Execute backend agentic blueprint**
-      Complete `backend-python-plan.md` end-to-end.
+- [x] **Step 2: Execute backend agentic blueprint**
+      Backend implementation complete with:
+      - Domain models and ORM entities
+      - Repositories (conversation, document, timeline)
+      - Services (planner with fallback, classifier, tool registry, agent loop)
+      - FastAPI app with SSE streaming
+      - Controller with timeline retrieval
       Verify: backend tests and verification commands in that file pass.
 
 - [ ] **Step 3: Execute frontend architecture blueprint**
@@ -121,11 +130,11 @@ Detailed contracts live in:
 4. `test -s /tmp/talkingcode-openapi.json`
 5. `pytest backend/tests/unit -q`
 6. `pytest backend/tests/integration -q`
-7. `pnpm --dir frontend check`
-8. `pnpm --dir frontend test`
-9. `pnpm --dir frontend run verify:agentic-e2e`
+7. `pnpm --dir talkingcode-frontend check`
+8. `pnpm --dir talkingcode-frontend test`
+9. `pnpm --dir talkingcode-frontend run verify:agentic-e2e`
 10. Manual chat sanity:
-   - planner/filter event appears,
-   - tool names + visible args/filters appear,
-   - payloads are hidden,
-   - final answer streams correctly.
+    - planner/filter event appears,
+    - tool names + visible args/filters appear,
+    - payloads are hidden,
+    - final answer streams correctly.

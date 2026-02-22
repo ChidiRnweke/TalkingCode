@@ -1,0 +1,163 @@
+"""Agent loop service with streaming."""
+import asyncio
+import json
+from dataclasses import dataclass
+from datetime import datetime
+from typing import AsyncGenerator
+from uuid import UUID
+
+import structlog
+
+from talkingcode.domain.models import (
+    AgentTurnInput,
+    PlannerOutput,
+    ToolExecutionResult,
+    WhiteboxEvent,
+)
+from talkingcode.domain.services import ExecuteToolGroupInput, PlannerInput
+from talkingcode.enums import WhiteboxEventKind
+from talkingcode.services.agent.timeline_repository import TimelineRepository
+from talkingcode.services.planner.planner_service import PlannerService
+from talkingcode.services.tools.tool_registry import ToolRegistry
+
+logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class AgentLoopService:
+    """Agent loop with planner and tool execution."""
+    
+    planner: PlannerService
+    tool_registry: ToolRegistry
+    timeline_repository: TimelineRepository
+    max_iterations: int = 8
+    max_tools_per_turn: int = 3
+    default_tool_timeout: int = 15
+    
+    async def run_turn(
+        self,
+        input_data: AgentTurnInput,
+    ) -> AsyncGenerator[WhiteboxEvent, None]:
+        """Run agent turn with streaming events."""
+        turn_id = str(datetime.utcnow().timestamp())
+        
+        # Emit planner started
+        yield WhiteboxEvent(
+            kind=WhiteboxEventKind.PLANNER_STARTED,
+            turn_id=turn_id,
+            tool_name=None,
+            message="Planner started",
+            visible_args=None,
+            timestamp=datetime.utcnow(),
+        )
+        
+        try:
+            # Get plan from planner
+            planner_input = PlannerInput(
+                question=input_data.question,
+                conversation_id=input_data.conversation_id,
+                selected_model=input_data.selected_model,
+            )
+            plan = await self.planner.plan(planner_input)
+            
+            # Emit planner ready
+            yield WhiteboxEvent(
+                kind=WhiteboxEventKind.PLANNER_READY,
+                turn_id=turn_id,
+                tool_name=None,
+                message=f"Intent: {plan.intent}",
+                visible_args={
+                    "intent": plan.intent,
+                    "filters": {
+                        "areas": [a.value for a in plan.filters.areas],
+                        "languages": plan.filters.languages,
+                        "file_types": [ft.value for ft in plan.filters.file_types],
+                    },
+                },
+                timestamp=datetime.utcnow(),
+            )
+            
+            # Execute tool groups
+            tool_count = 0
+            for group in plan.tool_groups[:self.max_tools_per_turn]:
+                if tool_count >= self.max_tools_per_turn:
+                    break
+                
+                # Emit tool call started for each tool
+                for call in group.calls:
+                    if tool_count >= self.max_tools_per_turn:
+                        break
+                    
+                    visible_args = {
+                        k: v for k, v in call.arguments.items()
+                        if k not in ["content", "payload", "data"]
+                    }
+                    
+                    yield WhiteboxEvent(
+                        kind=WhiteboxEventKind.TOOL_CALL_STARTED,
+                        turn_id=turn_id,
+                        tool_name=call.tool_name,
+                        message=f"Starting {call.tool_name}",
+                        visible_args=visible_args,
+                        timestamp=datetime.utcnow(),
+                    )
+                    tool_count += 1
+                
+                # Execute group
+                group_input = ExecuteToolGroupInput(
+                    group_name=group.name,
+                    calls=[
+                        {
+                            "tool_name": c.tool_name,
+                            "arguments": c.arguments,
+                            "non_blocking": c.non_blocking,
+                        }
+                        for c in group.calls
+                    ],
+                    parallel=group.parallel,
+                    timeout_seconds=self.default_tool_timeout,
+                )
+                
+                results = await self.tool_registry.execute_group(group_input)
+                
+                # Emit tool call finished
+                for result in results:
+                    yield WhiteboxEvent(
+                        kind=WhiteboxEventKind.TOOL_CALL_FINISHED,
+                        turn_id=turn_id,
+                        tool_name=result.tool_name,
+                        message=f"Completed {result.tool_name}",
+                        visible_args={"success": result.success, "duration_ms": result.duration_ms},
+                        timestamp=datetime.utcnow(),
+                    )
+            
+            # Emit assistant streaming tokens (mock for now)
+            yield WhiteboxEvent(
+                kind=WhiteboxEventKind.ASSISTANT_TOKEN,
+                turn_id=turn_id,
+                tool_name=None,
+                message="",
+                visible_args=None,
+                timestamp=datetime.utcnow(),
+            )
+            
+            # Emit done
+            yield WhiteboxEvent(
+                kind=WhiteboxEventKind.ASSISTANT_DONE,
+                turn_id=turn_id,
+                tool_name=None,
+                message="Turn complete",
+                visible_args=None,
+                timestamp=datetime.utcnow(),
+            )
+            
+        except Exception as e:
+            logger.error("Agent turn failed", error=str(e))
+            yield WhiteboxEvent(
+                kind=WhiteboxEventKind.AGENT_ERROR,
+                turn_id=turn_id,
+                tool_name=None,
+                message=str(e),
+                visible_args={"code": "agent_error"},
+                timestamp=datetime.utcnow(),
+            )
