@@ -36,6 +36,7 @@ The prior linear retrieve -> generate path is deprecated for chat orchestration.
 ## Architecture Decisions
 
 - Dataclass IO contracts at service boundaries (no raw dict/primitive signatures).
+- All domain/service IO dataclasses use `@dataclass(slots=True, frozen=True)`.
 - Repositories own ORM mapping and return domain models.
 - Services never import each other.
 - Controllers orchestrate multiple services.
@@ -51,6 +52,8 @@ The prior linear retrieve -> generate path is deprecated for chat orchestration.
 ## Interfaces and Models
 
 ### Core dataclasses
+
+All dataclasses in this section and below are `slots=True, frozen=True`.
 
 - `AgentTurnInput(conversation_id: UUID | None, question: str, selected_model: str | None)`
 - `PlannerInput(question: str, conversation_id: UUID | None, selected_model: str | None)`
@@ -93,6 +96,50 @@ The prior linear retrieve -> generate path is deprecated for chat orchestration.
 - OpenAPI emitted by backend is the canonical frontend contract source and must be retrievable at
   `http://localhost:8000/openapi.json` when backend is running.
 
+### Persistence schema (V1)
+
+- `conversation_turns` table:
+  - `id` (UUID, PK)
+  - `conversation_id` (UUID, FK)
+  - `question` (text)
+  - `selected_model` (text, nullable)
+  - `planner_model_used` (text)
+  - `status` (`done | error`)
+  - `created_at` (timestamptz)
+  - `completed_at` (timestamptz, nullable)
+- `tool_call_timeline` table:
+  - `id` (UUID, PK)
+  - `turn_id` (UUID, FK to `conversation_turns.id`)
+  - `sequence_no` (int)
+  - `group_name` (text)
+  - `tool_name` (text)
+  - `visible_args_json` (jsonb)
+  - `status` (`started | finished | failed`)
+  - `success` (bool, nullable)
+  - `duration_ms` (int, nullable)
+  - `error_code` (text, nullable)
+  - `error_message` (text, nullable)
+  - `created_at` (timestamptz)
+- Required indexes:
+  - `(turn_id, sequence_no)` on `tool_call_timeline`
+  - `(conversation_id, created_at)` on `conversation_turns`
+- Optional (disabled by default for V1): `tool_call_payload_cache`
+  - `id` (UUID, PK)
+  - `timeline_id` (UUID, FK to `tool_call_timeline.id`)
+  - `payload_json_encrypted` (text/jsonb)
+  - `ttl_expires_at` (timestamptz)
+  - Never exposed in API responses or SSE events.
+
+### Tool contract enforcement (V1)
+
+- Tool registry schemas are generated from dataclass tool IO models.
+- Argument decoding is strict: unknown arguments fail validation.
+- Execution policy defaults to blocking:
+  - if a tool call fails, the current execution group stops,
+  - subsequent groups are skipped,
+  - an `agent_error` is emitted with a safe message.
+- Non-blocking calls are allowed only when explicitly flagged in the planner output.
+
 ### Planner fallback policy (strict)
 
 - Attempt planner execution with `selected_model` when provided.
@@ -125,6 +172,7 @@ The prior linear retrieve -> generate path is deprecated for chat orchestration.
   - `assistant_done`: `{ "turn_id": str, "timestamp": str }`
   - `agent_error`: `{ "turn_id": str, "message": str, "code": str | null, "timestamp": str }`
 - Never include raw tool payload bodies in any event.
+- Frontend-facing stream/timeline surfaces only tool names, visible args, statuses, and timings.
 
 ## Plan
 

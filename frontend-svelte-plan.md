@@ -33,7 +33,9 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
 - Backend stream is consumed as FastAPI SSE named events with JSON payload data.
 - Service layer maps `snake_case` wire payloads to camelCase domain models.
 - Route handlers stay thin; controllers/services own orchestration.
-- UI never receives raw tool payload content.
+- Chat streaming is exposed via a dedicated SvelteKit API endpoint (`src/routes/api/chat/agentic/+server.ts`).
+- Route actions/loaders handle non-streaming orchestration (conversation selection, timeline/model loading).
+- UI never receives tool payload bodies or tool result content; only tool name + visible args + status metadata.
 - Chat route/UI composition follows locked inventory from `frontend-ui-plan.md`.
 - OpenAPI types are generated from the running backend endpoint
   `http://localhost:8000/openapi.json`.
@@ -76,7 +78,8 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
   - `timeline`,
   - `modelOptions`,
   - `selectedModel`.
-- `/` chat action/endpoint consumes `AgenticAskInput` and streams `AgentStreamEvent`.
+- `POST /api/chat/agentic` consumes `AgenticAskInput` and streams `AgentStreamEvent` as SSE.
+- `/` actions handle non-streaming mutations only (create/select conversation, model updates).
 
 ### Transport contract enforcement (strict)
 
@@ -86,6 +89,10 @@ timeline, visible filters, and final token stream. The legacy non-agentic flow i
 - Treat all incoming payload fields as `snake_case` and map to camelCase domain models in
   service-layer mappers only.
 - Reject or ignore unknown payload fields that could leak tool payload content.
+- Reject events that contain unknown payload fields; drop the offending event and surface a client parse
+  error path without exposing raw payload content.
+- Timeline API responses must follow the same rule: no raw tool payload content, only redacted
+  metadata (`toolName`, `visibleArgs`, status, duration, timestamp, errors).
 - `agent_error` frontend shape is:
   `AgentErrorEvent { turnId: string; message: string; code?: string | null; timestamp: string }`.
 

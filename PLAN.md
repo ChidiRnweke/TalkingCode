@@ -42,15 +42,24 @@ around the agent loop design and corresponding contracts.
 
 - Single source of truth plans: this file + three subplans below.
 - Backend follows `python-swe` with dataclass service IO contracts.
+- Backend dataclasses use `slots=True, frozen=True`.
 - Frontend follows `svelte-swe` strict layering.
 - UI follows `svelte-ui` + `DESIGN_SYSTEM.md` + locked `svelte-ai-elements` inventory.
 - Planner runs every turn with strict structured output.
 - Planner fallback model is `gemini-3-flash` on OpenRouter when the selected/default model
   cannot satisfy structured-output requirements.
 - Tool loop limits: max 8 iterations, max 3 tools/turn, planner-grouped parallel execution.
+- Tool registry/arg contracts are strict (schema from dataclass IO; unknown args rejected).
+- Default tool execution is blocking; non-blocking tool calls require explicit planner flag.
 - Backend streams FastAPI SSE events using named `event:` values and JSON `data:` payloads.
 - Stream payloads are `snake_case` on the wire; frontend maps to camelCase domain models.
+- Frontend chat stream is served from SvelteKit API route `POST /api/chat/agentic`; loaders/actions handle
+  non-streaming concerns.
+- Frontend rejects stream events with unknown payload fields to prevent schema drift and payload leakage.
 - Whitebox stream shows tool names and visible args/filters only; payloads hidden.
+- Timeline persistence uses `conversation_turns` + `tool_call_timeline` with indexed turn ordering.
+- Optional encrypted `tool_call_payload_cache` remains disabled by default in V1 and is never
+  exposed to frontend contracts.
 - OpenAPI contract is generated from the running backend via
   `http://localhost:8000/openapi.json` and consumed by frontend type generation.
 
