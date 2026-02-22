@@ -44,6 +44,7 @@ around the agent loop design and corresponding contracts.
 ## Architecture Decisions
 
 - Single source of truth plans: this file + three subplans below.
+- Secrets/bootstrap policy: the executor must create and manage local env files (`.env` / `.env.example`) needed for runtime; do not assume secrets are pre-provisioned beyond user-provided root credentials.
 - Backend follows `python-swe` with dataclass service IO contracts.
 - Backend dataclasses use `slots=True, frozen=True`.
 - Frontend follows `svelte-swe` strict layering.
@@ -84,7 +85,9 @@ Detailed contracts live in:
 
 - [ ] **Step 1: Scaffold runtime and project foundations**
       Create baseline monorepo runtime assets required by all subplans (backend/frontend skeletons,
-      env examples, and `docker-compose.yml`), then validate coherence.
+      env examples, and `docker-compose.yml`), and ensure env/secrets bootstrap is self-managed by
+      the implementation (create required service-level env files from templates and wire compose
+      env_file usage), then validate coherence.
       Verify: `docker compose config` succeeds.
 
 - [ ] **Step 2: Execute backend agentic blueprint**
