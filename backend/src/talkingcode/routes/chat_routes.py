@@ -58,8 +58,8 @@ async def chat_agentic(
     selected_model = request.get("selected_model")
     
     factory = AppFactory(session=session, config=config)
-    controller = factory.get_chat_controller()
-    
+    controller = await factory.get_chat_controller()
+
     async def event_generator() -> AsyncGenerator[str, None]:
         async for event in controller.start_agentic_turn(
             conversation_id=conversation_id,
@@ -82,8 +82,8 @@ async def get_chat_timeline(
 ) -> dict:
     """Get chat timeline for conversation."""
     factory = AppFactory(session=session, config=config)
-    controller = factory.get_chat_controller()
-    
+    controller = await factory.get_chat_controller()
+
     timeline = await controller.get_timeline(conversation_id)
     
     return {

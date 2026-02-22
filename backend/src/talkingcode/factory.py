@@ -66,19 +66,32 @@ class AppFactory:
             fallback_model=self.config.fallback_model,
         )
 
-    def get_tool_registry(self) -> ToolRegistry:
+    async def get_tool_registry(self) -> ToolRegistry:
         """Get tool registry with all tools."""
         document_repo = self.get_document_repository()
-        retriever = RetrieverTool(document_repo)
+        repo_repo = self.get_repo_repository()
+
+        # Fetch available repo names for intent extraction
+        repos = await repo_repo.list_all()
+        available_repos = [f"{r.owner}/{r.name}" for r in repos]
+
+        retriever = RetrieverTool(
+            document_repository=document_repo,
+            openrouter_client=self.get_openrouter_client(),
+            embedding_model=self.config.embedding_model,
+            embedding_dimensions=self.config.embedding_dimensions,
+            intent_model=self.config.intent_extraction_model,
+            available_repos=available_repos,
+        )
 
         registry = ToolRegistry()
         registry.register_tool(retriever)
 
         return registry
 
-    def get_agent_loop_service(self) -> AgentLoopService:
+    async def get_agent_loop_service(self) -> AgentLoopService:
         """Get agent loop service."""
-        tool_registry = self.get_tool_registry()
+        tool_registry = await self.get_tool_registry()
         timeline_repo = self.get_timeline_repository()
 
         return AgentLoopService(
@@ -91,11 +104,11 @@ class AppFactory:
             default_tool_timeout=self.config.default_tool_timeout,
         )
 
-    def get_chat_controller(self) -> "ChatController":
+    async def get_chat_controller(self) -> "ChatController":
         """Get chat controller."""
         from talkingcode.controllers.chat_controller import ChatController
 
-        agent_service = self.get_agent_loop_service()
+        agent_service = await self.get_agent_loop_service()
         timeline_repo = self.get_timeline_repository()
         conversation_repo = self.get_conversation_repository()
 
@@ -141,6 +154,7 @@ class AppFactory:
             classifier=self.get_document_classifier(),
             chunker=self.get_chunker(),
             embedder=self.get_embedder(),
+            database_url=self.config.database_url,
         )
 
     def get_ingestion_controller(self) -> "IngestionController":

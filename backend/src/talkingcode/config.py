@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     # Embeddings
     embedding_model: str = "openai/text-embedding-3-large"
     embedding_dimensions: int = 3072
+
+    # Intent extraction (cheap model for query classification)
+    intent_extraction_model: str = "deepseek/deepseek-v3.2"
+
+    # Curated model list
+    curated_models: str = "google/gemini-3-flash-preview,deepseek/deepseek-v3.2,moonshotai/kimi-k2.5,qwen/qwen3.5-plus-02-15,z-ai/glm-4.7,openai/gpt-5.1-codex-mini"
+    default_chat_model: str = "google/gemini-3-flash-preview"
     
     @property
     def database_url_async(self) -> str:
@@ -56,6 +63,9 @@ class AppConfig:
     default_tool_timeout: int
     embedding_model: str
     embedding_dimensions: int
+    intent_extraction_model: str
+    curated_models: str
+    default_chat_model: str
     
     @classmethod
     def from_env(cls) -> Self:
@@ -75,4 +85,7 @@ class AppConfig:
             default_tool_timeout=settings.default_tool_timeout,
             embedding_model=settings.embedding_model,
             embedding_dimensions=settings.embedding_dimensions,
+            intent_extraction_model=settings.intent_extraction_model,
+            curated_models=settings.curated_models,
+            default_chat_model=settings.default_chat_model,
         )
