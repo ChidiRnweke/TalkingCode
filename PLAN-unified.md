@@ -1047,7 +1047,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step B.5: Create document chunker service**
+- [x] **Step B.5: Create document chunker service**
 
       **Files to create:**
       - `backend/src/talkingcode/services/ingestion/chunker.py`
