@@ -899,7 +899,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step B.4: Create GitHub file fetcher service**
+- [x] **Step B.4: Create GitHub file fetcher service**
 
       **Files to create:**
       - `backend/src/talkingcode/services/ingestion/__init__.py` (empty)
