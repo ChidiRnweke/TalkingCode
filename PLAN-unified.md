@@ -275,7 +275,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step A.2: Update ChatHeader with personal branding and navigation stub**
+- [x] **Step A.2: Update ChatHeader with personal branding and navigation stub**
 
       **Files to modify:**
       - `talkingcode-frontend/src/lib/components/layout/ChatHeader.svelte`
@@ -321,6 +321,9 @@ Phase D — Integration & polish:
 
       **Verify:** Run `cd talkingcode-frontend && pnpm check`. The header shows "TalkingCode"
       in Fraunces font with "Chat with Chidi's code" subtitle. A "Chat" nav pill is visible.
+
+      Note: Header updated per structure/spec. `pnpm check` still fails on the same pre-existing
+      badge prop typing issues in `InlineReasoning.svelte` and `TurnDetailPanel.svelte`.
 
 ---
 

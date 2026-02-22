@@ -1,40 +1,37 @@
 <script lang="ts">
-	import {Badge} from '$lib/components/ui/badge';
+	import { Badge } from '$lib/components/ui/badge';
 	import { Code2 } from 'lucide-svelte';
 
-	type TurnPhase = 'idle' | 'planning' | 'tools' | 'streaming' | 'done' | 'error';
-
-	type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive';
-
 	interface Props {
-		phase?: TurnPhase;
+		phase?: string;
 	}
 
 	let { phase = 'idle' }: Props = $props();
-
-	const phaseLabels: Record<TurnPhase, string> = {
-		idle: 'Ready',
-		planning: 'Planning',
-		tools: 'Using tools',
-		streaming: 'Generating',
-		done: 'Done',
-		error: 'Error'
-	};
-
-	const phaseVariants: Record<TurnPhase, BadgeVariant> = {
-		idle: 'secondary',
-		planning: 'secondary',
-		tools: 'secondary',
-		streaming: 'outline',
-		done: 'secondary',
-		error: 'destructive'
-	};
 </script>
 
-<header class="flex h-14 items-center justify-between border-b border-border px-[var(--page-padding)]">
-	<div class="flex items-center gap-2">
-		<Code2 class="h-6 w-6 text-primary" />
-		<span class="font-display text-xl tracking-tight text-foreground">TalkingCode</span>
+<header
+	class="flex h-14 items-center justify-between border-b border-border bg-background px-[var(--page-padding)]"
+>
+	<div class="flex items-center gap-3">
+		<Code2 class="h-5 w-5 text-primary" />
+		<div class="flex items-baseline gap-2">
+			<h1 class="font-display text-lg font-semibold tracking-tight text-foreground">TalkingCode</h1>
+			<span class="text-xs text-muted-foreground">Chat with Chidi's code</span>
+		</div>
 	</div>
-	<Badge variant={phaseVariants[phase]}>{phaseLabels[phase]}</Badge>
+
+	<div class="flex items-center gap-3">
+		<nav class="flex items-center gap-1">
+			<a
+				href="/"
+				class="rounded-[var(--radius-full)] bg-[hsl(var(--color-primary)/0.12)] px-3 py-1.5 text-sm font-medium text-foreground"
+			>
+				Chat
+			</a>
+		</nav>
+
+		{#if phase && phase !== 'idle'}
+			<Badge variant="secondary" class="text-xs">{phase}</Badge>
+		{/if}
+	</div>
 </header>
