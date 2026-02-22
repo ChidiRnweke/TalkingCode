@@ -168,7 +168,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Keep tests focused on route access policy.
       **Verify:** `cd backend && uv run pytest -q` passes.
 
-- [ ] **Step 15: Document cron usage for protected ingestion**
+- [x] **Step 15: Document cron usage for protected ingestion**
       File: update an existing docs file (`README.md` or backend README).
       Add a short section with:
       - env var name `INGESTION_API_KEY`
