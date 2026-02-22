@@ -36,7 +36,7 @@
 				/>
 			</ConversationEmptyState>
 		{:else}
-			<div class="flex flex-col gap-4 px-4 py-6">
+			<div class="mx-auto max-w-3xl w-full px-4 md:px-0 flex flex-col gap-10 py-20 pb-40">
 				{#each messages as message (message.id)}
 					{#if message.role === 'user'}
 						<UserMessage {message} />

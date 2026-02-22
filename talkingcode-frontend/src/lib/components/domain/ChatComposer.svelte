@@ -36,32 +36,37 @@
 	];
 </script>
 
-<div class="border-t border-border bg-background px-[var(--page-padding)] py-4">
-	<PromptInput
-		onSubmit={handleSubmit}
-		class="border-border/60 bg-[hsl(var(--color-surface-2))] focus-within:border-[hsl(var(--color-primary)/0.4)] focus-within:ring-2 focus-within:ring-[hsl(var(--color-primary)/0.15)]"
-	>
-		<PromptInputBody>
-			<PromptInputTextarea placeholder="Ask about architecture, modules, ownership, or behavior..." />
-		</PromptInputBody>
-		<PromptInputToolbar>
-			<PromptInputModelSelect
-				value={selectedModel || models[0].value}
-				onValueChange={(v) => onModelChange?.(v ?? models[0].value)}
-			>
-				<PromptInputModelSelectTrigger>
-					<PromptInputModelSelectValue placeholder="Select model" />
-				</PromptInputModelSelectTrigger>
-				<PromptInputModelSelectContent>
-					{#each models as model}
-						<PromptInputModelSelectItem value={model.value}>
-							{model.label}
-						</PromptInputModelSelectItem>
-					{/each}
-				</PromptInputModelSelectContent>
-			</PromptInputModelSelect>
+<div class="fixed bottom-0 left-0 right-0 z-40 p-4 md:p-6 pointer-events-none">
+	<div class="mx-auto max-w-3xl w-full pointer-events-auto">
+		<PromptInput
+			onSubmit={handleSubmit}
+			class="border-border/60 bg-background/80 backdrop-blur-lg shadow-2xl focus-within:border-primary/40 focus-within:ring-4 focus-within:ring-primary/5"
+		>
+			<PromptInputBody>
+				<PromptInputTextarea placeholder="Ask about architecture, modules, ownership, or behavior..." />
+			</PromptInputBody>
+			<PromptInputToolbar>
+				<PromptInputModelSelect
+					value={selectedModel || models[0].value}
+					onValueChange={(v) => onModelChange?.(v ?? models[0].value)}
+				>
+					<PromptInputModelSelectTrigger>
+						<PromptInputModelSelectValue placeholder="Select model" />
+					</PromptInputModelSelectTrigger>
+					<PromptInputModelSelectContent>
+						{#each models as model}
+							<PromptInputModelSelectItem value={model.value}>
+								{model.label}
+							</PromptInputModelSelectItem>
+						{/each}
+					</PromptInputModelSelectContent>
+				</PromptInputModelSelect>
 
-			<PromptInputSubmit disabled={disabled} />
-		</PromptInputToolbar>
-	</PromptInput>
+				<PromptInputSubmit disabled={disabled} />
+			</PromptInputToolbar>
+		</PromptInput>
+		<p class="mt-3 text-[10px] text-center text-muted-foreground uppercase tracking-widest">
+			Chidi might make mistakes. Verify important info.
+		</p>
+	</div>
 </div>
