@@ -3,11 +3,11 @@ import json
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-import httpx
 import structlog
 
 from talkingcode.domain.models import PlannerInput, PlannerOutput, RetrievalFilters, StopRules, ToolGroupPlan, PlannedToolCall
 from talkingcode.enums import Area, FileType
+from talkingcode.services.llm.openrouter_client import IOpenRouterClient
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
@@ -75,8 +75,8 @@ PLANNER_SCHEMA = {
 @dataclass(slots=True)
 class PlannerService:
     """Planner service with OpenRouter integration."""
-    
-    openrouter_api_key: str
+
+    openrouter_client: IOpenRouterClient
     default_model: str
     fallback_model: str
     
@@ -99,42 +99,27 @@ class PlannerService:
     
     async def _try_plan(self, question: str, model: str) -> PlannerOutput:
         """Attempt to get plan from LLM."""
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.openrouter_api_key}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://talkingcode.dev",
+        content = await self.openrouter_client.send_chat(
+            model=model,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a code understanding planner. Analyze the question and create a plan with filters and tool calls.",
                 },
-                json={
-                    "model": model,
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": "You are a code understanding planner. Analyze the question and create a plan with filters and tool calls.",
-                        },
-                        {"role": "user", "content": question},
-                    ],
-                    "response_format": {
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": "planner_output",
-                            "strict": True,
-                            "schema": PLANNER_SCHEMA,
-                        },
-                    },
+                {"role": "user", "content": question},
+            ],
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "planner_output",
+                    "strict": True,
+                    "schema": PLANNER_SCHEMA,
                 },
-                timeout=30.0,
-            )
-            
-            response.raise_for_status()
-            data = response.json()
-            
-            content = data["choices"][0]["message"]["content"]
-            parsed = json.loads(content)
-            
-            return self._parse_output(parsed)
+            },
+        )
+        parsed = json.loads(content)
+
+        return self._parse_output(parsed)
     
     def _parse_output(self, data: dict[str, Any]) -> PlannerOutput:
         """Parse planner output."""

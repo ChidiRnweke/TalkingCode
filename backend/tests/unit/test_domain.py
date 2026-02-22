@@ -1,4 +1,6 @@
 """Tests for domain models."""
+from uuid import uuid4
+
 from talkingcode.domain.models import (
     RetrievalFilters,
     StopRules,
@@ -77,6 +79,7 @@ class TestPlannerOutput:
 class TestAgentTurnInput:
     def test_creation(self):
         input_data = AgentTurnInput(
+            turn_id=uuid4(),
             conversation_id=None,
             question="What is this?",
             selected_model="test-model",

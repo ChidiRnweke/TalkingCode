@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import AsyncGenerator, Protocol
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import structlog
 from talkingcode.domain.models import (
@@ -14,6 +14,7 @@ from talkingcode.domain.models import (
 )
 from talkingcode.enums import WhiteboxEventKind
 from talkingcode.services.agent.timeline_repository import TimelineRepository
+from talkingcode.services.llm.openrouter_client import IOpenRouterClient
 from talkingcode.services.planner.planner_service import PlannerService
 from talkingcode.services.tools.tool_registry import ToolRegistry
 
@@ -35,8 +36,10 @@ class AgentLoopService:
     """Agent loop with planner and tool execution."""
 
     planner: PlannerService
+    openrouter_client: IOpenRouterClient
     tool_registry: ToolRegistry
     timeline_repository: TimelineRepository
+    default_model: str
     max_iterations: int = 8
     max_tools_per_turn: int = 3
     default_tool_timeout: int = 15
@@ -46,7 +49,7 @@ class AgentLoopService:
         input_data: AgentTurnInput,
     ) -> AsyncGenerator[WhiteboxEvent, None]:
         """Run agent turn with streaming events."""
-        turn_uuid = uuid4()
+        turn_uuid = input_data.turn_id
         turn_id = str(turn_uuid)
 
         # Emit planner started
@@ -88,6 +91,7 @@ class AgentLoopService:
             # Execute tool groups
             tool_count = 0
             sequence_no = 0
+            tool_results_payloads: list[str] = []
             for group in plan.tool_groups[: self.max_tools_per_turn]:
                 if tool_count >= self.max_tools_per_turn:
                     break
@@ -106,7 +110,7 @@ class AgentLoopService:
 
                     # Persist timeline entry
                     timeline_id = await self.timeline_repository.create_timeline_entry(
-                        turn_id=UUID(turn_id) if len(turn_id) == 36 else uuid4(),
+                        turn_id=UUID(turn_id),
                         sequence_no=sequence_no,
                         group_name=group.name,
                         tool_name=call.tool_name,
@@ -141,6 +145,12 @@ class AgentLoopService:
                 )
 
                 results = await self.tool_registry.execute_group(group_input)
+                tool_results_payloads.extend(
+                    [
+                        f"tool={result.tool_name} success={result.success} payload={result.payload_json}"
+                        for result in results
+                    ]
+                )
 
                 # Emit tool call finished and update timeline
                 for (timeline_id, call), result in zip(timeline_ids, results):
@@ -164,15 +174,36 @@ class AgentLoopService:
                         timestamp=datetime.utcnow(),
                     )
 
-            # Emit assistant streaming tokens (mock for now)
-            yield WhiteboxEvent(
-                kind=WhiteboxEventKind.ASSISTANT_TOKEN,
-                turn_id=turn_id,
-                tool_name=None,
-                message="",
-                visible_args=None,
-                timestamp=datetime.utcnow(),
+            context_lines = tool_results_payloads[: self.max_tools_per_turn]
+            context_blob = "\n".join(context_lines)
+            assistant_prompt = (
+                f"Question:\n{input_data.question}\n\n"
+                f"Planner intent: {plan.intent}\n"
+                f"Tool results:\n{context_blob}"
             )
+
+            model = input_data.selected_model or self.default_model
+            async for token in self.openrouter_client.stream_chat(
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are TalkingCode. Answer the user using the tool outputs. "
+                            "Be concise and cite uncertainty when data is insufficient."
+                        ),
+                    },
+                    {"role": "user", "content": assistant_prompt},
+                ],
+            ):
+                yield WhiteboxEvent(
+                    kind=WhiteboxEventKind.ASSISTANT_TOKEN,
+                    turn_id=turn_id,
+                    tool_name=None,
+                    message=token,
+                    visible_args=None,
+                    timestamp=datetime.utcnow(),
+                )
 
             # Emit done
             yield WhiteboxEvent(

@@ -41,6 +41,8 @@ async def require_ingestion_api_key(
     Checks X-API-Key header first, then api_key query parameter.
     """
     effective_key = x_api_key or api_key
+    print(f"DEBUG: Config: {config}")
+    print(f"DEBUG: Ingestion Key: '{config.ingestion_api_key}'")
     
     if not config.ingestion_api_key:
         raise HTTPException(

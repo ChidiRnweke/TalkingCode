@@ -14,6 +14,7 @@ from talkingcode.enums import Area, FileType, IngestionStatus, WhiteboxEventKind
 @dataclass(slots=True, frozen=True)
 class AgentTurnInput:
     """Input for starting an agentic conversation turn."""
+    turn_id: UUID | None
     conversation_id: UUID | None
     question: str
     selected_model: str | None = None

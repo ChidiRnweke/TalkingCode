@@ -6,6 +6,7 @@ from uuid import UUID
 import structlog
 
 from talkingcode.domain.models import AgentTurnInput, ToolTimelineItem, WhiteboxEvent
+from talkingcode.enums import TurnStatus, WhiteboxEventKind
 from talkingcode.repository.conversation_repository import ConversationRepository
 from talkingcode.services.agent.agent_loop import AgentLoopService
 from talkingcode.services.agent.timeline_repository import TimelineRepository
@@ -28,14 +29,27 @@ class ChatController:
         selected_model: str | None,
     ) -> AsyncGenerator[WhiteboxEvent, None]:
         """Start agentic turn and stream events."""
+        turn = await self.conversation_repository.create_turn(
+            conversation_id=conversation_id,
+            question=question,
+            selected_model=selected_model,
+            planner_model_used=selected_model or self.agent_service.default_model,
+        )
+
         input_data = AgentTurnInput(
+            turn_id=turn.id,
             conversation_id=conversation_id,
             question=question,
             selected_model=selected_model,
         )
-        
+
+        status = TurnStatus.DONE
         async for event in self.agent_service.run_turn(input_data):
+            if event.kind == WhiteboxEventKind.AGENT_ERROR:
+                status = TurnStatus.ERROR
             yield event
+
+        await self.conversation_repository.complete_turn(turn.id, status=status)
     
     async def get_timeline(
         self,

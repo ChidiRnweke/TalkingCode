@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     
     # LLM APIs
     openrouter_api_key: str = ""
-    openai_api_key: str = ""
     github_token: str = ""
     ingestion_api_key: str = ""
     
@@ -46,7 +45,6 @@ class AppConfig:
     
     database_url: str
     openrouter_api_key: str
-    openai_api_key: str
     github_token: str
     ingestion_api_key: str
     environment: str
@@ -66,7 +64,6 @@ class AppConfig:
         return cls(
             database_url=settings.database_url_async,
             openrouter_api_key=settings.openrouter_api_key,
-            openai_api_key=settings.openai_api_key,
             github_token=settings.github_token,
             ingestion_api_key=settings.ingestion_api_key,
             environment=settings.environment,

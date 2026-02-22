@@ -36,8 +36,8 @@ async def app_config():
     return AppConfig(
         database_url="postgresql+asyncpg://test:test@localhost/test",
         openrouter_api_key="test-key",
-        openai_api_key="test-key",
         github_token="test-token",
+        ingestion_api_key="test-ingestion-key",
         environment="test",
         log_level="DEBUG",
         default_model="test-model",

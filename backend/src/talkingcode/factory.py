@@ -14,9 +14,10 @@ from talkingcode.services.agent.agent_loop import AgentLoopService
 from talkingcode.services.agent.timeline_repository import TimelineRepository
 from talkingcode.services.classification.document_classifier import DocumentClassifier
 from talkingcode.services.ingestion.chunker import LineChunker
-from talkingcode.services.ingestion.embedder import OpenAIEmbedder
+from talkingcode.services.ingestion.embedder import OpenRouterEmbedder
 from talkingcode.services.ingestion.github_fetcher import GitHubFetcher
 from talkingcode.services.ingestion.ingestion_service import IngestionService
+from talkingcode.services.llm.openrouter_client import OpenRouterClient
 from talkingcode.services.planner.planner_service import PlannerService
 from talkingcode.services.tools.retriever_tool import RetrieverTool
 from talkingcode.services.tools.tool_registry import ToolRegistry
@@ -50,13 +51,17 @@ class AppFactory:
     def get_document_classifier(self) -> DocumentClassifier:
         """Get document classifier."""
         return DocumentClassifier(
-            openai_api_key=self.config.openai_api_key,
+            openrouter_client=self.get_openrouter_client(),
         )
+
+    def get_openrouter_client(self) -> OpenRouterClient:
+        """Get OpenRouter SDK client adapter."""
+        return OpenRouterClient(api_key=self.config.openrouter_api_key)
 
     def get_planner_service(self) -> PlannerService:
         """Get planner service."""
         return PlannerService(
-            openrouter_api_key=self.config.openrouter_api_key,
+            openrouter_client=self.get_openrouter_client(),
             default_model=self.config.default_model,
             fallback_model=self.config.fallback_model,
         )
@@ -79,8 +84,10 @@ class AppFactory:
 
         return AgentLoopService(
             planner=planner,
+            openrouter_client=self.get_openrouter_client(),
             tool_registry=tool_registry,
             timeline_repository=timeline_repo,
+            default_model=self.config.default_model,
             max_iterations=self.config.max_iterations,
             max_tools_per_turn=self.config.max_tools_per_turn,
             default_tool_timeout=self.config.default_tool_timeout,
@@ -112,10 +119,10 @@ class AppFactory:
         """Get document chunker."""
         return LineChunker()
 
-    def get_embedder(self) -> OpenAIEmbedder:
+    def get_embedder(self) -> OpenRouterEmbedder:
         """Get embedding generator."""
-        return OpenAIEmbedder(
-            openai_api_key=self.config.openai_api_key,
+        return OpenRouterEmbedder(
+            openrouter_client=self.get_openrouter_client(),
             model=self.config.embedding_model,
             dimensions=self.config.embedding_dimensions,
         )
