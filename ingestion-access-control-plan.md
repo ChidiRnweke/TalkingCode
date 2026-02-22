@@ -134,7 +134,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       - `GET /repos/{owner}/{name}/runs`
       **Verify:** inspect file manually and ensure these signatures do not include auth dep.
 
-- [ ] **Step 10: Confirm chat routes remain unchanged/public**
+- [x] **Step 10: Confirm chat routes remain unchanged/public**
       File: `backend/src/talkingcode/routes/chat_routes.py`.
       Do not add any ingestion-key dependency here.
       **Verify:** `git diff -- backend/src/talkingcode/routes/chat_routes.py` shows no changes.
