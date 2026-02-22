@@ -91,14 +91,14 @@ The current UI is functional but feels "cramped" and lacks a clear landing exper
 
 ## Plan
 
-- [ ] **Step 1: Route & Layout Restructuring**
+- [x] **Step 1: Route & Layout Restructuring**
       - Move logic from `src/routes/+page.svelte` to `src/routes/chat/+page.svelte`.
       - Update `src/routes/+layout.svelte` to contain the `ChatHeader`.
       - Ensure `ChatHeader` is sticky or fixed.
       - Update `ChatHeader.svelte` to include "New Chat" button (which calls `chatStore.clear()`).
       - Verify: `/` is empty (for now), `/chat` contains the existing chat, `/repos` works.
 
-- [ ] **Step 2: Hero Section Implementation**
+- [x] **Step 2: Hero Section Implementation**
       - In `src/routes/+page.svelte`, build the Hero section.
       - Use `Fraunces` (serif) for the "TALKINGCODE" title and the quote.
       - Use `DM Sans` for body copy.
@@ -107,7 +107,7 @@ The current UI is functional but feels "cramped" and lacks a clear landing exper
       - Add "Curated Prompts" as clickable chips that also trigger the redirect.
       - Verify: Landing page looks editorial. Submitting a prompt navigates to `/chat` and starts the assistant.
 
-- [ ] **Step 3: About Page (Agentic Techniques)**
+- [x] **Step 3: About Page (Agentic Techniques)**
       - Implement `src/routes/about/+page.svelte`.
       - Create a technical but readable section explaining:
         - **Multi-step reasoning**: How the agent plans before it acts.
@@ -116,21 +116,21 @@ The current UI is functional but feels "cramped" and lacks a clear landing exper
       - Style this like a blog post or technical paper (centered text, serif headings).
       - Verify: Content is accurate to the user's description and matches theme.
 
-- [ ] **Step 4: Claude-tier Layout (Chat Thread)**
+- [x] **Step 4: Claude-tier Layout (Chat Thread)**
       - Update `ChatLayout.svelte` to support a centered container.
       - Update `ChatThread.svelte`: Wrap the message loop in `<div class="mx-auto max-w-3xl w-full px-4 md:px-0 flex flex-col gap-8">`.
       - Add massive vertical padding to the thread (`py-20`).
       - Update `ChatComposer.svelte`: Make it a floating or sticky bar at the bottom, centered within the same `max-w-3xl`.
       - Verify: Chat feels spacious. Messages have "room to breathe".
 
-- [ ] **Step 5: `svelte-ai-elements` Integration (Actions)**
+- [x] **Step 5: `svelte-ai-elements` Integration (Actions)**
       - Update `AssistantMessage.svelte`.
       - Use the `Actions` and `Action` components from `$lib/components/ai-elements/action`.
       - Map `Copy` to clipboard and `Retry` to a new `chatStore.retry(messageId)` method.
       - Ensure `InlineReasoning` is properly integrated with `shimmer` during thinking.
       - Verify: Assistant messages have polished action buttons.
 
-- [ ] **Step 6: Persona & System Prompt**
+- [x] **Step 6: Persona & System Prompt**
       - Update `backend/src/talkingcode/services/agent/agent_loop.py`.
       - Change the system prompt to: 
         `"You are Chidi, an expert software engineer and the creator of this project. Answer questions about your code and architecture humbly and accurately. Use the first person ('I built this...', 'My approach here was...'). Citation of uncertainty is mandatory."`
