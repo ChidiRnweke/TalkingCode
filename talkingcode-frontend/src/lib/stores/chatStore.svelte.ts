@@ -177,6 +177,27 @@ function createChatStore() {
 			selectedModel = model;
 		},
 
+		retry(messageId: string): string | null {
+			const idx = messages.findIndex((m) => m.id === messageId);
+			if (idx < 0) return null;
+
+			// Find preceding user message
+			let userMsgContent = null;
+			for (let i = idx - 1; i >= 0; i--) {
+				if (messages[i].role === 'user') {
+					userMsgContent = messages[i].content;
+					break;
+				}
+			}
+
+			if (userMsgContent !== null) {
+				// Remove the assistant message being retried and anything after it
+				messages = messages.slice(0, idx);
+			}
+
+			return userMsgContent;
+		},
+
 		clear() {
 			messages = [];
 			activeMessageId = null;

@@ -41,7 +41,7 @@
 					{#if message.role === 'user'}
 						<UserMessage {message} />
 					{:else}
-						<AssistantMessage {message} {onOpenDetail} />
+						<AssistantMessage {message} {onOpenDetail} onRetry={onSuggestionClick} />
 					{/if}
 				{/each}
 			</div>
