@@ -5,11 +5,8 @@ from typing import AsyncGenerator
 
 import structlog
 
-from talkingcode.domain.models import (
-    AgentTurnInput,
-    WhiteboxEvent,
-)
-from talkingcode.domain.services import ExecuteToolGroupInput, PlannerInput
+from talkingcode.domain.models import WhiteboxEvent
+from talkingcode.domain.services import AgentTurnInput, ExecuteToolGroupInput, PlannerInput
 from talkingcode.enums import WhiteboxEventKind
 from talkingcode.services.agent.timeline_repository import TimelineRepository
 from talkingcode.services.planner.planner_service import PlannerService

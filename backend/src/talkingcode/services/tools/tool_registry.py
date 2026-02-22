@@ -1,6 +1,6 @@
 """Tool registry and executor."""
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Coroutine
 
 import structlog
@@ -17,17 +17,9 @@ ToolFunction = Callable[..., Coroutine[Any, Any, dict[str, Any]]]
 class ToolRegistry:
     """Registry for tool definitions."""
     
-    _tools: dict[str, ToolFunction] = None
-    _schemas: dict[str, dict] = None
-    _timeouts: dict[str, int] = None
-    
-    def __post_init__(self):
-        if self._tools is None:
-            self._tools = {}
-        if self._schemas is None:
-            self._schemas = {}
-        if self._timeouts is None:
-            self._timeouts = {}
+    _tools: dict[str, ToolFunction] = field(default_factory=dict)
+    _schemas: dict[str, dict] = field(default_factory=dict)
+    _timeouts: dict[str, int] = field(default_factory=dict)
     
     def register_tool(
         self,

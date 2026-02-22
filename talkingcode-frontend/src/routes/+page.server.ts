@@ -1,13 +1,14 @@
-import { chatStore } from '$lib/stores/chatStore';
 import { AppFactory } from '$lib/factories/AppFactory';
 
 export async function load() {
+	// Server-side load - return empty initial state
+	// Client-side store will be populated from events
 	return {
-		phase: chatStore.phase,
-		currentPlan: chatStore.currentPlan,
-		timeline: chatStore.timeline,
-		streamingContent: chatStore.streamingContent,
-		error: chatStore.error
+		phase: 'idle',
+		currentPlan: null,
+		timeline: [],
+		streamingContent: '',
+		error: null
 	};
 }
 
@@ -22,29 +23,12 @@ export const actions = {
 			return { error: 'Question is required' };
 		}
 
-		const controller = AppFactory.getChatController();
-		const stream = controller.startAgenticTurn({
-			conversationId,
+		// Return the question data for the client to process
+		return { 
+			success: true,
 			question,
+			conversationId,
 			model
-		});
-
-		// Start processing the stream
-		chatStore.startTurn();
-
-		try {
-			for await (const event of stream) {
-				chatStore.handleEvent(event);
-			}
-		} catch (e) {
-			chatStore.handleEvent({
-				kind: 'agent_error',
-				turnId: chatStore.currentTurnId || '',
-				message: e instanceof Error ? e.message : 'Unknown error',
-				timestamp: new Date().toISOString()
-			});
-		}
-
-		return { success: true };
+		};
 	}
 };

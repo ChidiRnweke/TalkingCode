@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { chatStore } from '$lib/stores/chatStore';
+	import { chatStore } from '$lib/stores';
 	
 	let { data } = $props();
 	let question = $state('');
