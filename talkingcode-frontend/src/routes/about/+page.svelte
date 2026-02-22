@@ -18,9 +18,9 @@
 
 		<section class="space-y-6">
 			<p class="text-foreground/80 leading-relaxed text-lg">
-				Hi, I'm Chidi 👋. I've been exploring agentic AI for a while now, mostly out of 
-				a simple curiosity about how code can reason. I believe that the future of 
-				software development lies in systems that don't just search, but <em>reason</em> alongside us.
+				Hi, I'm Chidi 👋. I’ve been working with GenAI for the past years, both professionally 
+				and as a hobby. I believe that the future of software development 
+				lies in systems that don't just search, but <em>reason</em> alongside us.
 			</p>
 			<p class="text-foreground/80 leading-relaxed">
 				I built TalkingCode to share some of the state-of-the-art techniques I've been 

@@ -91,6 +91,27 @@ function createChatStore() {
 			const current = messages[idx];
 
 			switch (event.kind) {
+				case 'iteration_started':
+					messages[idx] = {
+						...current,
+						planText: current.planText ?? ''
+					};
+					break;
+
+				case 'plan_chunk':
+					messages[idx] = {
+						...current,
+						planText: (current.planText ?? '') + event.chunk
+					};
+					break;
+
+				case 'plan_done':
+					messages[idx] = {
+						...current,
+						planText: event.planText
+					};
+					break;
+
 				case 'planner_started':
 					messages[idx] = {
 						...current,
@@ -113,6 +134,8 @@ function createChatStore() {
 					const newToolCall: ToolCallTimelineItem = {
 						turnId: event.turnId,
 						toolName: event.toolName,
+						callId: event.callId,
+						iteration: event.iteration,
 						visibleArgs: event.visibleArgs,
 						status: 'started',
 						timestamp: event.timestamp
@@ -128,9 +151,10 @@ function createChatStore() {
 					const toolCalls = current.toolCalls?.map((t) =>
 						t.turnId === event.turnId &&
 						t.toolName === event.toolName &&
+						(event.callId ? t.callId === event.callId : true) &&
 						t.status === 'started'
 							? {
-									...t,
+								...t,
 									status: event.success ? 'finished' as const : 'failed' as const,
 									durationMs: event.durationMs
 								}

@@ -19,7 +19,7 @@
 </script>
 
 <header
-	class="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-border/40 bg-background/80 px-6 md:px-12 backdrop-blur-md"
+	class="sticky top-0 z-50 flex h-20 items-center justify-between border-b border-border/40 bg-background/80 px-8 md:px-12 backdrop-blur-md"
 >
 	<a href="/" class="flex items-center gap-3 transition-opacity hover:opacity-80">
 		<div class="bg-primary p-1 rounded-md">

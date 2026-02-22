@@ -86,6 +86,32 @@ export class ChatService implements IChatService {
 			const turnId = parsed.turn_id || '';
 
 			switch (eventType) {
+				case 'iteration_started':
+					return {
+						kind: 'iteration_started',
+						turnId,
+						iteration: parsed.iteration || 1,
+						timestamp
+					};
+
+				case 'plan_chunk':
+					return {
+						kind: 'plan_chunk',
+						turnId,
+						iteration: parsed.iteration || 1,
+						chunk: parsed.visible_args?.chunk || parsed.message || '',
+						timestamp
+					};
+
+				case 'plan_done':
+					return {
+						kind: 'plan_done',
+						turnId,
+						iteration: parsed.iteration || 1,
+						planText: parsed.visible_args?.plan_text || parsed.message || '',
+						timestamp
+					};
+
 				case 'planner_started':
 					return { kind: 'planner_started', turnId, timestamp };
 
@@ -111,6 +137,8 @@ export class ChatService implements IChatService {
 						kind: 'tool_call_started',
 						turnId,
 						toolName: parsed.tool_name || '',
+						callId: parsed.call_id || undefined,
+						iteration: parsed.iteration || undefined,
 						visibleArgs: parsed.visible_args || {},
 						timestamp
 					};
@@ -120,8 +148,11 @@ export class ChatService implements IChatService {
 						kind: 'tool_call_finished',
 						turnId,
 						toolName: parsed.tool_name || '',
+						callId: parsed.call_id || undefined,
+						iteration: parsed.iteration || undefined,
 						success: parsed.visible_args?.success || false,
 						durationMs: parsed.visible_args?.duration_ms || 0,
+						errorCode: parsed.visible_args?.error_code || parsed.code || undefined,
 						timestamp
 					};
 

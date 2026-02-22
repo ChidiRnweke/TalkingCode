@@ -47,8 +47,8 @@
 				
 				<div class="max-w-2xl space-y-6">
 					<p class="text-lg md:text-xl text-foreground/70 leading-relaxed font-medium">
-						I’ve been exploring agentic AI for a while now, mostly out of a deep curiosity for how we can make 
-						software more helpful. <strong>TalkingCode</strong> is a project I built to share some of the 
+						I’ve been working with GenAI for the past years—both professionally and as a personal passion. 
+						<strong>TalkingCode</strong> is a project I built to share some of the 
 						state-of-the-art techniques I’ve picked up along the way, and to give you a chance to 
 						get to know me through the code I write.
 					</p>

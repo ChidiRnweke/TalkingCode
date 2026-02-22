@@ -55,6 +55,16 @@ async def test_planner_uses_fallback_model_after_retries() -> None:
                 }
             )
 
+        async def send_chat_with_tools(self, *, model: str, messages: list[dict], tools: list[dict]) -> dict:
+            return {"content": "", "tool_calls": []}
+
+        async def stream_chat(self, *, model: str, messages: list[dict]):
+            if False:
+                yield ""
+
+        async def generate_embeddings(self, *, model: str, texts: list[str], dimensions: int | None):
+            return []
+
     client = _StubClient()
     service = PlannerService(
         openrouter_client=client,
@@ -76,24 +86,27 @@ async def test_planner_uses_fallback_model_after_retries() -> None:
 async def test_agent_loop_streams_assistant_tokens() -> None:
     """Agent loop emits incremental assistant token events."""
 
-    class _StubPlanner:
-        async def plan(self, input_data: PlannerInput) -> PlannerOutput:
-            return PlannerOutput(
-                intent="retrieve",
-                filters=RetrievalFilters(),
-                tool_groups=[
-                    ToolGroupPlan(
-                        name="retrieval",
-                        calls=[PlannedToolCall(tool_name="run_retriever", arguments={"query": "hello"})],
-                        parallel=False,
-                    )
-                ],
-                stop_rules=StopRules(),
-            )
-
     class _StubOpenRouterClient:
         async def send_chat(self, *, model: str, messages: list[dict], response_format: dict | None = None) -> str:
             return ""
+
+        async def send_chat_with_tools(self, *, model: str, messages: list[dict], tools: list[dict]) -> dict:
+            tool_observation_present = any(msg.get("role") == "tool" for msg in messages)
+            if not tool_observation_present:
+                return {
+                    "content": "Planning retrieval",
+                    "tool_calls": [
+                        {
+                            "id": "call_1",
+                            "name": "run_retriever",
+                            "arguments": {"query": "hello"},
+                        }
+                    ],
+                }
+            return {
+                "content": "Hello world",
+                "tool_calls": [],
+            }
 
         async def stream_chat(self, *, model: str, messages: list[dict]):
             for token in ["Hello", " world"]:
@@ -103,10 +116,22 @@ async def test_agent_loop_streams_assistant_tokens() -> None:
             return []
 
     class _StubToolRegistry:
+        def get_tool_definitions(self) -> list[dict]:
+            return [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "run_retriever",
+                        "description": "retrieve",
+                        "parameters": {"type": "object", "properties": {"query": {"type": "string"}}},
+                    },
+                }
+            ]
+
         async def execute_group(self, input_data: ExecuteToolGroupInput) -> list[ToolExecutionResult]:
             return [
                 ToolExecutionResult(
-                    call_id="retrieval_0",
+                    call_id="call_1",
                     tool_name="run_retriever",
                     success=True,
                     payload_json='{"items": []}',
@@ -136,7 +161,6 @@ async def test_agent_loop_streams_assistant_tokens() -> None:
             return None
 
     service = AgentLoopService(
-        planner=_StubPlanner(),
         openrouter_client=_StubOpenRouterClient(),
         tool_registry=_StubToolRegistry(),
         timeline_repository=_StubTimelineRepo(),
@@ -153,9 +177,11 @@ async def test_agent_loop_streams_assistant_tokens() -> None:
     events = [event async for event in service.run_turn(input_data)]
 
     kinds = [event.kind for event in events]
-    assert WhiteboxEventKind.PLANNER_STARTED in kinds
-    assert WhiteboxEventKind.PLANNER_READY in kinds
-    assert kinds.count(WhiteboxEventKind.ASSISTANT_TOKEN) == 2
+    assert WhiteboxEventKind.ITERATION_STARTED in kinds
+    assert WhiteboxEventKind.PLAN_DONE in kinds
+    assert WhiteboxEventKind.TOOL_CALL_STARTED in kinds
+    assert WhiteboxEventKind.TOOL_CALL_FINISHED in kinds
+    assert kinds.count(WhiteboxEventKind.ASSISTANT_TOKEN) >= 1
     assert kinds[-1] == WhiteboxEventKind.ASSISTANT_DONE
 
     tokens = [event.message for event in events if event.kind == WhiteboxEventKind.ASSISTANT_TOKEN]

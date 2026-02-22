@@ -78,12 +78,10 @@ class AppFactory:
 
     def get_agent_loop_service(self) -> AgentLoopService:
         """Get agent loop service."""
-        planner = self.get_planner_service()
         tool_registry = self.get_tool_registry()
         timeline_repo = self.get_timeline_repository()
 
         return AgentLoopService(
-            planner=planner,
             openrouter_client=self.get_openrouter_client(),
             tool_registry=tool_registry,
             timeline_repository=timeline_repo,

@@ -1,7 +1,8 @@
 """Chat controller."""
 from dataclasses import dataclass
+from datetime import datetime
 from typing import AsyncGenerator
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import structlog
 
@@ -29,12 +30,25 @@ class ChatController:
         selected_model: str | None,
     ) -> AsyncGenerator[WhiteboxEvent, None]:
         """Start agentic turn and stream events."""
-        turn = await self.conversation_repository.create_turn(
-            conversation_id=conversation_id,
-            question=question,
-            selected_model=selected_model,
-            planner_model_used=selected_model or self.agent_service.default_model,
-        )
+        try:
+            turn = await self.conversation_repository.create_turn(
+                conversation_id=conversation_id,
+                question=question,
+                selected_model=selected_model,
+                planner_model_used=selected_model or self.agent_service.default_model,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error("Failed to create conversation turn", error=str(exc))
+            yield WhiteboxEvent(
+                kind=WhiteboxEventKind.AGENT_ERROR,
+                turn_id=str(uuid4()),
+                tool_name=None,
+                message=str(exc),
+                visible_args={"code": "agent_error"},
+                timestamp=datetime.utcnow(),
+                code="agent_error",
+            )
+            return
 
         input_data = AgentTurnInput(
             turn_id=turn.id,

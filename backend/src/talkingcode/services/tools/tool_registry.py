@@ -249,7 +249,7 @@ class ToolRegistry:
             async with asyncio.TaskGroup() as tg:
                 tasks = [
                     tg.create_task(execute_single(
-                        f"{input_data.group_name}_{i}",
+                        call.get("call_id", f"{input_data.group_name}_{i}"),
                         call["tool_name"],
                         call.get("arguments", {}),
                         call.get("non_blocking", False),
@@ -262,7 +262,7 @@ class ToolRegistry:
             # Execute sequentially
             for i, call in enumerate(input_data.calls):
                 result = await execute_single(
-                    f"{input_data.group_name}_{i}",
+                    call.get("call_id", f"{input_data.group_name}_{i}"),
                     call["tool_name"],
                     call.get("arguments", {}),
                     call.get("non_blocking", False),
