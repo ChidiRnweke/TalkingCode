@@ -139,7 +139,7 @@ Frontend already has a repos page that reads tracked repos via `GET /api/repos` 
       Do not add any ingestion-key dependency here.
       **Verify:** `git diff -- backend/src/talkingcode/routes/chat_routes.py` shows no changes.
 
-- [ ] **Step 11: Remove public ingest action wiring from repos page**
+- [x] **Step 11: Remove public ingest action wiring from repos page**
       File: `talkingcode-frontend/src/routes/repos/+page.svelte`.
       Remove `onIngest` handler and any calls to `repoService.startIngestion(...)`.
       Keep list loading and run-history refresh behavior intact.
