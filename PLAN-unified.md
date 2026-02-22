@@ -1759,7 +1759,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step B.11: Backend integration verification**
+- [x] **Step B.11: Backend integration verification**
 
       **What to do:**
 
@@ -1774,6 +1774,9 @@ Phase D — Integration & polish:
       4. If no database is available, just verify the import checks pass.
 
       **Verify:** At minimum, steps 1-2 pass. If DB is available, all 7+ routes appear in OpenAPI.
+
+      Note: Verified `uv run ruff check src/` and `from talkingcode.app import app` import path,
+      and confirmed OpenAPI now exposes `/chat/*`, `/health`, and all `/repos*` routes.
 
 ---
 
