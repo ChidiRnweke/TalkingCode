@@ -526,7 +526,7 @@ Phase D — Integration & polish:
 
 ### Phase B: Backend Ingestion Pipeline
 
-- [ ] **Step B.1: Set up Alembic migration infrastructure**
+- [x] **Step B.1: Set up Alembic migration infrastructure**
 
       **Files to create:**
       - `backend/alembic.ini`
@@ -619,6 +619,11 @@ Phase D — Integration & polish:
       `create_table` operations for all 7 tables. `ruff check backend/alembic/` passes clean.
       If Alembic can't connect to the database (no Postgres running), that's OK — the migration
       file itself is the deliverable. Check it was generated and contains the right tables.
+
+      Note: Added async Alembic env, initialized versions package, and generated
+      `d4c0865a4138_initial_schema.py` with all 7 tables. Local `DATABASE_URL` auth failed, so
+      migration autogeneration was run against a temporary Postgres container and validated via
+      `uv run ruff check alembic/`.
 
 ---
 
