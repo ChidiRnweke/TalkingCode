@@ -76,8 +76,10 @@ def create_app() -> FastAPI:
         )
     
     # Include routers
-    from talkingcode.routes import chat_routes
+    from talkingcode.routes import chat_routes, repo_routes
+
     app.include_router(chat_routes.router, prefix="/chat", tags=["chat"])
+    app.include_router(repo_routes.router, tags=["repos"])
     
     @app.get("/health")
     async def health_check() -> dict[str, str]:

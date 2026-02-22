@@ -1547,7 +1547,7 @@ Phase D — Integration & polish:
 
 ---
 
-- [ ] **Step B.9: Create repo management and ingestion routes**
+- [x] **Step B.9: Create repo management and ingestion routes**
 
       **Files to create:**
       - `backend/src/talkingcode/routes/repo_routes.py`
