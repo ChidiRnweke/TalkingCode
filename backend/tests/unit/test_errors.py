@@ -1,39 +1,36 @@
 """Tests for errors."""
-from talkingcode.errors import (
-    TalkingCodeError,
-    ValidationError,
-    NotFoundError,
-    ToolError,
-)
+import pytest
+
+from talkingcode.errors import AppError, InputError, NotFoundError, InfraError, UnauthorisedError
 
 
-class TestTalkingCodeError:
+class TestAppError:
     def test_basic_error(self):
-        error = TalkingCodeError("Test error")
-        assert error.message == "Test error"
-        assert error.code == "unknown_error"
-
-    def test_with_code(self):
-        error = TalkingCodeError("Not found", code="not_found")
-        assert error.code == "not_found"
+        error = AppError("Test error")
+        assert str(error) == "Test error"
 
 
-class TestValidationError:
+class TestInputError:
     def test_creation(self):
-        error = ValidationError("Invalid input")
-        assert error.code == "validation_error"
+        error = InputError("Invalid input")
         assert error.message == "Invalid input"
+        assert str(error) == "Invalid input"
 
 
 class TestNotFoundError:
     def test_creation(self):
-        error = NotFoundError("User not found", resource_type="User")
-        assert error.code == "not_found"
-        assert error.details["resource_type"] == "User"
+        error = NotFoundError("User")
+        assert error.resource == "User"
+        assert "User not found" in str(error)
 
 
-class TestToolError:
+class TestInfraError:
     def test_creation(self):
-        error = ToolError("Tool failed", tool_name="retriever")
-        assert error.code == "tool_error"
-        assert error.details["tool_name"] == "retriever"
+        error = InfraError("Database connection failed")
+        assert "Database connection failed" in str(error)
+
+
+class TestUnauthorisedError:
+    def test_creation(self):
+        error = UnauthorisedError()
+        assert isinstance(error, AppError)
