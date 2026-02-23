@@ -47,5 +47,5 @@
 			</div>
 		{/if}
 	</ConversationContent>
-	<ConversationScrollButton />
+	<ConversationScrollButton bottom="bottom-32" />
 </Conversation>

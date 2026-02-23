@@ -11,6 +11,8 @@
 	import { Copy, RotateCcw } from 'lucide-svelte';
 	import type { ChatMessage, ReasoningStep } from '$lib/models';
 	import { chatStore } from '$lib/stores';
+	import * as Avatar from '$lib/components/ui/avatar';
+	import portrait from '$lib/assets/portrait.png';
 
 	interface Props {
 		message: ChatMessage;
@@ -71,94 +73,103 @@
 </script>
 
 <Message from="assistant" class="max-w-none text-base">
-	{#if isThinking || hasThought}
-		<Reasoning
-			isStreaming={isThinking}
-			bind:open={reasoningOpen}
-			defaultOpen={false}
-			duration={message.thoughtDurationS}
-			class="mb-2"
-		>
-			<ReasoningTrigger class="cursor-pointer" />
-			<ReasoningContent>
-				{#if sortedReasoningSteps.length > 0}
-					<div class="relative pl-6">
-						<div class="absolute left-2.5 top-2 bottom-2 w-px bg-border/70"></div>
-						<ol class="space-y-3">
-							{#each sortedReasoningSteps as step (reasoningKey(step))}
-								<li class="relative">
-									{#if step.kind === 'plan'}
-										<span class="absolute -left-6 top-2.5 size-2.5 rounded-full border border-primary/40 bg-primary/80"></span>
-										<div class="space-y-1 rounded-md border border-border/60 bg-background/50 px-3 py-2">
-											<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-												Plan {step.iteration}
-											</p>
-											<p class="text-sm whitespace-pre-wrap text-foreground/90">{step.text}</p>
-										</div>
-									{:else if step.kind === 'tool'}
-										<span class="absolute -left-6 top-2.5 size-2.5 rounded-full border border-border bg-muted-foreground/70"></span>
-										<div class="rounded-md border border-border/60 bg-background/30 px-3 py-2">
-											<InlineTool tool={step.tool} />
-										</div>
-									{:else if step.phase === 'answer_started'}
-										<span class="absolute -left-6 top-2.5 size-2.5 rounded-full border border-accent/40 bg-accent"></span>
-										<p class="rounded-md border border-border/60 bg-background/40 px-3 py-2 text-xs font-medium italic text-muted-foreground/80">
-											Switching to final answer
-										</p>
-									{/if}
-								</li>
-							{/each}
-						</ol>
-					</div>
-				{:else}
-					{#if message.planText}
-						<div class="space-y-1 rounded-md border border-border/60 bg-background/50 px-3 py-2">
-							<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Plan</p>
-							<p class="text-sm whitespace-pre-wrap text-foreground/90">{message.planText}</p>
-						</div>
-					{/if}
-					{#if message.toolCalls?.length}
-						<div class="space-y-2">
-							{#each message.toolCalls as tool (tool.callId ?? tool.toolName + tool.timestamp)}
-								<InlineTool {tool} />
-							{/each}
-						</div>
-					{/if}
-				{/if}
-			</ReasoningContent>
-		</Reasoning>
-	{/if}
+	<div class="flex items-start gap-3 md:gap-5">
+		<Avatar.Root class="size-9 shrink-0 border border-border/50 shadow-sm mt-1.5">
+			<Avatar.Image src={portrait} alt="Chidi Nweke" class="object-cover" />
+			<Avatar.Fallback class="bg-primary/10 text-primary text-[10px] font-bold">CN</Avatar.Fallback>
+		</Avatar.Root>
 
-	{#if message.content}
-		<MessageContent class={hasThought ? 'mt-3' : ''}>
-			<MessageResponse
-				content={message.content}
-				isStreaming={!!message.isStreaming}
-				sources={message.sources}
-			/>
-		</MessageContent>
-	{/if}
+		<div class="flex-1 min-w-0">
+			{#if isThinking || hasThought}
+				<Reasoning
+					isStreaming={isThinking}
+					bind:open={reasoningOpen}
+					defaultOpen={false}
+					duration={message.thoughtDurationS}
+					class="mb-2"
+				>
+					<ReasoningTrigger class="cursor-pointer" />
+					<ReasoningContent>
+						{#if sortedReasoningSteps.length > 0}
+							<div class="relative pl-6">
+								<div class="absolute left-2.5 top-2 bottom-2 w-px bg-border/70"></div>
+								<ol class="space-y-3">
+									{#each sortedReasoningSteps as step (reasoningKey(step))}
+										<li class="relative">
+											{#if step.kind === 'plan'}
+												<span class="absolute -left-6 top-2.5 size-2.5 rounded-full border border-primary/40 bg-primary/80"></span>
+												<div class="space-y-1 rounded-md border border-border/60 bg-background/50 px-3 py-2">
+													<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+														Plan {step.iteration}
+													</p>
+													<p class="text-sm whitespace-pre-wrap text-foreground/90">{step.text}</p>
+												</div>
+											{:else if step.kind === 'tool'}
+												<span class="absolute -left-6 top-2.5 size-2.5 rounded-full border border-border bg-muted-foreground/70"></span>
+												<div class="rounded-md border border-border/60 bg-background/30 px-3 py-2">
+													<InlineTool tool={step.tool} />
+												</div>
+											{:else if step.phase === 'answer_started'}
+												<span class="absolute -left-6 top-2.5 size-2.5 rounded-full border border-accent/40 bg-accent"></span>
+												<p class="rounded-md border border-border/60 bg-background/40 px-3 py-2 text-xs font-medium italic text-muted-foreground/80">
+													Switching to final answer
+												</p>
+											{/if}
+										</li>
+									{/each}
+								</ol>
+							</div>
+						{:else}
+							{#if message.planText}
+								<div class="space-y-1 rounded-md border border-border/60 bg-background/50 px-3 py-2">
+									<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Plan</p>
+									<p class="text-sm whitespace-pre-wrap text-foreground/90">{message.planText}</p>
+								</div>
+							{/if}
+							{#if message.toolCalls?.length}
+								<div class="space-y-2">
+									{#each message.toolCalls as tool (tool.callId ?? tool.toolName + tool.timestamp)}
+										<InlineTool {tool} />
+									{/each}
+								</div>
+							{/if}
+						{/if}
+					</ReasoningContent>
+				</Reasoning>
+			{/if}
 
-	{#if message.error}
-		<div class="rounded-md bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive">
-			<p class="font-bold mb-1">Error</p>
-			{message.error}
+			{#if message.content}
+				<MessageContent class={hasThought ? 'mt-3' : ''}>
+					<MessageResponse
+						content={message.content}
+						isStreaming={!!message.isStreaming}
+						sources={message.sources}
+					/>
+				</MessageContent>
+			{/if}
+
+			{#if message.error}
+				<div class="rounded-md bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive">
+					<p class="font-bold mb-1">Error</p>
+					{message.error}
+				</div>
+			{/if}
+
+			{#if !message.isStreaming}
+				<MessageToolbar class="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+					<MessageActions>
+						{#if message.content}
+							<MessageAction tooltip="Copy message" onclick={handleCopy}>
+								<Copy class="size-4" />
+							</MessageAction>
+						{/if}
+
+						<MessageAction tooltip="Retry" onclick={handleRetry}>
+							<RotateCcw class="size-4" />
+						</MessageAction>
+					</MessageActions>
+				</MessageToolbar>
+			{/if}
 		</div>
-	{/if}
-
-	{#if !message.isStreaming}
-		<MessageToolbar class="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-			<MessageActions>
-				{#if message.content}
-					<MessageAction tooltip="Copy message" onclick={handleCopy}>
-						<Copy class="size-4" />
-					</MessageAction>
-				{/if}
-
-				<MessageAction tooltip="Retry" onclick={handleRetry}>
-					<RotateCcw class="size-4" />
-				</MessageAction>
-			</MessageActions>
-		</MessageToolbar>
-	{/if}
+	</div>
 </Message>

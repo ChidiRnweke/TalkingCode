@@ -58,7 +58,7 @@
 
 <Streamdown
 	class={cn(
-		"prose prose-base dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 prose-ul:list-disc prose-ol:list-decimal prose-ul:pl-5 prose-ol:pl-5 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 max-w-none size-full text-[1.04rem] leading-8 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_strong]:font-bold [&_li]:my-1",
+		"prose prose-base dark:prose-invert prose-pre:p-0 max-w-none size-full text-base leading-[1.65] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_strong]:font-bold [&_li]:my-0.5 [&_li]:pl-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_ul]:my-4 [&_ol]:my-4 [&_p]:my-4",
 		isStreaming && 'streaming-cursor',
 		className
 	)}
@@ -77,9 +77,9 @@
 		{#if source}
 			<InlineCitationCard>
 				<HoverCard.Trigger
-					class="ml-0.5 inline text-[0.72em] font-medium align-super text-muted-foreground no-underline hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+					class="ml-0.5 inline text-[0.72em] font-medium align-super text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
 				>
-					[{token.keys[0]}]
+					{source.title.split(': ').pop() || source.title}
 				</HoverCard.Trigger>
 				<InlineCitationCardBody>
 					<div class="p-3">
@@ -93,7 +93,7 @@
 			</InlineCitationCard>
 		{:else}
 			<span class="ml-0.5 inline text-[0.72em] font-medium align-super text-muted-foreground">
-				[{token.keys[0]}]
+				{token.keys[0]}
 			</span>
 		{/if}
 	{/snippet}

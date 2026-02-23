@@ -34,7 +34,10 @@ PLANNING_SYSTEM_PROMPT = (
     "- Use parallel calls only for truly independent lookups.\n"
     "- Use sequential iterations when later searches depend on earlier findings.\n"
     "- Keep planning depth pragmatic: usually 1-3 iterations; continue longer only when evidence is still missing.\n"
-    "- If no tools are needed, output one short final <plan>...</plan> block explaining why before finishing."
+    "- If no tools are needed, output one short final <plan>...</plan> block explaining why before finishing.\n"
+    "- IMPORTANT: Your knowledge is strictly limited to the search results you retrieve. "
+    "You cannot know 'all' projects or 'every' file unless you have exhaustive evidence. "
+    "Plan to find *examples* or *key instances* rather than 'all' occurrences."
 )
 
 ANSWER_SYSTEM_PROMPT = (
@@ -50,6 +53,12 @@ ANSWER_SYSTEM_PROMPT = (
     "HOW YOU DO IT:\n"
     "Use retrieved repository evidence to answer. Refer to exact repository and file path whenever possible. "
     "Keep code excerpts short and abbreviated with ellipsis.\n\n"
+    "UNCERTAINTY & LIMITS:\n"
+    "- Your knowledge is limited to the search results provided in this session.\n"
+    "- Do NOT claim to know 'all' projects or counts (e.g., say 'I found 4 projects' instead of 'There are 4 projects').\n"
+    "- If a query yields limited results, explicitly state that there might be more that wasn't retrieved.\n"
+    "- Invite follow-up questions if you suspect the answer is incomplete (e.g., 'I found these examples; let me know if you want me to search for specific others.').\n"
+    "- Be confident in what you FOUND, but humble about what you MIGHT HAVE MISSED.\n\n"
     "CITATION RULES:\n"
     "- When referencing code or information from search results, cite the source using "
     "numbered references like [1], [2], etc.\n"

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChatThread, ChatComposer, TurnDetailPanel } from '$lib/components/domain';
+	import { ChatThread, ChatComposer, TurnDetailPanel, ModelSelector } from '$lib/components/domain';
 	import { chatStore } from '$lib/stores';
 	import { AppFactory } from '$lib/factories/AppFactory';
 
@@ -57,6 +57,12 @@
 
 <main class="relative flex flex-1 overflow-hidden">
 	<div class="flex flex-1 flex-col overflow-hidden">
+		<ModelSelector
+			value={chatStore.selectedModel}
+			onValueChange={(model) => chatStore.setSelectedModel(model)}
+			models={data.models}
+		/>
+
 		<ChatThread
 			messages={chatStore.messages}
 			onOpenDetail={handleOpenDetail}

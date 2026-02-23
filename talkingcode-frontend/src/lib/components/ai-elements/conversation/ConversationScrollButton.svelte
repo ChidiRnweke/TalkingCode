@@ -2,7 +2,9 @@
 	import { cn } from "$lib/utils";
 	import type { ButtonProps } from "$lib/components/ui/button/index.js";
 
-	export interface ConversationScrollButtonProps extends ButtonProps {}
+	export interface ConversationScrollButtonProps extends ButtonProps {
+		bottom?: string;
+	}
 </script>
 
 <script lang="ts">
@@ -12,7 +14,7 @@
 	import { fade, fly, scale } from "svelte/transition";
 	import { backOut } from "svelte/easing";
 
-	let { class: className, onclick, ...restProps }: ConversationScrollButtonProps = $props();
+	let { class: className, onclick, bottom = "bottom-4", ...restProps }: ConversationScrollButtonProps = $props();
 
 	const context = getStickToBottomContext();
 
@@ -40,7 +42,7 @@
 			y: 10,
 			easing: backOut,
 		}}
-		class="absolute bottom-4 left-[50%] translate-x-[-50%]"
+		class={cn("absolute left-[50%] translate-x-[-50%]", bottom)}
 	>
 		<Button
 			class={cn(

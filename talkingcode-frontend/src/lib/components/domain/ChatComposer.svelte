@@ -5,11 +5,6 @@
 		PromptInputTextarea,
 		PromptInputToolbar,
 		PromptInputSubmit,
-		PromptInputModelSelect,
-		PromptInputModelSelectTrigger,
-		PromptInputModelSelectContent,
-		PromptInputModelSelectItem,
-		PromptInputModelSelectValue,
 		type PromptInputMessage
 	} from '$lib/components/ai-elements/prompt-input';
 	import { Message } from '$lib/components/ai-elements/new-message';
@@ -60,29 +55,15 @@
 						placeholder="Ask about architecture, modules, ownership, or behavior..."
 					/>
 				</PromptInputBody>
-				<PromptInputToolbar>
-					<PromptInputModelSelect
-						value={selectedModel || fallbackModel}
-						onValueChange={(v) => onModelChange?.(v ?? fallbackModel)}
-					>
-						<PromptInputModelSelectTrigger>
-							<PromptInputModelSelectValue placeholder="Select model" />
-						</PromptInputModelSelectTrigger>
-						<PromptInputModelSelectContent>
-							{#each models as model}
-								<PromptInputModelSelectItem value={model.id}>
-									{model.label}
-								</PromptInputModelSelectItem>
-							{/each}
-						</PromptInputModelSelectContent>
-					</PromptInputModelSelect>
-
+				<PromptInputToolbar class="justify-end">
 					<PromptInputSubmit disabled={isSubmitDisabled} />
 				</PromptInputToolbar>
 			</PromptInput>
 		</Message>
-		<p class="mt-3 text-[10px] text-center text-muted-foreground uppercase tracking-widest">
-			My AI agent might make some mistakes 😅
-		</p>
+		<div class="mt-3 flex justify-center">
+			<p class="px-2 py-0.5 rounded-full bg-background/40 backdrop-blur-sm border border-border/20 text-[10px] text-center text-muted-foreground uppercase tracking-widest shadow-sm">
+				My AI agent might make some mistakes 😅
+			</p>
+		</div>
 	</div>
 </div>

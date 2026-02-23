@@ -9,3 +9,4 @@ export { default as TurnDetailPanel } from './TurnDetailPanel.svelte';
 export { default as RepoCard } from './RepoCard.svelte';
 export { default as RegisterRepoForm } from './RegisterRepoForm.svelte';
 export { default as IngestionHistory } from './IngestionHistory.svelte';
+export { default as ModelSelector } from './ModelSelector.svelte';
