@@ -734,7 +734,7 @@ Optional:
   - GitHub and embedding requests emit latency + request counters.
   - Classifier fallback is counted.
 
-- [ ] **Step 6: Add frontend secrets loader script (Infisical + env fallback)**
+- [x] **Step 6: Add frontend secrets loader script (Infisical + env fallback)**
 
   **Files to create/modify**
 
