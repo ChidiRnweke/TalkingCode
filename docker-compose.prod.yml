@@ -1,5 +1,8 @@
 services:
   backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     image: ghcr.io/chidirnweke/talkingcode-backend:latest
     container_name: talkingcode-backend
     restart: unless-stopped
@@ -25,6 +28,9 @@ services:
       caddy.rate_limit.zone: "backend { key {remote.host} events 60 window 1m }"
 
   frontend:
+    build:
+      context: ./talkingcode-frontend
+      dockerfile: Dockerfile
     image: ghcr.io/chidirnweke/talkingcode-frontend:latest
     container_name: talkingcode-frontend
     restart: unless-stopped
@@ -51,6 +57,9 @@ services:
       caddy.rate_limit.zone: "frontend { key {remote.host} events 100 window 1m }"
 
   migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     image: ghcr.io/chidirnweke/talkingcode-backend:latest
     container_name: talkingcode-migrate
     restart: "no"
