@@ -812,7 +812,7 @@ Optional:
 
   - Frontend server runtime can source secrets from env or Infisical.
 
-- [ ] **Step 7: Add frontend OTEL instrumentation script (ReceiptToRecipe pattern) + launcher**
+- [x] **Step 7: Add frontend OTEL instrumentation script (ReceiptToRecipe pattern) + launcher**
 
   **Files to create/modify**
 
