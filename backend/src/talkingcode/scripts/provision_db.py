@@ -16,6 +16,7 @@ import os
 import secrets as stdlib_secrets
 
 import structlog
+from dotenv import load_dotenv
 from infisical_client import (
     AuthenticationOptions,
     ClientSettings,
@@ -122,6 +123,7 @@ async def provision_database() -> str:
 
     Returns the DATABASE_URL.
     """
+    load_dotenv()
     logger.info("provision.starting")
 
     # --- Resolve Infisical credentials ---

@@ -11,8 +11,8 @@ from pathlib import Path
 import structlog
 from alembic import command
 from alembic.config import Config
+from dotenv import load_dotenv
 
-from talkingcode.config import AppConfig
 from talkingcode.scripts.provision_db import provision_database
 from talkingcode.telemetry import configure_telemetry
 
@@ -30,11 +30,12 @@ def _get_alembic_config() -> Config:
 
 
 def run() -> None:
+    load_dotenv()
+
     # 1. Initialize telemetry
-    config = AppConfig.from_env()
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
     service_name = os.getenv("OTEL_SERVICE_NAME", "talkingcode-migrate")
-    otel_env = os.getenv("OTEL_ENVIRONMENT", config.environment)
+    otel_env = os.getenv("OTEL_ENVIRONMENT", os.getenv("ENVIRONMENT", "development"))
 
     if endpoint:
         configure_telemetry(endpoint=endpoint, service_name=service_name, environment=otel_env)
@@ -43,12 +44,14 @@ def run() -> None:
     try:
         # 2. Run provision function
         logger.info("migrate.provision.starting")
-        asyncio.run(provision_database())
+        database_url = asyncio.run(provision_database())
+        os.environ["DATABASE_URL"] = database_url
         logger.info("migrate.provision.completed")
 
         # 3. Run Alembic upgrade head via Python API
         logger.info("migrate.alembic.starting")
         alembic_cfg = _get_alembic_config()
+        alembic_cfg.set_main_option("sqlalchemy.url", database_url)
         command.upgrade(alembic_cfg, "head")
         logger.info("migrate.completed")
 
