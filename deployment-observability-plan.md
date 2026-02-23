@@ -1014,7 +1014,7 @@ Optional:
 
   - Setup script is idempotent and handles existing resources cleanly.
 
-- [ ] **Step 9: Upgrade backend and frontend Dockerfiles for production runtime**
+- [x] **Step 9: Upgrade backend and frontend Dockerfiles for production runtime**
 
   **Files to modify**
 
