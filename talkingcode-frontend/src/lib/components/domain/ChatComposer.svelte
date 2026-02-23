@@ -82,7 +82,7 @@
 			</PromptInput>
 		</Message>
 		<p class="mt-3 text-[10px] text-center text-muted-foreground uppercase tracking-widest">
-			Chidi might make mistakes. Verify important info.
+			My AI agent might make some mistakes 😅
 		</p>
 	</div>
 </div>

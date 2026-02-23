@@ -11,6 +11,6 @@
 	let { children, class: className, ...restProps }: Props = $props();
 </script>
 
-<span class={cn("group inline items-center gap-1", className)} {...restProps}>
+<span class={cn("group-hover:bg-accent transition-colors", className)} {...restProps}>
 	{@render children()}
 </span>

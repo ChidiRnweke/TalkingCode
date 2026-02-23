@@ -3,7 +3,7 @@
 	import type { Snippet } from "svelte";
 	import type { HTMLAttributes } from "svelte/elements";
 
-	type Props = HTMLAttributes<HTMLSpanElement> & {
+	type Props = HTMLAttributes<HTMLDivElement> & {
 		children: Snippet;
 		class?: string;
 	};
@@ -11,6 +11,9 @@
 	let { children, class: className, ...restProps }: Props = $props();
 </script>
 
-<span class={cn("group inline items-center gap-1", className)} {...restProps}>
+<div
+	class={cn("bg-secondary flex items-center justify-between gap-2 rounded-t-md p-2", className)}
+	{...restProps}
+>
 	{@render children()}
-</span>
+</div>

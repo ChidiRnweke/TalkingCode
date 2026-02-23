@@ -3,7 +3,7 @@
 	import type { Snippet } from "svelte";
 	import type { HTMLAttributes } from "svelte/elements";
 
-	type Props = HTMLAttributes<HTMLSpanElement> & {
+	type Props = HTMLAttributes<HTMLQuoteElement> & {
 		children: Snippet;
 		class?: string;
 	};
@@ -11,6 +11,9 @@
 	let { children, class: className, ...restProps }: Props = $props();
 </script>
 
-<span class={cn("group inline items-center gap-1", className)} {...restProps}>
+<blockquote
+	class={cn("border-muted text-muted-foreground border-l-2 pl-3 text-sm italic", className)}
+	{...restProps}
+>
 	{@render children()}
-</span>
+</blockquote>

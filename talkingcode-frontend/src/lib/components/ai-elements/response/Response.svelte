@@ -3,7 +3,12 @@
 	import Code from "svelte-streamdown/code"; // Shiki syntax highlighting
 	import { cn } from "$lib/utils";
 	import { mode } from "mode-watcher";
-	import InlineCitation from "$lib/components/ai-elements/inline-citation/InlineCitation.svelte";
+	import * as HoverCard from "$lib/components/ui/hover-card";
+	import {
+		InlineCitationCard,
+		InlineCitationCardBody,
+		InlineCitationSource
+	} from "$lib/components/ai-elements/inline-citation";
 
 	// Import Shiki themes
 	import githubLightDefault from "@shikijs/themes/github-light-default";
@@ -68,9 +73,28 @@
 	{...restProps}
 >
 	{#snippet inlineCitationPreview({ token })}
-		<InlineCitation
-			label={`[${token.keys[0]}]`}
-			source={citationMap[token.keys[0]]}
-		/>
+		{@const source = citationMap[token.keys[0]]}
+		{#if source}
+			<InlineCitationCard>
+				<HoverCard.Trigger
+					class="ml-0.5 inline text-[0.72em] font-medium align-super text-muted-foreground no-underline hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+				>
+					[{token.keys[0]}]
+				</HoverCard.Trigger>
+				<InlineCitationCardBody>
+					<div class="p-3">
+						<InlineCitationSource
+							title={source.title}
+							url={source.url}
+							description={source.location}
+						/>
+					</div>
+				</InlineCitationCardBody>
+			</InlineCitationCard>
+		{:else}
+			<span class="ml-0.5 inline text-[0.72em] font-medium align-super text-muted-foreground">
+				[{token.keys[0]}]
+			</span>
+		{/if}
 	{/snippet}
 </Streamdown>

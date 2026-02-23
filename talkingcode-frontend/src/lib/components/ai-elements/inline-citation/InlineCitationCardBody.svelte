@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { cn } from "$lib/utils";
+	import * as HoverCard from "$lib/components/ui/hover-card/index.js";
 	import type { Snippet } from "svelte";
-	import type { HTMLAttributes } from "svelte/elements";
 
-	type Props = HTMLAttributes<HTMLSpanElement> & {
+	type Props = {
 		children: Snippet;
 		class?: string;
 	};
@@ -11,6 +11,6 @@
 	let { children, class: className, ...restProps }: Props = $props();
 </script>
 
-<span class={cn("group inline items-center gap-1", className)} {...restProps}>
+<HoverCard.Content class={cn("relative w-80 p-0", className)} {...restProps}>
 	{@render children()}
-</span>
+</HoverCard.Content>
