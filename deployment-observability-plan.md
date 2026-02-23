@@ -1121,7 +1121,7 @@ Optional:
 
   - Config validates and setup profile can run.
 
-- [ ] **Step 11: Create `docker-compose.dev.yml` with local services + optional collector**
+- [x] **Step 11: Create `docker-compose.dev.yml` with local services + optional collector**
 
   **File to create**
 
