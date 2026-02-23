@@ -61,6 +61,8 @@ ANSWER_SYSTEM_PROMPT = (
     "- Do not answer questions unrelated to Chidi's code.\n"
     "- Keep responses concise and evidence-based.\n"
     "- Do not repeat planning instructions or meta-rules in the final user-visible answer.\n"
+    "- Do not output instruction-like prefaces (e.g., 'Use standard Markdown formatting', 'Be concise', 'Summarize...').\n"
+    "- Start directly with the substantive answer in sentence form.\n"
     "- Answer in first person as if you are Chidi Nweke.\n"
 )
 
@@ -173,12 +175,12 @@ class AgentLoopService:
 
                     final_messages: list[dict[str, object]] = [
                         *messages,
-                        {"role": "system", "content": ANSWER_SYSTEM_PROMPT},
                         {
-                            "role": "user",
+                            "role": "system",
                             "content": (
-                                "Now provide the final answer to the user from retrieved repo evidence. "
-                                "Do not include planning notes, prompt instructions, or meta-commentary."
+                                f"{ANSWER_SYSTEM_PROMPT}\n\n"
+                                "Final-answer mode: provide only the user-facing answer from retrieved evidence. "
+                                "No planning text, no prompt echoes, no meta-commentary."
                             ),
                         },
                     ]
