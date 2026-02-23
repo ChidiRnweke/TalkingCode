@@ -1,13 +1,36 @@
-.vscode/settings.json
-.env.secret
-.env.secret.prod
-__pycache__/    
-dataprocessing/.vscode/settings.json
-config/
-backend/site
-site/
-.vscode
-talkingcode.db
-qdrant-data
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# Node
+node_modules/
+.svelte-kit/
+build/
+
+# Environment
 .env
-pipelines/talkingcode.sqlite
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Docker
+qdrant-data/
+
+# Misc
+site/

@@ -1,0 +1,90 @@
+services:
+  backend:
+    image: ghcr.io/chidirnweke/talkingcode-backend:latest
+    container_name: talkingcode-backend
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      - INFISICAL_ENABLED=1
+      - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_ID=${INFISICAL_PROJECT_ID}
+      - INFISICAL_ENVIRONMENT=prod
+      - INFISICAL_URL=${INFISICAL_URL}
+      # OpenTelemetry
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel_collector:4317
+      - OTEL_SERVICE_NAME=talkingcode-backend
+    networks:
+      - reverse-proxy
+      - postgres-network
+      - telemetry-network
+    labels:
+      caddy: api.talkingcode.chidinweke.be
+      caddy.reverse_proxy: "{{upstreams 8000}}"
+      caddy.rate_limit.zone: "backend { key {remote.host} events 60 window 1m }"
+
+  frontend:
+    image: ghcr.io/chidirnweke/talkingcode-frontend:latest
+    container_name: talkingcode-frontend
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - INFISICAL_ENABLED=1
+      - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_ID=${INFISICAL_PROJECT_ID}
+      - INFISICAL_ENVIRONMENT=prod
+      - INFISICAL_URL=${INFISICAL_URL}
+      - BACKEND_URL=http://backend:8000
+      # OpenTelemetry
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel_collector:4317
+      - OTEL_SERVICE_NAME=talkingcode-frontend
+    networks:
+      - reverse-proxy
+      - postgres-network
+      - telemetry-network
+    labels:
+      caddy: agent.chidinweke.be
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+      caddy.rate_limit.zone: "frontend { key {remote.host} events 100 window 1m }"
+
+  migrate:
+    image: ghcr.io/chidirnweke/talkingcode-backend:latest
+    container_name: talkingcode-migrate
+    restart: "no"
+    profiles: ["setup"]
+    command: python -m talkingcode.scripts.migrate
+    environment:
+      # App Infisical credentials (for reading/writing app secrets)
+      - INFISICAL_ENABLED=1
+      - INFISICAL_CLIENT_ID=${INFISICAL_CLIENT_ID}
+      - INFISICAL_CLIENT_SECRET=${INFISICAL_CLIENT_SECRET}
+      - INFISICAL_PROJECT_ID=${INFISICAL_PROJECT_ID}
+      - INFISICAL_ENVIRONMENT=prod
+      # Admin Infisical credentials (for provisioning database)
+      - INFISICAL_ADMIN_CLIENT_ID=${INFISICAL_ADMIN_CLIENT_ID}
+      - INFISICAL_ADMIN_CLIENT_SECRET=${INFISICAL_ADMIN_CLIENT_SECRET}
+      - INFISICAL_ADMIN_PROJECT_ID=${INFISICAL_ADMIN_PROJECT_ID}
+      - INFISICAL_URL=${INFISICAL_URL}
+      # Project-specific database config
+      - DB_NAME=talkingcode
+      - DB_USER=talkingcode
+      # OpenTelemetry
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel_collector:4317
+      - OTEL_SERVICE_NAME=talkingcode-migrate
+    labels:
+      komodo.skip: # Prevent Komodo from stopping with StopAllContainers
+    networks:
+      - reverse-proxy
+      - postgres-network
+      - telemetry-network
+
+networks:
+  reverse-proxy:
+    external: true
+  postgres-network:
+    external: true
+  telemetry-network:
+    external: true
