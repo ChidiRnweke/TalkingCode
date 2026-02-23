@@ -6,7 +6,7 @@ The idea behind this project is to create a retrieval augmented generation (RAG)
 2. A backend that is capable of taking questions, finding the most relevant code snippets and giving those to chatgpt to generate a response.
 3. A frontend that allows you to interact with the chatbot.
 
-The frontend is implemented using Sveltekit. This is a full rebuild of my app, currently deployed on my VPS and can be accessed [here](https://chat.chidinweke.be). 
+The frontend is implemented using Sveltekit. This is a full rebuild of my app,     currently deployed on my VPS and can be accessed [here](https://chat.chidinweke.be). 
 
 The project is dockerized and the relevant images are pushed to my github container registry. 
 

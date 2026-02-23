@@ -3,52 +3,7 @@
 from dataclasses import dataclass
 from typing import Self
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-class Settings(BaseSettings):
-    """Application settings loaded from environment."""
-
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
-
-    # Database
-    database_url: str = (
-        "postgresql+asyncpg://talkingcode:talkingcode@localhost:5432/talkingcode"
-    )
-
-    # LLM APIs
-    openrouter_api_key: str = ""
-    github_token: str = ""
-    ingestion_api_key: str = ""
-
-    # App Config
-    environment: str = "development"
-    log_level: str = "INFO"
-    default_model: str = "anthropic/claude-3.5-sonnet"
-    fallback_model: str = "google/gemini-3-flash"
-
-    # Planner Settings
-    max_iterations: int = 8
-    max_tools_per_turn: int = 3
-    default_tool_timeout: int = 15
-
-    # Embeddings
-    embedding_model: str = "openai/text-embedding-3-large"
-    embedding_dimensions: int = 3072
-
-    # Intent extraction (cheap model for query classification)
-    intent_extraction_model: str = "deepseek/deepseek-v3.2"
-
-    # Curated model list
-    curated_models: str = "google/gemini-3-flash-preview,deepseek/deepseek-v3.2,moonshotai/kimi-k2.5,qwen/qwen3.5-plus-02-15,z-ai/glm-4.7,openai/gpt-5.1-codex-mini"
-    default_chat_model: str = "google/gemini-3-flash-preview"
-
-    @property
-    def database_url_async(self) -> str:
-        """Get async database URL."""
-        return self.database_url
+from talkingcode.environment.env import SecretsReader
 
 
 @dataclass(slots=True, frozen=True)
@@ -75,22 +30,22 @@ class AppConfig:
     @classmethod
     def from_env(cls) -> Self:
         """Create configuration from environment."""
-        settings = Settings()
+        reader = SecretsReader.from_env()
         return cls(
-            database_url=settings.database_url_async,
-            openrouter_api_key=settings.openrouter_api_key,
-            github_token=settings.github_token,
-            ingestion_api_key=settings.ingestion_api_key,
-            environment=settings.environment,
-            log_level=settings.log_level,
-            default_model=settings.default_model,
-            fallback_model=settings.fallback_model,
-            max_iterations=settings.max_iterations,
-            max_tools_per_turn=settings.max_tools_per_turn,
-            default_tool_timeout=settings.default_tool_timeout,
-            embedding_model=settings.embedding_model,
-            embedding_dimensions=settings.embedding_dimensions,
-            intent_extraction_model=settings.intent_extraction_model,
-            curated_models=settings.curated_models,
-            default_chat_model=settings.default_chat_model,
+            database_url=reader.read_secret("DATABASE_URL"),
+            openrouter_api_key=reader.read_secret("OPENROUTER_API_KEY"),
+            github_token=reader.read_or_default("GITHUB_TOKEN", ""),
+            ingestion_api_key=reader.read_secret("INGESTION_API_KEY"),
+            environment=reader.read_or_default("ENVIRONMENT", "development"),
+            log_level=reader.read_or_default("LOG_LEVEL", "INFO"),
+            default_model=reader.read_or_default("DEFAULT_MODEL", "anthropic/claude-3.5-sonnet"),
+            fallback_model=reader.read_or_default("FALLBACK_MODEL", "google/gemini-3-flash"),
+            max_iterations=int(reader.read_or_default("MAX_ITERATIONS", "8")),
+            max_tools_per_turn=int(reader.read_or_default("MAX_TOOLS_PER_TURN", "3")),
+            default_tool_timeout=int(reader.read_or_default("DEFAULT_TOOL_TIMEOUT", "15")),
+            embedding_model=reader.read_or_default("EMBEDDING_MODEL", "openai/text-embedding-3-large"),
+            embedding_dimensions=int(reader.read_or_default("EMBEDDING_DIMENSIONS", "3072")),
+            intent_extraction_model=reader.read_or_default("INTENT_EXTRACTION_MODEL", "deepseek/deepseek-v3.2"),
+            curated_models=reader.read_or_default("CURATED_MODELS", ""),
+            default_chat_model=reader.read_or_default("DEFAULT_CHAT_MODEL", "google/gemini-3-flash-preview"),
         )
