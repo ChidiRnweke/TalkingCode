@@ -1045,7 +1045,7 @@ Optional:
 
   - Both images build and run with expected commands.
 
-- [ ] **Step 10: Create `docker-compose.prod.yml` with setup profile and external OTLP endpoint**
+- [x] **Step 10: Create `docker-compose.prod.yml` with setup profile and external OTLP endpoint**
 
   **File to create**
 
