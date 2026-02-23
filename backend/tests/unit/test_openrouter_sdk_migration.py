@@ -98,7 +98,7 @@ async def test_agent_loop_streams_assistant_tokens() -> None:
                     "tool_calls": [
                         {
                             "id": "call_1",
-                            "name": "run_retriever",
+                            "name": "search_github",
                             "arguments": {"query": "hello"},
                         }
                     ],
@@ -121,7 +121,7 @@ async def test_agent_loop_streams_assistant_tokens() -> None:
                 {
                     "type": "function",
                     "function": {
-                        "name": "run_retriever",
+                        "name": "search_github",
                         "description": "retrieve",
                         "parameters": {"type": "object", "properties": {"query": {"type": "string"}}},
                     },
@@ -132,7 +132,7 @@ async def test_agent_loop_streams_assistant_tokens() -> None:
             return [
                 ToolExecutionResult(
                     call_id="call_1",
-                    tool_name="run_retriever",
+                    tool_name="search_github",
                     success=True,
                     payload_json='{"items": []}',
                     duration_ms=12,

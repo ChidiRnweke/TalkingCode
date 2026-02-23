@@ -1,22 +1,29 @@
-/** Repo service implementation */
-import type { RepositoryInfo, IngestionRunInfo, RegisterRepoInput } from '$lib/models';
+import { env } from '$env/dynamic/private';
+import type { IngestionRunInfo, RegisterRepoInput, RepositoryInfo } from '$lib/models';
 import type { IRepoService } from './IRepoService';
 
-export class RepoService implements IRepoService {
+type ServerFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
+export class RepoServiceServer implements IRepoService {
+	constructor(
+		private readonly fetchFn: ServerFetch,
+		private readonly backendUrl: string = env.BACKEND_URL || 'http://localhost:8000'
+	) {}
+
 	async listRepos(): Promise<RepositoryInfo[]> {
-		const response = await fetch('/api/repos');
+		const response = await this.fetchFn(`${this.backendUrl}/repos`);
 		if (!response.ok) throw new Error(`Failed to list repos: ${response.status}`);
 		return response.json();
 	}
 
 	async getRepo(owner: string, name: string): Promise<RepositoryInfo> {
-		const response = await fetch(`/api/repos/${owner}/${name}`);
+		const response = await this.fetchFn(`${this.backendUrl}/repos/${owner}/${name}`);
 		if (!response.ok) throw new Error(`Failed to get repo: ${response.status}`);
 		return response.json();
 	}
 
 	async registerRepo(input: RegisterRepoInput): Promise<RepositoryInfo> {
-		const response = await fetch('/api/repos', {
+		const response = await this.fetchFn(`${this.backendUrl}/repos`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -30,7 +37,7 @@ export class RepoService implements IRepoService {
 	}
 
 	async startIngestion(owner: string, name: string, gitRef?: string): Promise<IngestionRunInfo> {
-		const response = await fetch(`/api/repos/${owner}/${name}/ingest`, {
+		const response = await this.fetchFn(`${this.backendUrl}/repos/${owner}/${name}/ingest`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ git_ref: gitRef || null })
@@ -40,15 +47,20 @@ export class RepoService implements IRepoService {
 	}
 
 	async listIngestionRuns(owner: string, name: string): Promise<IngestionRunInfo[]> {
-		const response = await fetch(`/api/repos/${owner}/${name}/runs`);
+		const response = await this.fetchFn(`${this.backendUrl}/repos/${owner}/${name}/runs`);
 		if (!response.ok) throw new Error(`Failed to list runs: ${response.status}`);
 		return response.json();
 	}
 
 	async startOwnedIngestion(gitRef?: string): Promise<IngestionRunInfo[]> {
-		const response = await fetch('/api/repos/ingest-owned', {
+		const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+		if (env.INGESTION_API_KEY) {
+			headers['X-API-Key'] = env.INGESTION_API_KEY;
+		}
+
+		const response = await this.fetchFn(`${this.backendUrl}/repos/ingest-owned`, {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers,
 			body: JSON.stringify({ git_ref: gitRef || null })
 		});
 		if (!response.ok) throw new Error(`Failed to ingest owned repositories: ${response.status}`);

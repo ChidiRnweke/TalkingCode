@@ -26,6 +26,19 @@ than a default SaaS dashboard.
   - Warning: `hsl(38 90% 48%)`
   - Danger: `hsl(3 70% 50%)`
 
+### Dark Palette
+
+- `--color-surface`: `hsl(220 12% 10%)` (warm charcoal)
+- `--color-surface-2`: `hsl(220 10% 14%)` (elevated surface)
+- `--color-surface-3`: `hsl(220 8% 19%)` (tertiary surface)
+- `--color-border`: `hsl(220 8% 24%)`
+- `--color-text`: `hsl(40 15% 90%)` (warm off-white)
+- `--color-text-muted`: `hsl(40 8% 62%)`
+- `--color-text-subtle`: `hsl(40 6% 46%)`
+- `--color-primary`: `hsl(145 35% 45%)`
+- `--color-primary-light`: `hsl(145 25% 18%)`
+- `--color-accent`: `hsl(38 85% 58%)`
+
 ## Typography
 
 - **Display**: `Fraunces`

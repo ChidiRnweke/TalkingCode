@@ -139,6 +139,18 @@ class WhiteboxEvent:
 
 
 @dataclass(slots=True, frozen=True)
+class SourceReference:
+    """Citation source reference."""
+
+    index: int
+    repository: str
+    path: str
+    start_line: int | None = None
+    end_line: int | None = None
+    similarity_score: float = 0.0
+
+
+@dataclass(slots=True, frozen=True)
 class ToolTimelineItem:
     """Tool call timeline item (redacted)."""
     turn_id: str

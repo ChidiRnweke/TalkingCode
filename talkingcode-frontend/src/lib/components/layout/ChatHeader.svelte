@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
-	import { Code2, Plus } from 'lucide-svelte';
+	import { Code2, Moon, Plus, Sun } from 'lucide-svelte';
 	import { chatStore } from '$lib/stores';
 	import { goto } from '$app/navigation';
+	import { mode, toggleMode } from 'mode-watcher';
 
 	interface Props {
 		phase?: string;
@@ -16,14 +17,15 @@
 		chatStore.clear();
 		goto('/chat');
 	}
+
 </script>
 
 <header
 	class="sticky top-0 z-50 flex h-16 shrink-0 items-center justify-between border-b border-border/40 bg-background/80 px-8 md:px-12 backdrop-blur-md"
 >
 	<a href="/" class="flex items-center gap-3 transition-opacity hover:opacity-80">
-		<div class="bg-primary p-1 rounded-md">
-			<Code2 class="h-5 w-5 text-primary-foreground" />
+		<div class="bg-primary p-1.5 rounded-lg shadow-sm shadow-primary/20">
+			<Code2 class="h-4.5 w-4.5 text-primary-foreground" />
 		</div>
 		<div class="flex flex-col">
 			<h1 class="font-display text-base font-bold tracking-tight text-foreground uppercase leading-none">TalkingCode</h1>
@@ -68,6 +70,21 @@
 		<div class="hidden md:block h-4 w-[1px] bg-border mx-1"></div>
 
 		<div class="flex items-center gap-3">
+			<Button
+				variant="ghost"
+				size="sm"
+				class="h-8 w-8 p-0"
+				onclick={toggleMode}
+				aria-label="Toggle theme"
+				title={`Theme: ${mode.current}`}
+			>
+				{#if mode.current === 'dark'}
+					<Sun class="h-4 w-4" />
+				{:else}
+					<Moon class="h-4 w-4" />
+				{/if}
+			</Button>
+
 			<Button variant="ghost" size="sm" class="gap-1.5 h-8 text-[10px] uppercase tracking-widest font-bold" onclick={handleNewChat}>
 				<Plus class="h-3.5 w-3.5" />
 				<span class="hidden sm:inline">New Chat</span>

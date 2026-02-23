@@ -5,6 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import array
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from talkingcode.domain.models import RetrievedChunk, RepositorySummary
@@ -49,6 +50,14 @@ class DocumentRepository:
 
             if filters.get("file_type"):
                 stmt = stmt.where(DocumentChunk.file_type == filters["file_type"])
+
+            symbols = filters.get("symbols")
+            if isinstance(symbols, list) and symbols:
+                stmt = stmt.where(DocumentChunk.symbols_json.op("?|")(array(symbols)))
+
+            tags = filters.get("tags")
+            if isinstance(tags, list) and tags:
+                stmt = stmt.where(DocumentChunk.tags_json.op("?|")(array(tags)))
 
         result = await self.session.execute(stmt)
 

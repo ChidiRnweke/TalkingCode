@@ -19,6 +19,8 @@ from talkingcode.services.ingestion.github_fetcher import GitHubFetcher
 from talkingcode.services.ingestion.ingestion_service import IngestionService
 from talkingcode.services.llm.openrouter_client import OpenRouterClient
 from talkingcode.services.planner.planner_service import PlannerService
+from talkingcode.services.tools.project_descriptions_tool import ProjectDescriptionsTool
+from talkingcode.services.tools.read_file_tool import ReadFileTool
 from talkingcode.services.tools.retriever_tool import RetrieverTool
 from talkingcode.services.tools.tool_registry import ToolRegistry
 
@@ -84,8 +86,22 @@ class AppFactory:
             available_repos=available_repos,
         )
 
+        project_descriptions = ProjectDescriptionsTool(
+            document_repository=document_repo,
+            openrouter_client=self.get_openrouter_client(),
+            embedding_model=self.config.embedding_model,
+            embedding_dimensions=self.config.embedding_dimensions,
+        )
+
+        read_file = ReadFileTool(
+            document_repository=document_repo,
+            repo_repository=repo_repo,
+        )
+
         registry = ToolRegistry()
         registry.register_tool(retriever)
+        registry.register_tool(project_descriptions)
+        registry.register_tool(read_file)
 
         return registry
 

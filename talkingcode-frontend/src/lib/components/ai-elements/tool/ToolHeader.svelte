@@ -6,7 +6,7 @@
 		CheckCircleIcon,
 		ChevronDownIcon,
 		CircleIcon,
-		ClockIcon,
+		Loader2Icon,
 		WrenchIcon,
 		XCircleIcon,
 	} from "@lucide/svelte";
@@ -37,7 +37,7 @@
 
 		let icons = {
 			"input-streaming": CircleIcon,
-			"input-available": ClockIcon,
+			"input-available": Loader2Icon,
 			"output-available": CheckCircleIcon,
 			"output-error": XCircleIcon,
 		} as const;
@@ -61,19 +61,10 @@
 		<WrenchIcon class="text-muted-foreground size-4" />
 		<span class="text-sm font-medium">{type}</span>
 		<Badge class="gap-1.5 rounded-full text-xs" variant="secondary">
-			<!-- <svelte:component
-        this={getStatusBadge.IconComponent}
-        class={cn(
-          "size-4",
-          state === "input-available" && "animate-pulse",
-          state === "output-available" && "text-green-600",
-          state === "output-error" && "text-red-600"
-        )}
-      /> -->
 			<IconComponent
 				class={cn(
 					"size-4",
-					state === "input-available" && "animate-pulse",
+					state === "input-available" && "animate-spin",
 					state === "output-available" && "text-green-600",
 					state === "output-error" && "text-red-600"
 				)}

@@ -1,8 +1,4 @@
 <script lang="ts">
-	import Tool from '$lib/components/ai-elements/tool/Tool.svelte';
-	import ToolHeader from '$lib/components/ai-elements/tool/ToolHeader.svelte';
-	import ToolInput from '$lib/components/ai-elements/tool/ToolInput.svelte';
-	import ToolOutput from '$lib/components/ai-elements/tool/ToolOutput.svelte';
 	import type { ToolCallTimelineItem } from '$lib/models';
 
 	interface Props {
@@ -11,31 +7,81 @@
 
 	let { tool }: Props = $props();
 
-	const stateMap: Record<string, 'input-streaming' | 'output-available' | 'output-error'> = {
-		started: 'input-streaming',
-		finished: 'output-available',
-		failed: 'output-error'
-	};
+	let startTime = $state<number | null>(null);
+	let currentDurationMs = $state<number | null>(null);
+
+	$effect(() => {
+		if (tool.status === 'started') {
+			if (startTime === null) {
+				startTime = Date.now();
+			}
+			const interval = setInterval(() => {
+				if (startTime !== null) {
+					currentDurationMs = Date.now() - startTime;
+				}
+			}, 100);
+			return () => clearInterval(interval);
+		} else if (tool.status === 'finished' || tool.status === 'failed') {
+			startTime = null;
+		}
+	});
 
 	const duration = $derived(
 		tool.durationMs !== undefined
 			? `${Math.round(tool.durationMs)}ms`
-			: tool.status === 'started'
-				? 'Running...'
+			: currentDurationMs !== null
+				? `${Math.round(currentDurationMs)}ms`
 				: ''
 	);
+
+	const toolName = $derived(
+		tool.toolName
+			.split('_')
+			.filter(Boolean)
+			.map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+			.join(' ')
+	);
+
+	const statusLabel = $derived.by(() => {
+		if (tool.status === 'started') return 'Running';
+		if (tool.status === 'finished') return 'Completed';
+		return 'Failed';
+	});
+
+	const statusClass = $derived.by(() => {
+		if (tool.status === 'started') return 'text-muted-foreground';
+		if (tool.status === 'finished') return 'text-emerald-700';
+		return 'text-destructive';
+	});
+
+	const detailText = $derived.by(() => {
+		const query = tool.visibleArgs?.query;
+		if (typeof query === 'string' && query.trim()) {
+			return `Query: ${query.trim()}`;
+		}
+
+		const repository = tool.visibleArgs?.repository;
+		const filePath = tool.visibleArgs?.file_path;
+		if (typeof repository === 'string' && typeof filePath === 'string') {
+			return `File: ${repository}/${filePath}`;
+		}
+
+		return null;
+	});
 </script>
 
-<Tool>
-	<ToolHeader
-		type={tool.toolName}
-		state={stateMap[tool.status]}
-		{duration}
-	/>
-	{#if tool.visibleArgs && Object.keys(tool.visibleArgs).length > 0}
-		<ToolInput input={tool.visibleArgs} />
-	{/if}
-	{#if tool.status === 'failed'}
-		<ToolOutput type="error">{tool.errorMessage ?? 'Tool failed'}</ToolOutput>
-	{/if}
-</Tool>
+	<div class="py-1">
+		<div class="flex items-center gap-2 text-sm">
+			<span class="font-medium text-foreground">{toolName}</span>
+			<span class={`text-xs ${statusClass}`}>{statusLabel}</span>
+			{#if duration}
+				<span class="text-xs text-muted-foreground">{duration}</span>
+			{/if}
+		</div>
+		{#if detailText}
+			<p class="mt-1 text-sm text-muted-foreground">{detailText}</p>
+		{/if}
+		{#if tool.status === 'failed'}
+			<p class="mt-1 text-sm text-destructive">{tool.errorMessage ?? 'Tool failed'}</p>
+		{/if}
+	</div>

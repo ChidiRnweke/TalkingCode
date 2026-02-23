@@ -47,10 +47,10 @@ class TestStopRules:
 class TestPlannedToolCall:
     def test_creation(self):
         call = PlannedToolCall(
-            tool_name="run_retriever",
+            tool_name="search_github",
             arguments={"query": "test"},
         )
-        assert call.tool_name == "run_retriever"
+        assert call.tool_name == "search_github"
         assert call.arguments["query"] == "test"
         assert call.non_blocking is False
 

@@ -16,6 +16,9 @@
 
 	let { onAction, compact = false }: Props = $props();
 
+	let inputText = $state('');
+	const isSubmitDisabled = $derived(!inputText.trim());
+
 	const curatedPrompts = [
 		"How do you handle data ingestion?",
 		"Show me your favorite Rust or Scala patterns.",
@@ -27,6 +30,7 @@
 		if (text) {
 			chatStore.addUserMessage(text);
 			onAction?.();
+			inputText = '';
 			goto('/chat');
 		}
 	}
@@ -59,20 +63,21 @@
 
 	<div class="relative group">
 		{#if !compact}
-			<div class="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+			<div class="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 rounded-xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
 		{/if}
 		<PromptInput
 			onSubmit={handleSubmit}
-			class={`relative border-border/80 bg-background/90 backdrop-blur-sm focus-within:border-primary/50 focus-within:ring-8 focus-within:ring-primary/5 shadow-2xl ${compact ? 'rounded-xl p-1' : 'rounded-2xl p-2'}`}
+			class={`relative border-border/80 bg-background/90 backdrop-blur-sm focus-within:border-primary/50 focus-within:ring-8 focus-within:ring-primary/5 shadow-2xl ${compact ? 'rounded-lg p-1' : 'rounded-xl p-2'}`}
 		>
 			<PromptInputBody>
 				<PromptInputTextarea 
+					bind:value={inputText}
 					placeholder="Ask me about how I built this..." 
 					class={`${compact ? 'text-sm py-2 px-3 min-h-[44px]' : 'text-base py-3 px-4 min-h-[80px]'} resize-none border-none focus-visible:ring-0`}
 				/>
 			</PromptInputBody>
 			<div class={`flex justify-end ${compact ? 'p-1' : 'p-2'}`}>
-				<PromptInputSubmit class={`${compact ? 'h-8 px-4 rounded-lg' : 'h-10 px-6 rounded-xl'} uppercase tracking-widest text-[9px] font-bold`} />
+				<PromptInputSubmit disabled={isSubmitDisabled} class={`${compact ? 'h-8 px-4 rounded-md' : 'h-10 px-6 rounded-lg'} uppercase tracking-widest text-[9px] font-bold`} />
 			</div>
 		</PromptInput>
 	</div>

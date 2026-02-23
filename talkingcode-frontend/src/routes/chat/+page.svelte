@@ -3,6 +3,15 @@
 	import { chatStore } from '$lib/stores';
 	import { AppFactory } from '$lib/factories/AppFactory';
 
+	interface Props {
+		data: {
+			models: Array<{ id: string; label: string }>;
+			defaultModel: string | null;
+		};
+	}
+
+	let { data }: Props = $props();
+
 	const controller = AppFactory.getChatController();
 
 	async function handleSubmit(question: string, skipAdd = false) {
@@ -34,6 +43,8 @@
 
 	// Handle initial message from Hero page or New Chat with pre-filled message
 	$effect(() => {
+		chatStore.initializeSelectedModel(data.defaultModel);
+
 		if (chatStore.messages.length === 1 && chatStore.messages[0].role === 'user' && !chatStore.isStreaming && chatStore.phase === 'idle') {
 			handleSubmit(chatStore.messages[0].content, true);
 		}
@@ -57,6 +68,8 @@
 			disabled={chatStore.isStreaming}
 			selectedModel={chatStore.selectedModel}
 			onModelChange={(model) => chatStore.setSelectedModel(model)}
+			models={data.models}
+			defaultModel={data.defaultModel}
 		/>
 	</div>
 

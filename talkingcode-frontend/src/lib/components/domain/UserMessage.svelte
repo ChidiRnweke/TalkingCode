@@ -12,6 +12,6 @@
 
 <Message from="user" class="max-w-[60ch]">
 	<MessageContent>
-		<p class="whitespace-pre-wrap">{message.content}</p>
+		{message.content}
 	</MessageContent>
 </Message>

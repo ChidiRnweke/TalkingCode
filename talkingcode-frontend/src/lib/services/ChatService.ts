@@ -61,7 +61,27 @@ const toolCallFinishedSchema = baseSchema
 	.strict();
 
 const assistantTokenSchema = baseSchema.extend({ message: z.string() }).strict();
-const assistantDoneSchema = baseSchema.extend({ message: z.string().optional() }).strict();
+const assistantDoneSchema = baseSchema
+	.extend({
+		message: z.string().optional(),
+		visible_args: z
+			.object({
+				sources: z
+					.array(
+						z.object({
+							index: z.number().int().positive(),
+							repository: z.string().min(1),
+							path: z.string().min(1),
+							start_line: z.number().int().nullable().optional(),
+							end_line: z.number().int().nullable().optional(),
+							similarity_score: z.number().optional()
+						})
+					)
+					.optional()
+			})
+			.optional()
+	})
+	.strict();
 const agentErrorSchema = baseSchema
 	.extend({
 		message: z.string(),
@@ -155,6 +175,14 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 			return {
 				kind: 'assistant_done',
 				turnId: result.data.turn_id,
+				sources: (result.data.visible_args?.sources ?? []).map((source) => ({
+					index: source.index,
+					repository: source.repository,
+					path: source.path,
+					startLine: source.start_line ?? null,
+					endLine: source.end_line ?? null,
+					similarityScore: source.similarity_score ?? 0
+				})),
 				timestamp: result.data.timestamp
 			};
 		}

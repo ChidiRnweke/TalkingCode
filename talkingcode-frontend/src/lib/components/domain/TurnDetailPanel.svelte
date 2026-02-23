@@ -11,6 +11,47 @@
 
 	let { message, onClose }: Props = $props();
 
+	function toTitleCaseTool(name: string): string {
+		return name
+			.split('_')
+			.filter(Boolean)
+			.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+			.join(' ');
+	}
+
+	function displayToolArgs(args: Record<string, unknown>): string {
+		const query = args.query;
+		if (typeof query === 'string' && query.trim()) {
+			return `Query: ${query}`;
+		}
+
+		const repository = args.repository;
+		const filePath = args.file_path;
+		if (typeof repository === 'string' && typeof filePath === 'string') {
+			return `File: ${repository}/${filePath}`;
+		}
+
+		return Object.entries(args)
+			.map(([key, value]) => {
+				const label = key
+					.split('_')
+					.filter(Boolean)
+					.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+					.join(' ');
+
+				if (Array.isArray(value)) {
+					return `${label}: ${value.join(', ')}`;
+				}
+
+				if (value && typeof value === 'object') {
+					return `${label}: ${Object.keys(value as Record<string, unknown>).join(', ')}`;
+				}
+
+				return `${label}: ${String(value)}`;
+			})
+			.join('\n');
+	}
+
 	const statusColors = {
 		started: 'secondary',
 		finished: 'default',
@@ -53,11 +94,11 @@
 					</div>
 					
 					{#if message.planText}
-						<div class="whitespace-pre-wrap rounded-lg border border-border/40 bg-surface-2 p-4 text-[0.95rem] leading-7 text-foreground/90">
+						<div class="whitespace-pre-wrap rounded-md border border-border/40 bg-surface-2 p-4 text-[0.95rem] leading-7 text-foreground/90">
 							{message.planText}
 						</div>
 					{:else if message.plan?.intent}
-						<div class="rounded-lg border border-border/40 bg-surface-2 p-4 text-[0.95rem] text-foreground/90">
+						<div class="rounded-md border border-border/40 bg-surface-2 p-4 text-[0.95rem] text-foreground/90">
 							{message.plan.intent}
 						</div>
 					{/if}
@@ -91,10 +132,10 @@
 					</div>
 					<ul class="flex flex-col gap-3">
 						{#each message.toolCalls as tool}
-							<li class="group flex flex-col gap-2 rounded-xl border border-border/60 bg-background p-3 shadow-sm hover:shadow-md transition-shadow">
+							<li class="group flex flex-col gap-2 rounded-lg border border-border/60 bg-background p-3 shadow-sm hover:shadow-md transition-shadow">
 								<div class="flex items-center justify-between">
 									<div class="flex items-center gap-2">
-										<span class="text-xs font-mono font-bold text-foreground">{tool.toolName}</span>
+									<span class="text-xs font-mono font-bold text-foreground">{toTitleCaseTool(tool.toolName)}</span>
 										{#if tool.iteration}
 											<Badge variant="outline" class="text-[9px] h-4">Iter {tool.iteration}</Badge>
 										{/if}
@@ -105,8 +146,8 @@
 								</div>
 								
 								{#if tool.visibleArgs && Object.keys(tool.visibleArgs).length > 0}
-									<div class="text-[10px] bg-surface-2/50 rounded-md p-2 font-mono text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">
-										{JSON.stringify(tool.visibleArgs)}
+									<div class="max-h-24 overflow-y-auto rounded-md bg-surface-2/50 p-2 text-[11px] leading-relaxed text-muted-foreground">
+										{displayToolArgs(tool.visibleArgs)}
 									</div>
 								{/if}
 

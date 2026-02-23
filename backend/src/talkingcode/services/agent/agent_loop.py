@@ -8,13 +8,54 @@ from uuid import UUID
 
 import structlog
 
-from talkingcode.domain.models import AgentTurnInput, ExecuteToolGroupInput, WhiteboxEvent
+from talkingcode.domain.models import AgentTurnInput, ExecuteToolGroupInput, SourceReference, WhiteboxEvent
 from talkingcode.enums import WhiteboxEventKind
 from talkingcode.services.agent.timeline_repository import TimelineRepository
 from talkingcode.services.llm.openrouter_client import IOpenRouterClient
 from talkingcode.services.tools.tool_registry import ToolRegistry
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+
+PLANNING_SYSTEM_PROMPT = (
+    "You are TalkingCode's planning agent. You must answer questions using Chidi Nweke's indexed "
+    "GitHub repositories in this system. When the user says 'this repo', 'this project', or similar, "
+    "treat it as TalkingCode unless they explicitly name another repository. "
+    "Use search_github to look up concrete evidence before answering. "
+    "Use iterative planning: do one search, inspect results, then decide next search. "
+    "If independent searches are needed, emit multiple tool calls in the same iteration (parallel). "
+    "If later searches depend on earlier results, do them in later iterations (sequential). "
+    "Keep plan text short and action-focused."
+)
+
+ANSWER_SYSTEM_PROMPT = (
+    "YOUR ROLE:\n"
+    "You are an advanced assistant created to help users navigate and understand Chidi Nweke's GitHub repositories. "
+    "Your role is to provide insights into the projects, explain technologies used, and discuss the purpose of each project.\n"
+    "Chidi's profile:\n"
+    "- Machine Learning Engineer\n"
+    "- MSc in Information Management at KU Leuven, with a focus on AI and Data Science.\n"
+    "- Python, Java, JavaScript, TypeScript, Svelte, Scala, Rust, SQL, R, Docker, Azure and more.\n"
+    "- Many projects are related to web development.\n"
+    "- Some advanced machine learning projects are work projects and not open-source.\n\n"
+    "HOW YOU DO IT:\n"
+    "Use retrieved repository evidence to answer. Refer to exact repository and file path whenever possible. "
+    "Keep code excerpts short and abbreviated with ellipsis.\n\n"
+    "CITATION RULES:\n"
+    "- When referencing code or information from search results, cite the source using "
+    "numbered references like [1], [2], etc.\n"
+    "- Each unique file you reference gets a sequential number.\n"
+    "- Place citations inline, immediately after the relevant claim or code reference.\n"
+    "- At the end of your response, list all sources in a 'Sources:' section:\n"
+    "  Sources:\n"
+    "  [1] owner/repo: path/to/file.py (lines X-Y)\n"
+    "  [2] owner/repo: path/to/other.ts (lines A-B)\n"
+    "- Only cite files that actually appear in your search results.\n"
+    "- If multiple chunks from the same file are relevant, use the same citation number.\n\n"
+    "YOUR CONSTRAINTS:\n"
+    "- Do not answer questions unrelated to Chidi's code.\n"
+    "- Keep answers short to medium length.\n"
+    "- Answer in first person as if you are Chidi Nweke.\n"
+)
 
 
 class IAgentLoopService(Protocol):
@@ -50,16 +91,14 @@ class AgentLoopService:
         messages: list[dict[str, object]] = [
             {
                 "role": "system",
-                "content": (
-                    "You are TalkingCode in an iterative ReAct tool loop. For each step, explain the next "
-                    "plan briefly in plain text. Use tool calls when needed, and after tool results are "
-                    "provided, continue iterating until you can answer the user directly."
-                ),
+                "content": PLANNING_SYSTEM_PROMPT,
             },
             {"role": "user", "content": input_data.question},
         ]
 
         sequence_no = 0
+        collected_sources: dict[tuple[str, str], SourceReference] = {}
+        next_source_index = 1
 
         try:
             for iteration in range(1, self.max_iterations + 1):
@@ -107,10 +146,11 @@ class AgentLoopService:
                 if not tool_calls:
                     final_messages: list[dict[str, object]] = [
                         *messages,
+                        {"role": "system", "content": ANSWER_SYSTEM_PROMPT},
                         {
                             "role": "user",
                             "content": (
-                                "Now provide the final answer to the user using any gathered tool results. "
+                                "Now provide the final answer to the user from retrieved repo evidence. "
                                 "Do not include internal planning notes."
                             ),
                         },
@@ -134,7 +174,7 @@ class AgentLoopService:
                         turn_id=turn_id,
                         tool_name=None,
                         message="Turn complete",
-                        visible_args=None,
+                        visible_args={"sources": self._serialize_sources(collected_sources)},
                         timestamp=datetime.utcnow(),
                     )
                     return
@@ -266,6 +306,12 @@ class AgentLoopService:
                                 "error_code": result.error_code,
                             }
                         )
+                    elif tool_name == "search_github":
+                        next_source_index = self._collect_sources_from_observation(
+                            observation=observation,
+                            collected_sources=collected_sources,
+                            next_source_index=next_source_index,
+                        )
 
                     messages.append(
                         {
@@ -322,3 +368,61 @@ class AgentLoopService:
             chunks.append(" ".join(current))
 
         return chunks
+
+    @staticmethod
+    def _collect_sources_from_observation(
+        *,
+        observation: str,
+        collected_sources: dict[tuple[str, str], SourceReference],
+        next_source_index: int,
+    ) -> int:
+        try:
+            payload = json.loads(observation)
+        except json.JSONDecodeError:
+            return next_source_index
+
+        items = payload.get("items") if isinstance(payload, dict) else None
+        if not isinstance(items, list):
+            return next_source_index
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+
+            repository = str(item.get("repository") or "").strip()
+            path = str(item.get("path") or "").strip()
+            if not repository or not path:
+                continue
+
+            key = (repository, path)
+            if key in collected_sources:
+                continue
+
+            collected_sources[key] = SourceReference(
+                index=next_source_index,
+                repository=repository,
+                path=path,
+                start_line=item.get("start_line"),
+                end_line=item.get("end_line"),
+                similarity_score=float(item.get("score") or 0.0),
+            )
+            next_source_index += 1
+
+        return next_source_index
+
+    @staticmethod
+    def _serialize_sources(
+        collected_sources: dict[tuple[str, str], SourceReference],
+    ) -> list[dict[str, object]]:
+        ordered = sorted(collected_sources.values(), key=lambda source: source.index)
+        return [
+            {
+                "index": source.index,
+                "repository": source.repository,
+                "path": source.path,
+                "start_line": source.start_line,
+                "end_line": source.end_line,
+                "similarity_score": source.similarity_score,
+            }
+            for source in ordered
+        ]

@@ -2,7 +2,6 @@
 	import Reasoning from '$lib/components/ai-elements/reasoning/Reasoning.svelte';
 	import ReasoningTrigger from '$lib/components/ai-elements/reasoning/ReasoningTrigger.svelte';
 	import ReasoningContent from '$lib/components/ai-elements/reasoning/ReasoningContent.svelte';
-	import Shimmer from '$lib/components/ai-elements/shimmer/Shimmer.svelte';
 	import { Badge } from '$lib/components/ui/badge';
 	import type { AgentPlanView } from '$lib/models';
 
@@ -18,11 +17,11 @@
 </script>
 
 {#if isStreaming && !hasPlan}
-	<Reasoning isStreaming={true}>
-		<Shimmer>Analyzing your request...</Shimmer>
+	<Reasoning isStreaming={true} defaultOpen={false}>
+		<ReasoningTrigger />
 	</Reasoning>
 {:else if hasPlan}
-	<Reasoning isStreaming={isStreaming}>
+	<Reasoning isStreaming={isStreaming} defaultOpen={true}>
 		<ReasoningTrigger>
 			<span class="text-sm text-muted-foreground">{planText || plan?.intent || 'Planning'}</span>
 		</ReasoningTrigger>

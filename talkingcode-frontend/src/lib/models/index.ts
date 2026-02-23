@@ -114,6 +114,14 @@ export interface AssistantTokenEvent {
 export interface AssistantDoneEvent {
 	kind: 'assistant_done';
 	turnId: string;
+	sources?: Array<{
+		index: number;
+		repository: string;
+		path: string;
+		startLine: number | null;
+		endLine: number | null;
+		similarityScore: number;
+	}>;
 	timestamp: string;
 }
 
@@ -137,6 +145,7 @@ export interface ChatMessage {
 	toolCalls?: ToolCallTimelineItem[];
 	isStreaming?: boolean;
 	thoughtDurationS?: number;
+	sources?: AssistantDoneEvent['sources'];
 	error?: string | null;
 }
 

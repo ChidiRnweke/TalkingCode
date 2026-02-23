@@ -172,7 +172,10 @@ function createChatStore() {
 				}
 
 				case 'assistant_done': {
-					const update: Partial<ChatMessage> = { isStreaming: false };
+					const update: Partial<ChatMessage> = {
+						isStreaming: false,
+						sources: event.sources
+					};
 
 					if (!current.thoughtDurationS && currentTurnStartTime) {
 						update.thoughtDurationS = Math.max(1, Math.round((Date.now() - currentTurnStartTime) / 1000));
@@ -204,6 +207,12 @@ function createChatStore() {
 
 		setSelectedModel(model: string) {
 			selectedModel = model;
+		},
+
+		initializeSelectedModel(defaultModel: string | null) {
+			if (!selectedModel && defaultModel) {
+				selectedModel = defaultModel;
+			}
 		},
 
 		retry(messageId: string): string | null {

@@ -8,6 +8,7 @@
 	import { Reasoning, ReasoningTrigger } from '$lib/components/ai-elements/reasoning';
 	import ReasoningContent from '$lib/components/ai-elements/reasoning/ReasoningContent.svelte';
 	import InlineTool from './InlineTool.svelte';
+	import Citations from './Citations.svelte';
 	import { Copy, RotateCcw } from 'lucide-svelte';
 	import type { ChatMessage } from '$lib/models';
 	import { chatStore } from '$lib/stores';
@@ -72,8 +73,15 @@
 	{/if}
 
 	{#if message.content}
-		<MessageContent>
-			<MessageResponse content={message.content} />
+		<MessageContent class={hasThought ? 'mt-3' : ''}>
+			<MessageResponse
+				content={message.content}
+				isStreaming={!!message.isStreaming}
+				sources={message.sources}
+			/>
+			{#if message.sources?.length}
+				<Citations sources={message.sources} />
+			{/if}
 		</MessageContent>
 	{/if}
 

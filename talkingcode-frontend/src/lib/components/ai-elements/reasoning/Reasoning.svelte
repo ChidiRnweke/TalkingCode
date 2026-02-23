@@ -18,7 +18,7 @@
 		class: className = "",
 		isStreaming = false,
 		open = $bindable(),
-		defaultOpen = true,
+		defaultOpen = false,
 		onOpenChange,
 		duration = $bindable(),
 		children,
