@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import time
 from dataclasses import dataclass
 from datetime import datetime
 import re
@@ -27,8 +28,11 @@ from talkingcode.services.classification.document_classifier import IDocumentCla
 from talkingcode.services.ingestion.chunker import IChunker
 from talkingcode.services.ingestion.embedder import IEmbedder
 from talkingcode.services.ingestion.github_fetcher import IGitHubFetcher
+from talkingcode.telemetry.ingestion_metrics import get_ingestion_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+metrics = get_ingestion_metrics()
+
 OWNED_REPO_INGEST_CONCURRENCY = 4
 FILE_INGEST_CONCURRENCY = 12
 GITHUB_API_CONCURRENCY = 6
@@ -139,12 +143,9 @@ class IngestionService:
         git_ref = input_data.git_ref or repo.default_branch
         run = await self.repo_repository.create_ingestion_run(repo.id)
 
-        logger.info(
-            "Starting ingestion",
-            repo=f"{repo.owner}/{repo.name}",
-            ref=git_ref,
-            run_id=str(run.id),
-        )
+        run_start = time.perf_counter()
+        metrics.ingestion_runs_total.add(1, attributes={"repository": f"{repo.owner}/{repo.name}", "status": "started"})
+        logger.info("ingestion.run.started", run_id=str(run.id), repository=f"{repo.owner}/{repo.name}", git_ref=git_ref)
 
         try:
             paths = await self.github_fetcher.fetch_file_tree(
@@ -159,9 +160,13 @@ class IngestionService:
 
             try:
                 async def ingest_file(path: str) -> bool:
-                    logger.info("Ingesting file", path=path)
+                    file_start = time.perf_counter()
+                    logger.info("ingestion.file.started", run_id=str(run.id), repository=f"{repo.owner}/{repo.name}", git_ref=git_ref, path=path)
+
                     try:
                         async with file_processing_semaphore:
+                            # stage: github fetch
+                            t0 = time.perf_counter()
                             async with cast(asyncio.Semaphore, self.github_api_semaphore):
                                 file_content = await self.github_fetcher.fetch_file_content(
                                     owner=repo.owner,
@@ -169,16 +174,27 @@ class IngestionService:
                                     ref=git_ref,
                                     path=path,
                                 )
+                            fetch_sec = time.perf_counter() - t0
+                            metrics.ingestion_github_request_duration_seconds.record(fetch_sec, attributes={"operation": "fetch_file_content", "provider": "github"})
+                            logger.info("ingestion.file.stage.completed", stage="fetch", duration_ms=int(fetch_sec * 1000), path=path)
+
+                            metrics.ingestion_file_size_bytes.record(len(file_content.content.encode("utf-8")), attributes={"repository": f"{repo.owner}/{repo.name}"})
 
                             content_sha = hashlib.sha256(
                                 file_content.content.encode("utf-8")
                             ).hexdigest()
 
+                            # stage: classify
+                            t0 = time.perf_counter()
                             classification = await self._classify_with_fallback(
                                 repo=f"{repo.owner}/{repo.name}",
                                 path=path,
                                 content=file_content.content,
                             )
+                            classify_sec = time.perf_counter() - t0
+                            metrics.ingestion_classification_duration_seconds.record(classify_sec, attributes={"repository": f"{repo.owner}/{repo.name}"})
+                            logger.info("ingestion.file.stage.completed", stage="classify", duration_ms=int(classify_sec * 1000), path=path)
+
                             classification_dict = {
                                 "language": classification.language,
                                 "area": classification.area.value,
@@ -187,15 +203,30 @@ class IngestionService:
                                 "tags": classification.tags,
                             }
 
+                            # stage: chunk
+                            t0 = time.perf_counter()
                             chunks = self.chunker.chunk(file_content.content)
+                            chunk_sec = time.perf_counter() - t0
+                            metrics.ingestion_chunking_duration_seconds.record(chunk_sec, attributes={"repository": f"{repo.owner}/{repo.name}"})
+                            metrics.ingestion_chunk_count_per_file.record(len(chunks), attributes={"repository": f"{repo.owner}/{repo.name}"})
+                            metrics.ingestion_chunks_total.add(len(chunks), attributes={"repository": f"{repo.owner}/{repo.name}"})
+                            logger.info("ingestion.file.stage.completed", stage="chunk", duration_ms=int(chunk_sec * 1000), path=path, chunk_count=len(chunks))
 
+                            # stage: embed
+                            t0 = time.perf_counter()
                             embeddings: list[list[float]] = []
                             if chunks:
                                 async with cast(asyncio.Semaphore, self.openrouter_api_semaphore):
                                     embeddings = await self.embedder.embed_batch(
                                         [chunk.content for chunk in chunks]
                                     )
+                            embed_sec = time.perf_counter() - t0
+                            metrics.ingestion_embedding_request_duration_seconds.record(embed_sec, attributes={"repository": f"{repo.owner}/{repo.name}", "operation": "embed_batch"})
+                            metrics.ingestion_embeddings_total.add(len(embeddings), attributes={"repository": f"{repo.owner}/{repo.name}"})
+                            logger.info("ingestion.file.stage.completed", stage="embed", duration_ms=int(embed_sec * 1000), path=path, embedding_count=len(embeddings))
 
+                            # stage: db write
+                            t0 = time.perf_counter()
                             async with session_maker() as session:
                                 local_document_repository = DocumentRepository(session)
                                 try:
@@ -235,14 +266,21 @@ class IngestionService:
                                 except Exception:
                                     await session.rollback()
                                     raise
+                            db_sec = time.perf_counter() - t0
+                            metrics.ingestion_db_write_duration_seconds.record(db_sec, attributes={"repository": f"{repo.owner}/{repo.name}"})
+                            logger.info("ingestion.file.stage.completed", stage="db_write", duration_ms=int(db_sec * 1000), path=path)
+
+                            file_sec = time.perf_counter() - file_start
+                            metrics.ingestion_files_total.add(1, attributes={"repository": f"{repo.owner}/{repo.name}", "status": "success"})
+                            metrics.ingestion_file_duration_seconds.record(file_sec, attributes={"repository": f"{repo.owner}/{repo.name}", "status": "success"})
+                            logger.info("ingestion.file.completed", path=path, duration_ms=int(file_sec * 1000), status="success")
 
                             return True
                     except Exception as file_err:  # noqa: BLE001
-                        logger.warning(
-                            "Failed to ingest file, skipping",
-                            path=path,
-                            error=str(file_err),
-                        )
+                        file_sec = time.perf_counter() - file_start
+                        metrics.ingestion_files_failed_total.add(1, attributes={"repository": f"{repo.owner}/{repo.name}", "status": "failed"})
+                        metrics.ingestion_file_duration_seconds.record(file_sec, attributes={"repository": f"{repo.owner}/{repo.name}", "status": "failed"})
+                        logger.warning("ingestion.file.failed", path=path, duration_ms=int(file_sec * 1000), status="failed", error_code=type(file_err).__name__, error=str(file_err))
                         return False
 
                 tasks: list[asyncio.Task[bool]] = []
@@ -266,18 +304,15 @@ class IngestionService:
                 status=IngestionStatus.DONE,
             )
 
-            logger.info(
-                "Ingestion completed",
-                repo=f"{repo.owner}/{repo.name}",
-                run_id=str(run.id),
-            )
+            run_sec = time.perf_counter() - run_start
+            metrics.ingestion_run_duration_seconds.record(run_sec, attributes={"repository": f"{repo.owner}/{repo.name}", "status": "done"})
+            logger.info("ingestion.run.completed", run_id=str(run.id), repository=f"{repo.owner}/{repo.name}", duration_ms=int(run_sec * 1000), status="done")
 
         except Exception as exc:  # noqa: BLE001
-            logger.error(
-                "Ingestion failed",
-                repo=f"{repo.owner}/{repo.name}",
-                error=str(exc),
-            )
+            run_sec = time.perf_counter() - run_start
+            metrics.ingestion_run_duration_seconds.record(run_sec, attributes={"repository": f"{repo.owner}/{repo.name}", "status": "failed"})
+            logger.error("ingestion.run.failed", run_id=str(run.id), repository=f"{repo.owner}/{repo.name}", duration_ms=int(run_sec * 1000), status="failed", error_code=type(exc).__name__, error=str(exc))
+            
             await self.repo_repository.complete_ingestion_run(
                 run_id=run.id,
                 status=IngestionStatus.FAILED,
@@ -304,6 +339,7 @@ class IngestionService:
                     )
                 )
         except Exception as classification_err:  # noqa: BLE001
+            metrics.ingestion_classifier_fallback_total.add(1, attributes={"operation": "classify", "status": "fallback"})
             logger.warning(
                 "Classifier failed, using heuristic classification",
                 path=path,

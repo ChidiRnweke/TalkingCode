@@ -30,7 +30,7 @@ def mock_factory():
     
     # Chat Controller
     chat_controller = MagicMock()
-    factory.get_chat_controller.return_value = chat_controller
+    factory.get_chat_controller = AsyncMock(return_value=chat_controller)
     
     # Mock return values for ingestion controller methods
     now = datetime.now(timezone.utc)
@@ -71,7 +71,11 @@ def client(mock_config, mock_factory):
     app.dependency_overrides[get_factory] = lambda: mock_factory
     # Mock DB session for chat routes that require it
     from talkingcode.dependencies import get_db_session
-    app.dependency_overrides[get_db_session] = lambda: MagicMock()
+    db_session = MagicMock()
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = []
+    db_session.execute = AsyncMock(return_value=mock_result)
+    app.dependency_overrides[get_db_session] = lambda: db_session
     return TestClient(app)
 
 

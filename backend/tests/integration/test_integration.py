@@ -47,6 +47,9 @@ async def app_config():
         default_tool_timeout=15,
         embedding_model="test-embedding",
         embedding_dimensions=1536,
+        intent_extraction_model="test-intent",
+        curated_models="test-curated",
+        default_chat_model="test-chat",
     )
 
 

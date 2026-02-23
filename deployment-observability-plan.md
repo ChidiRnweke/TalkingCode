@@ -557,7 +557,7 @@ Optional:
 
   - Ingestion metrics registry exists and imports cleanly.
 
-- [ ] **Step 4: Instrument ingestion orchestration with detailed logs/metrics**
+- [x] **Step 4: Instrument ingestion orchestration with detailed logs/metrics**
 
   **File to modify**
 
