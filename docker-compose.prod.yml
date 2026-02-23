@@ -25,7 +25,6 @@ services:
     labels:
       caddy: api.talkingcode.chidinweke.be
       caddy.reverse_proxy: "{{upstreams 8000}}"
-      caddy.rate_limit.zone: "backend { key {remote.host} events 60 window 1m }"
 
   frontend:
     build:
@@ -54,7 +53,6 @@ services:
     labels:
       caddy: agent.chidinweke.be
       caddy.reverse_proxy: "{{upstreams 3000}}"
-      caddy.rate_limit.zone: "frontend { key {remote.host} events 100 window 1m }"
 
   migrate:
     build:
