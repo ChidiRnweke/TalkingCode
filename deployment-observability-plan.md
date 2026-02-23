@@ -459,7 +459,7 @@ Optional:
   - Telemetry initialization is centralized.
   - No debug prints remain in dependencies.
 
-- [ ] **Step 3: Add dedicated ingestion metrics registry**
+- [x] **Step 3: Add dedicated ingestion metrics registry**
 
   **Files to create**
 
