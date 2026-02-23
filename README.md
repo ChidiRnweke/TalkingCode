@@ -32,3 +32,42 @@ curl -X POST "https://your-domain.com/api/repos/ingest-owned?api_key=your-secret
 ```
 
 Note: The `/repos` endpoint remains public for reading repository status, but write actions are restricted.
+
+## Deployment & Observability
+
+### Secrets Management
+
+This project supports loading secrets from **Infisical** or environment variables.
+
+- **Env-only mode (default)**: Just set the variables in `.env`.
+- **Infisical mode**: Set `INFISICAL_ENABLED=1` and provide `INFISICAL_CLIENT_ID`, `INFISICAL_CLIENT_SECRET`, `INFISICAL_PROJECT_ID`, `INFISICAL_ENVIRONMENT`, and `INFISICAL_URL`.
+
+### Observability (OpenTelemetry)
+
+Telemetry is supported for traces, metrics, and logs via OTLP.
+
+- Set `OTEL_EXPORTER_OTLP_ENDPOINT` (e.g., `http://localhost:4317`) to enable.
+- Ingestion telemetry includes:
+  - **Logs**: Detailed per-file and per-run status with timing.
+  - **Metrics**: `ingestion_runs_total`, `ingestion_files_total`, `ingestion_file_duration_seconds`, etc.
+  - **Traces**: Run-level and stage-level spans.
+
+### Development Stack
+
+Run the full local stack with OTel collector:
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+### Production Setup
+
+1. **Database Provisioning**:
+   The setup profile handles database and role creation idempotently.
+   ```bash
+   docker compose -f docker-compose.prod.yml --profile setup up backend-migrate
+   ```
+
+2. **Deploy App**:
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d
+   ```

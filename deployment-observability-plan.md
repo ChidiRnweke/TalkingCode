@@ -1159,7 +1159,7 @@ Optional:
 
   - Local stack runs and backend health check works.
 
-- [ ] **Step 12: Update documentation and env examples with exact required contracts**
+- [x] **Step 12: Update documentation and env examples with exact required contracts**
 
   **Files to modify**
 
