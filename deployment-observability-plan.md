@@ -166,7 +166,7 @@ Optional:
 
 ## Plan
 
-- [ ] **Step 1: Implement backend secrets reader module and wire AppConfig**
+- [x] **Step 1: Implement backend secrets reader module and wire AppConfig**
 
   **Files to create/modify**
 
