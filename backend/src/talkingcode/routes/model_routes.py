@@ -1,6 +1,8 @@
 """Model list routes."""
-from fastapi import APIRouter, Depends
 
+from dataclasses import dataclass
+
+from fastapi import APIRouter, Depends
 from talkingcode.config import AppConfig
 from talkingcode.dependencies import get_config
 
@@ -18,11 +20,27 @@ def _model_label(model_id: str) -> str:
     return name.replace("-", " ").replace("_", " ").title()
 
 
+@dataclass(slots=True, frozen=True)
+class ModelInfo:
+    """Information about a model."""
+
+    id: str
+    label: str
+
+
+@dataclass(slots=True, frozen=True)
+class ModelListResponse:
+    """Response model for model list endpoint."""
+
+    models: list[ModelInfo]
+    default: str
+
+
 @router.get("/models")
-async def list_models(config: AppConfig = Depends(get_config)) -> dict:
+async def list_models(config: AppConfig = Depends(get_config)) -> ModelListResponse:
     """Return curated model list with labels and default."""
     model_ids = [m.strip() for m in config.curated_models.split(",") if m.strip()]
-    return {
-        "models": [{"id": m, "label": _model_label(m)} for m in model_ids],
-        "default": config.default_chat_model,
-    }
+    return ModelListResponse(
+        models=[ModelInfo(id=m, label=_model_label(m)) for m in model_ids],
+        default=config.default_chat_model,
+    )

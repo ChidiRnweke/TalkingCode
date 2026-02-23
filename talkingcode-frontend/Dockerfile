@@ -31,6 +31,7 @@ COPY --from=builder /app/build ./build
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/scripts ./scripts
 
 # Ensure production environment
 ENV NODE_ENV=production
@@ -38,4 +39,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Start through the launcher
-CMD ["node", "scripts/server.js"]
+CMD ["node", "--import", "./scripts/otel-instrumentation.js", "--import", "./scripts/secrets.js", "build"]

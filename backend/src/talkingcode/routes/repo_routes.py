@@ -1,13 +1,13 @@
 """Repository management routes."""
 
-from dataclasses import asdict
-from datetime import datetime
-
 from fastapi import APIRouter
 from pydantic import BaseModel
-
 from talkingcode.dependencies import FactoryDep, IngestionAuthDep
-from talkingcode.domain.models import IngestionRunInfo, RegisterRepoInput, RepositoryInfo
+from talkingcode.domain.models import (
+    IngestionRunInfo,
+    RegisterRepoInput,
+    RepositoryInfo,
+)
 
 router = APIRouter()
 
@@ -26,44 +26,12 @@ class StartIngestionRequest(BaseModel):
     git_ref: str | None = None
 
 
-def _to_iso(value: datetime | None) -> str | None:
-    """Convert optional datetime to ISO string."""
-    return value.isoformat() if value else None
-
-
-def _serialize_repo(repo: RepositoryInfo) -> dict[str, str | None]:
-    """Serialize a RepositoryInfo to a JSON-safe dict."""
-    data = asdict(repo)
-    return {
-        "id": str(data["id"]),
-        "provider": data["provider"],
-        "owner": data["owner"],
-        "name": data["name"],
-        "default_branch": data["default_branch"],
-        "last_ingested_at": _to_iso(data["last_ingested_at"]),
-        "created_at": data["created_at"].isoformat(),
-    }
-
-
-def _serialize_run(run: IngestionRunInfo) -> dict[str, str | None]:
-    """Serialize an IngestionRunInfo to a JSON-safe dict."""
-    data = asdict(run)
-    return {
-        "id": str(data["id"]),
-        "repository_id": str(data["repository_id"]),
-        "status": data["status"].value,
-        "started_at": data["started_at"].isoformat(),
-        "completed_at": _to_iso(data["completed_at"]),
-        "error_message": data["error_message"],
-    }
-
-
 @router.post("/repos")
 async def register_repo(
     body: RegisterRepoRequest,
     factory: FactoryDep,
     auth: IngestionAuthDep,
-) -> dict[str, str | None]:
+) -> RepositoryInfo:
     """Register a GitHub repository for ingestion."""
     controller = factory.get_ingestion_controller()
     repo = await controller.register_repo(
@@ -73,23 +41,25 @@ async def register_repo(
             default_branch=body.default_branch,
         )
     )
-    return _serialize_repo(repo)
+    return repo
 
 
 @router.get("/repos")
-async def list_repos(factory: FactoryDep) -> list[dict[str, str | None]]:
+async def list_repos(
+    factory: FactoryDep, auth: IngestionAuthDep
+) -> list[RepositoryInfo]:
     """List all tracked repositories."""
     controller = factory.get_ingestion_controller()
     repos = await controller.list_repos()
-    return [_serialize_repo(repo) for repo in repos]
+    return repos
 
 
 @router.get("/repos/{owner}/{name}")
-async def get_repo(owner: str, name: str, factory: FactoryDep) -> dict[str, str | None]:
+async def get_repo(owner: str, name: str, factory: FactoryDep) -> RepositoryInfo:
     """Get details of a specific repository."""
     controller = factory.get_ingestion_controller()
     repo = await controller.get_repo(owner, name)
-    return _serialize_repo(repo)
+    return repo
 
 
 @router.post("/repos/{owner}/{name}/ingest")
@@ -99,12 +69,12 @@ async def start_ingestion(
     factory: FactoryDep,
     auth: IngestionAuthDep,
     body: StartIngestionRequest | None = None,
-) -> dict[str, str | None]:
+) -> IngestionRunInfo:
     """Start an ingestion run. Synchronous — completes when ingestion is done."""
     controller = factory.get_ingestion_controller()
     git_ref = body.git_ref if body else None
     run = await controller.start_ingestion(owner, name, git_ref)
-    return _serialize_run(run)
+    return run
 
 
 @router.post("/repos/ingest-owned")
@@ -112,12 +82,12 @@ async def start_owned_repo_ingestion(
     factory: FactoryDep,
     auth: IngestionAuthDep,
     body: StartIngestionRequest | None = None,
-) -> list[dict[str, str | None]]:
+) -> list[IngestionRunInfo]:
     """Ingest all repositories owned by the authenticated user (excluding forks)."""
     controller = factory.get_ingestion_controller()
     git_ref = body.git_ref if body else None
     runs = await controller.start_owned_repo_ingestion(git_ref)
-    return [_serialize_run(run) for run in runs]
+    return runs
 
 
 @router.get("/repos/{owner}/{name}/runs")
@@ -125,8 +95,8 @@ async def list_ingestion_runs(
     owner: str,
     name: str,
     factory: FactoryDep,
-) -> list[dict[str, str | None]]:
+) -> list[IngestionRunInfo]:
     """List ingestion run history for a repository."""
     controller = factory.get_ingestion_controller()
     runs = await controller.list_ingestion_runs(owner, name)
-    return [_serialize_run(run) for run in runs]
+    return runs

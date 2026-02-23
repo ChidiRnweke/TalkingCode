@@ -46,3 +46,15 @@ export async function loadFrontendSecrets() {
   process.env.OTEL_SERVICE_NAME = process.env.OTEL_SERVICE_NAME || secretMap.OTEL_SERVICE_NAME || 'talkingcode-frontend';
   process.env.OTEL_ENVIRONMENT = process.env.OTEL_ENVIRONMENT || secretMap.OTEL_ENVIRONMENT || process.env.NODE_ENV || 'development';
 }
+
+
+if (isInfisicalEnabled()) {
+  console.log('[Secrets] Infisical integration enabled. Loading secrets from Infisical...');
+  await loadFrontendSecrets()
+    .then(() => {
+      console.log('[Secrets] Secrets loaded successfully from Infisical.');
+    })
+    .catch((err) => {
+      console.error(`[Secrets] Error loading secrets from Infisical: ${err}`);
+    });
+}
