@@ -1,6 +1,7 @@
 """Embedding generator service."""
 
 import asyncio
+import time
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -8,8 +9,10 @@ import structlog
 
 from talkingcode.errors import InfraError
 from talkingcode.services.llm.openrouter_client import IOpenRouterClient
+from talkingcode.telemetry.ingestion_metrics import get_ingestion_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+metrics = get_ingestion_metrics()
 
 MAX_BATCH_SIZE = 100
 MAX_RETRIES = 3
@@ -54,13 +57,21 @@ class OpenRouterEmbedder:
     async def _embed_single_batch(self, texts: list[str]) -> list[list[float]]:
         """Embed a single batch with retry."""
         for attempt in range(MAX_RETRIES):
+            t0 = time.perf_counter()
             try:
-                return await self.openrouter_client.generate_embeddings(
+                embeddings = await self.openrouter_client.generate_embeddings(
                     model=self.model,
                     texts=texts,
                     dimensions=self.dimensions,
                 )
+                elapsed = time.perf_counter() - t0
+                metrics.ingestion_embedding_requests_total.add(1, attributes={"operation": "generate_embeddings", "status": "success"})
+                metrics.ingestion_embedding_request_duration_seconds.record(elapsed, attributes={"operation": "generate_embeddings", "status": "success"})
+                return embeddings
             except Exception as exc:  # noqa: BLE001
+                elapsed = time.perf_counter() - t0
+                metrics.ingestion_embedding_requests_total.add(1, attributes={"operation": "generate_embeddings", "status": "failed"})
+                metrics.ingestion_embedding_request_duration_seconds.record(elapsed, attributes={"operation": "generate_embeddings", "status": "failed"})
                 if attempt == MAX_RETRIES - 1:
                     raise InfraError(
                         f"OpenRouter embedding failed after {MAX_RETRIES} retries: {exc}"

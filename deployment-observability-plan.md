@@ -677,7 +677,7 @@ Optional:
   - Each file ingestion path has stage timings in logs.
   - Run/file success/failure counters and durations are emitted.
 
-- [ ] **Step 5: Instrument fetcher/embedder/classifier internals for richer metrics**
+- [x] **Step 5: Instrument fetcher/embedder/classifier internals for richer metrics**
 
   **Files to modify**
 

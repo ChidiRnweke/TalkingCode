@@ -9,8 +9,10 @@ import structlog
 from talkingcode.domain.models import DocumentClassificationInput, DocumentClassificationOutput
 from talkingcode.enums import Area, FileType
 from talkingcode.services.llm.openrouter_client import IOpenRouterClient
+from talkingcode.telemetry.ingestion_metrics import get_ingestion_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+metrics = get_ingestion_metrics()
 
 
 class IDocumentClassifier(Protocol):
@@ -82,6 +84,7 @@ class DocumentClassifier:
                 tags=parsed.get("tags", []),
             )
         except Exception as exc:  # noqa: BLE001
+            metrics.ingestion_classifier_fallback_total.add(1, attributes={"operation": "classify", "status": "fallback"})
             logger.warning("Classifier failed; switching to heuristic fallback", error=str(exc))
             self.llm_available = False
             return self._heuristic_classification(input_data)

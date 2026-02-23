@@ -1,6 +1,7 @@
 """GitHub file fetcher service."""
 
 import base64
+import time
 from dataclasses import dataclass
 from typing import Protocol
 from urllib.parse import parse_qs, urlparse
@@ -10,8 +11,10 @@ import structlog
 
 from talkingcode.domain.models import GitHubFileContent, GitHubRepository
 from talkingcode.errors import InfraError
+from talkingcode.telemetry.ingestion_metrics import get_ingestion_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+metrics = get_ingestion_metrics()
 
 # File extensions to index
 INDEXABLE_EXTENSIONS = {
@@ -105,6 +108,7 @@ class GitHubFetcher:
 
         async with httpx.AsyncClient() as client:
             while True:
+                t0 = time.perf_counter()
                 response = await client.get(
                     "https://api.github.com/user/repos",
                     headers={
@@ -119,6 +123,11 @@ class GitHubFetcher:
                     },
                     timeout=30.0,
                 )
+
+                elapsed = time.perf_counter() - t0
+                status_class = f"{response.status_code // 100}xx"
+                metrics.ingestion_github_requests_total.add(1, attributes={"operation": "list_owned_repositories", "status_class": status_class, "provider": "github"})
+                metrics.ingestion_github_request_duration_seconds.record(elapsed, attributes={"operation": "list_owned_repositories", "status_class": status_class, "provider": "github"})
 
                 if response.status_code in (403, 429):
                     raise InfraError(f"GitHub rate limit hit: {response.status_code}")
@@ -157,6 +166,7 @@ class GitHubFetcher:
         """Fetch list of indexable file paths using the Git Trees API."""
         url = f"https://api.github.com/repos/{owner}/{name}/git/trees/{ref}?recursive=1"
 
+        t0 = time.perf_counter()
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 url,
@@ -166,6 +176,11 @@ class GitHubFetcher:
                 },
                 timeout=30.0,
             )
+
+            elapsed = time.perf_counter() - t0
+            status_class = f"{response.status_code // 100}xx"
+            metrics.ingestion_github_requests_total.add(1, attributes={"operation": "fetch_file_tree", "status_class": status_class, "provider": "github"})
+            metrics.ingestion_github_request_duration_seconds.record(elapsed, attributes={"operation": "fetch_file_tree", "status_class": status_class, "provider": "github"})
 
             if response.status_code in (403, 429):
                 raise InfraError(f"GitHub rate limit hit: {response.status_code}")
@@ -215,6 +230,7 @@ class GitHubFetcher:
         """Fetch a single file's content via the Contents API."""
         url = f"https://api.github.com/repos/{owner}/{name}/contents/{path}?ref={ref}"
 
+        t0 = time.perf_counter()
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 url,
@@ -224,6 +240,11 @@ class GitHubFetcher:
                 },
                 timeout=30.0,
             )
+
+            elapsed = time.perf_counter() - t0
+            status_class = f"{response.status_code // 100}xx"
+            metrics.ingestion_github_requests_total.add(1, attributes={"operation": "fetch_file_content", "status_class": status_class, "provider": "github"})
+            metrics.ingestion_github_request_duration_seconds.record(elapsed, attributes={"operation": "fetch_file_content", "status_class": status_class, "provider": "github"})
 
             if response.status_code in (403, 429):
                 raise InfraError(
