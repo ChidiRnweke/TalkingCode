@@ -14,9 +14,10 @@
 		messages: ChatMessage[];
 		onOpenDetail?: (id: string) => void;
 		onSuggestionClick?: (suggestion: string) => void;
+		onRetry?: (question: string) => void;
 	}
 
-	let { messages, onOpenDetail, onSuggestionClick }: Props = $props();
+	let { messages, onOpenDetail, onSuggestionClick, onRetry }: Props = $props();
 </script>
 
 <Conversation>
@@ -41,7 +42,7 @@
 					{#if message.role === 'user'}
 						<UserMessage {message} />
 					{:else}
-						<AssistantMessage {message} {onOpenDetail} onRetry={onSuggestionClick} />
+						<AssistantMessage {message} {onOpenDetail} {onRetry} />
 					{/if}
 				{/each}
 			</div>

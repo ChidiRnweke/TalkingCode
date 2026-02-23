@@ -1,4 +1,5 @@
 """Application configuration."""
+
 from dataclasses import dataclass
 from typing import Self
 
@@ -7,28 +8,32 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """Application settings loaded from environment."""
-    
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
-    
+
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
+
     # Database
-    database_url: str = "postgresql+asyncpg://talkingcode:talkingcode@localhost:5432/talkingcode"
-    
+    database_url: str = (
+        "postgresql+asyncpg://talkingcode:talkingcode@localhost:5432/talkingcode"
+    )
+
     # LLM APIs
     openrouter_api_key: str = ""
     github_token: str = ""
     ingestion_api_key: str = ""
-    
+
     # App Config
     environment: str = "development"
     log_level: str = "INFO"
     default_model: str = "anthropic/claude-3.5-sonnet"
     fallback_model: str = "google/gemini-3-flash"
-    
+
     # Planner Settings
     max_iterations: int = 8
     max_tools_per_turn: int = 3
     default_tool_timeout: int = 15
-    
+
     # Embeddings
     embedding_model: str = "openai/text-embedding-3-large"
     embedding_dimensions: int = 3072
@@ -39,7 +44,7 @@ class Settings(BaseSettings):
     # Curated model list
     curated_models: str = "google/gemini-3-flash-preview,deepseek/deepseek-v3.2,moonshotai/kimi-k2.5,qwen/qwen3.5-plus-02-15,z-ai/glm-4.7,openai/gpt-5.1-codex-mini"
     default_chat_model: str = "google/gemini-3-flash-preview"
-    
+
     @property
     def database_url_async(self) -> str:
         """Get async database URL."""
@@ -49,7 +54,7 @@ class Settings(BaseSettings):
 @dataclass(slots=True, frozen=True)
 class AppConfig:
     """Runtime application configuration."""
-    
+
     database_url: str
     openrouter_api_key: str
     github_token: str
@@ -66,7 +71,7 @@ class AppConfig:
     intent_extraction_model: str
     curated_models: str
     default_chat_model: str
-    
+
     @classmethod
     def from_env(cls) -> Self:
         """Create configuration from environment."""

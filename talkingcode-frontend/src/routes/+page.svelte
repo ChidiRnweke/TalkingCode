@@ -1,7 +1,7 @@
 <script lang="ts">
 	import HeroComposer from '$lib/components/domain/HeroComposer.svelte';
 	import { Badge } from '$lib/components/ui/badge';
-	import { GitBranch, MessageSquare, Search, Zap } from 'lucide-svelte';
+	import { GitBranch, MessageSquare, Search, Wrench } from 'lucide-svelte';
 	import { onMount } from 'svelte';
 	import { fade, fly } from 'svelte/transition';
 
@@ -47,9 +47,9 @@
 				
 				<div class="max-w-2xl space-y-6">
 					<p class="text-lg md:text-xl text-foreground/70 leading-relaxed font-medium">
-						I’ve been working with GenAI for the past years—both professionally and as a personal passion. 
+						I've been working with GenAI for the past years, both professionally for fun. 
 						<strong>TalkingCode</strong> is a project I built to share some of the 
-						state-of-the-art techniques I’ve picked up along the way, and to give you a chance to 
+						state-of-the-art techniques I've picked up along the way, and to give you a chance to 
 						get to know me through the code I write.
 					</p>
 				</div>
@@ -60,7 +60,7 @@
 		
 		<div class="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce opacity-40">
 			<span class="text-[10px] uppercase tracking-widest font-bold">Explore the techniques</span>
-			<div class="w-[1px] h-8 bg-foreground"></div>
+			<div class="w-px h-8 bg-foreground"></div>
 		</div>
 	</section>
 
@@ -74,8 +74,8 @@
 					</h3>
 					<p class="text-lg text-foreground/70 leading-relaxed">
 						This agent is a sandbox for the techniques I find most interesting: multi-step reasoning, 
-						precise tool calling, and structural context. I’m sharing them here so we can see how they 
-						perform on real-world repository structures.
+						precise tool calling, and structural context. I'm sharing them here so we can see how they 
+						perform on real-world data.
 					</p>
 					
 					<div class="space-y-6">
@@ -90,7 +90,7 @@
 						</div>
 						<div class="flex gap-4">
 							<div class="bg-primary/10 p-2 h-fit rounded-lg">
-								<Zap class="size-5 text-primary" />
+								<Wrench class="size-5 text-primary" />
 							</div>
 							<div>
 								<h4 class="font-bold uppercase tracking-wider text-sm mb-1">Multi-Step Planning</h4>

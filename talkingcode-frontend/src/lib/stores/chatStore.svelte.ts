@@ -114,11 +114,13 @@ function createChatStore() {
 			return id;
 		},
 
-		handleEvent(event: AgentStreamEvent) {
-			if (!activeMessageId) return;
+		handleEvent(event: AgentStreamEvent, targetMessageId?: string) {
+			const messageId = targetMessageId ?? activeMessageId;
+			if (!messageId) return;
 
-			const idx = messages.findIndex((m) => m.id === activeMessageId);
+			const idx = messages.findIndex((m) => m.id === messageId);
 			if (idx < 0) return;
+			activeMessageId = messageId;
 
 			const current = messages[idx];
 
@@ -372,6 +374,8 @@ function createChatStore() {
 			messages = [];
 			activeMessageId = null;
 			detailPanelMessageId = null;
+			selectedModel = null;
+			currentTurnStartTime = null;
 		}
 	};
 }

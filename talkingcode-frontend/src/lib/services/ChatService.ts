@@ -228,10 +228,11 @@ export class ChatService implements IChatService {
 		this.backendUrl = env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
 	}
 
-	async *askAgentic(input: AgenticAskInput): AsyncGenerator<AgentStreamEvent> {
+	async *askAgentic(input: AgenticAskInput, signal?: AbortSignal): AsyncGenerator<AgentStreamEvent> {
 		const response = await fetch(`${this.backendUrl}/chat/agentic`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
+			signal,
 			body: JSON.stringify({
 				conversation_id: input.conversationId,
 				question: input.question,

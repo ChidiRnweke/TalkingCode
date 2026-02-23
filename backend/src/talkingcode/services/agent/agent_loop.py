@@ -8,8 +8,12 @@ from typing import AsyncGenerator, Protocol
 from uuid import UUID
 
 import structlog
-
-from talkingcode.domain.models import AgentTurnInput, ExecuteToolGroupInput, SourceReference, WhiteboxEvent
+from talkingcode.domain.models import (
+    AgentTurnInput,
+    ExecuteToolGroupInput,
+    SourceReference,
+    WhiteboxEvent,
+)
 from talkingcode.enums import WhiteboxEventKind
 from talkingcode.services.agent.timeline_repository import TimelineRepository
 from talkingcode.services.llm.openrouter_client import IOpenRouterClient
@@ -33,7 +37,8 @@ PLANNING_SYSTEM_PROMPT = (
     "- Planning phase is NOT the final answer; do not draft the full user-facing answer here.\n"
     "- Use parallel calls only for truly independent lookups.\n"
     "- Use sequential iterations when later searches depend on earlier findings.\n"
-    "- Keep planning depth pragmatic: usually 1-3 iterations; continue longer only when evidence is still missing.\n"
+    "- Keep planning depth pragmatic: usually 1-3 iterations; continue longer only when evidence is clearly missing.\n"
+    "- Prefer stopping once you have enough evidence to answer; do not chase exhaustive coverage.\n"
     "- If no tools are needed, output one short final <plan>...</plan> block explaining why before finishing.\n"
     "- IMPORTANT: Your knowledge is strictly limited to the search results you retrieve. "
     "You cannot know 'all' projects or 'every' file unless you have exhaustive evidence. "
@@ -139,7 +144,9 @@ class AgentLoopService:
                 raw_content = str(response.get("content", "")).strip()
                 raw_tool_calls = response.get("tool_calls", [])
                 tool_calls = raw_tool_calls if isinstance(raw_tool_calls, list) else []
-                plan_text, used_plan_tags = AgentLoopService._extract_plan_text(raw_content)
+                plan_text, used_plan_tags = AgentLoopService._extract_plan_text(
+                    raw_content
+                )
 
                 # Prevent final-answer prose from leaking into the reasoning plan section.
                 # If the model did not use <plan> tags and also decided to stop calling tools,
@@ -212,7 +219,9 @@ class AgentLoopService:
                         turn_id=turn_id,
                         tool_name=None,
                         message="Turn complete",
-                        visible_args={"sources": self._serialize_sources(collected_sources)},
+                        visible_args={
+                            "sources": self._serialize_sources(collected_sources)
+                        },
                         timestamp=datetime.utcnow(),
                     )
                     return
@@ -229,7 +238,9 @@ class AgentLoopService:
                     if not tool_name:
                         continue
 
-                    call_id = str(raw_call.get("id") or f"iteration_{iteration}_{index}")
+                    call_id = str(
+                        raw_call.get("id") or f"iteration_{iteration}_{index}"
+                    )
                     arguments_raw = raw_call.get("arguments", {})
                     arguments = arguments_raw if isinstance(arguments_raw, dict) else {}
 
@@ -312,7 +323,9 @@ class AgentLoopService:
                     }
                 )
 
-                for (timeline_id, call_id, tool_name), result in zip(timeline_entries, results):
+                for (timeline_id, call_id, tool_name), result in zip(
+                    timeline_entries, results
+                ):
                     await self.timeline_repository.complete_timeline_entry(
                         entry_id=timeline_id,
                         success=result.success,
@@ -388,7 +401,9 @@ class AgentLoopService:
         if not content:
             return "", False
 
-        match = re.search(r"<plan>(.*?)</plan>", content, flags=re.IGNORECASE | re.DOTALL)
+        match = re.search(
+            r"<plan>(.*?)</plan>", content, flags=re.IGNORECASE | re.DOTALL
+        )
         if match:
             return match.group(1).strip(), True
 
