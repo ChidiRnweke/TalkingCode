@@ -339,7 +339,7 @@ Optional:
   - `AppConfig.from_env()` reads via `SecretsReader`.
   - Alembic resolves DB URL through same path.
 
-- [ ] **Step 2: Add backend telemetry core module and initialize it at startup**
+- [x] **Step 2: Add backend telemetry core module and initialize it at startup**
 
   **Files to create/modify**
 

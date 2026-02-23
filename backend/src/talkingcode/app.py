@@ -1,4 +1,5 @@
 """FastAPI app factory and error handlers."""
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -6,10 +7,14 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
 from talkingcode.config import AppConfig
 from talkingcode.errors import AppError, InfraError, NotFoundError
 from talkingcode.repository.database import get_engine, init_db
+from talkingcode.telemetry import configure_telemetry
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
@@ -26,11 +31,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan events."""
     # Startup
     config = AppConfig.from_env()
+
+    # Telemetry
+    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+    service_name = os.getenv("OTEL_SERVICE_NAME", "talkingcode-backend")
+    otel_env = os.getenv("OTEL_ENVIRONMENT", config.environment)
+    if endpoint:
+        configure_telemetry(endpoint=endpoint, service_name=service_name, environment=otel_env)
+        logger.info("telemetry.enabled", endpoint=endpoint, service_name=service_name)
+    else:
+        logger.info("telemetry.disabled")
+
     await setup_database(config)
     logger.info("Application started", environment=config.environment)
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Application shutting down")
 
@@ -42,7 +58,14 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
-    
+
+    # Instrument FastAPI
+    FastAPIInstrumentor.instrument_app(app)
+    # Instrument SQLAlchemy
+    SQLAlchemyInstrumentor().instrument()
+    # Instrument HTTPX
+    HTTPXClientInstrumentor().instrument()
+
     # CORS
     app.add_middleware(
         CORSMiddleware,
