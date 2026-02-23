@@ -17,12 +17,14 @@ Query: "{query}"
 Schema: {{ "refined_query": string, "repo_filter": string|null, "language_filter": string|null, "area_filter": string|null, "file_type_filter": string|null }}
 
 Rules:
-- refined_query: rewrite the query as a concise search phrase (remove filler words)
+- refined_query: rewrite as one focused natural-language search phrase; do NOT convert into boolean OR keyword lists
 - repo_filter: set ONLY if the user explicitly mentions a repo name from the list (use exact format from list)
 - language_filter: set ONLY if the query mentions a specific language (use lowercase: python, typescript, etc.)
 - area_filter: set ONLY if clear from context. Valid values: backend, frontend, infra, scripts, docs, tests
 - file_type_filter: set ONLY if clear. Valid values: source, config, migration, test, docs, ci
-- When in doubt, leave filters as null — better to search broadly than miss results"""
+- If the question is broad or ambiguous, keep filters null and preserve broad intent in refined_query
+- Do not infer narrow assumptions that were not explicitly asked
+- When in doubt, leave filters as null — better to search broadly first, then refine in later lookups"""
 
 
 @dataclass(frozen=True)

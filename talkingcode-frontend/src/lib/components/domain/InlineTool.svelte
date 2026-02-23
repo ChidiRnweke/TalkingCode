@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Search, Loader, Check, X } from 'lucide-svelte';
 	import type { ToolCallTimelineItem } from '$lib/models';
 
 	interface Props {
@@ -28,9 +29,9 @@
 
 	const duration = $derived(
 		tool.durationMs !== undefined
-			? `${Math.round(tool.durationMs)}ms`
+			? `${Math.max(0.1, tool.durationMs / 1000).toFixed(tool.durationMs < 1000 ? 1 : 2)}s`
 			: currentDurationMs !== null
-				? `${Math.round(currentDurationMs)}ms`
+				? `${Math.max(0.1, currentDurationMs / 1000).toFixed(currentDurationMs < 1000 ? 1 : 2)}s`
 				: ''
 	);
 
@@ -42,46 +43,43 @@
 			.join(' ')
 	);
 
-	const statusLabel = $derived.by(() => {
-		if (tool.status === 'started') return 'Running';
-		if (tool.status === 'finished') return 'Completed';
-		return 'Failed';
-	});
-
-	const statusClass = $derived.by(() => {
-		if (tool.status === 'started') return 'text-muted-foreground';
-		if (tool.status === 'finished') return 'text-emerald-700';
-		return 'text-destructive';
-	});
-
 	const detailText = $derived.by(() => {
 		const query = tool.visibleArgs?.query;
 		if (typeof query === 'string' && query.trim()) {
-			return `Query: ${query.trim()}`;
+			return query.trim();
 		}
 
 		const repository = tool.visibleArgs?.repository;
 		const filePath = tool.visibleArgs?.file_path;
 		if (typeof repository === 'string' && typeof filePath === 'string') {
-			return `File: ${repository}/${filePath}`;
+			return `${repository}/${filePath}`;
 		}
 
 		return null;
 	});
 </script>
 
-	<div class="py-1">
-		<div class="flex items-center gap-2 text-sm">
-			<span class="font-medium text-foreground">{toolName}</span>
-			<span class={`text-xs ${statusClass}`}>{statusLabel}</span>
-			{#if duration}
-				<span class="text-xs text-muted-foreground">{duration}</span>
-			{/if}
-		</div>
-		{#if detailText}
-			<p class="mt-1 text-sm text-muted-foreground">{detailText}</p>
-		{/if}
-		{#if tool.status === 'failed'}
-			<p class="mt-1 text-sm text-destructive">{tool.errorMessage ?? 'Tool failed'}</p>
-		{/if}
-	</div>
+<div
+	class="flex items-center gap-2 py-1 text-sm {tool.status === 'failed'
+		? 'text-destructive'
+		: 'text-muted-foreground'}"
+>
+	{#if tool.status === 'started'}
+		<Loader class="size-3.5 animate-spin" />
+	{:else if tool.status === 'finished'}
+		<Check class="size-3.5 text-emerald-600" />
+	{:else}
+		<X class="size-3.5 text-destructive" />
+	{/if}
+
+	<Search class="size-3.5 text-muted-foreground/60" />
+	<span class="font-medium text-foreground/90">{toolName}</span>
+
+	{#if detailText}
+		<span class="text-muted-foreground/80 truncate">{detailText}</span>
+	{/if}
+
+	{#if duration}
+		<span class="ml-auto text-xs tabular-nums text-muted-foreground/60">{duration}</span>
+	{/if}
+</div>

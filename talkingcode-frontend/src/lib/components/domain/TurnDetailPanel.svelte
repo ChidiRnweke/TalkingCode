@@ -2,7 +2,8 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { X } from 'lucide-svelte';
-	import type { ChatMessage } from '$lib/models';
+	import InlineTool from './InlineTool.svelte';
+	import type { ChatMessage, ReasoningStep } from '$lib/models';
 
 	interface Props {
 		message: ChatMessage | null;
@@ -52,11 +53,34 @@
 			.join('\n');
 	}
 
+	function formatDurationSeconds(durationMs: number): string {
+		const seconds = durationMs / 1000;
+		return `${Math.max(0.1, seconds).toFixed(durationMs < 1000 ? 1 : 2)}s`;
+	}
+
 	const statusColors = {
 		started: 'secondary',
 		finished: 'default',
 		failed: 'destructive'
 	} as const;
+
+	const sortedReasoningSteps = $derived.by(() => {
+		const steps = [...(message?.reasoningSteps ?? [])];
+		return steps.sort((a, b) => {
+			const timeDiff = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+			if (timeDiff !== 0) return timeDiff;
+			if (a.kind === 'plan' && b.kind === 'tool') return -1;
+			if (a.kind === 'tool' && b.kind === 'plan') return 1;
+			return 0;
+		});
+	});
+
+	function reasoningKey(step: ReasoningStep): string {
+		if (step.kind === 'tool') {
+			return step.tool.callId ?? step.id;
+		}
+		return step.id;
+	}
 </script>
 
 {#if message}
@@ -74,7 +98,7 @@
 			<div class="flex flex-col">
 				<h3 class="font-display text-sm font-bold uppercase tracking-widest text-foreground">Activity</h3>
 				{#if message.thoughtDurationS}
-					<span class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Thought for {message.thoughtDurationS}s</span>
+					<span class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Thought for {message.thoughtDurationS} seconds</span>
 				{/if}
 			</div>
 			<Button variant="ghost" size="icon-sm" onclick={onClose} aria-label="Close panel">
@@ -84,7 +108,33 @@
 
 		<div class="min-h-0 flex-1 overflow-y-auto p-6 pb-20">
 			<div class="flex flex-col gap-8">
-			{#if message.plan || message.planText}
+			{#if sortedReasoningSteps.length > 0}
+				<section class="space-y-4">
+					<div class="flex items-center gap-2">
+						<div class="h-1 w-1 rounded-full bg-primary"></div>
+						<h4 class="font-display text-xs font-bold tracking-widest text-muted-foreground uppercase">
+							Reasoning Timeline
+						</h4>
+					</div>
+
+					<div class="space-y-2">
+						{#each sortedReasoningSteps as step (reasoningKey(step))}
+							{#if step.kind === 'plan'}
+								<div class="whitespace-pre-wrap rounded-md border border-border/40 bg-surface-2 p-4 text-[0.95rem] leading-7 text-foreground/90">
+									<p class="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+										Plan {step.iteration}
+									</p>
+									{step.text}
+								</div>
+							{:else if step.kind === 'tool'}
+								<InlineTool tool={step.tool} />
+							{:else if step.phase === 'answer_started'}
+								<p class="text-xs font-medium italic text-muted-foreground">Switching to final answer...</p>
+							{/if}
+						{/each}
+					</div>
+				</section>
+			{:else if message.plan || message.planText}
 				<section class="space-y-4">
 					<div class="flex items-center gap-2">
 						<div class="h-1 w-1 rounded-full bg-primary"></div>
@@ -122,7 +172,7 @@
 				</section>
 			{/if}
 
-			{#if message.toolCalls && message.toolCalls.length > 0}
+			{#if !sortedReasoningSteps.length && message.toolCalls && message.toolCalls.length > 0}
 				<section class="space-y-4">
 					<div class="flex items-center gap-2">
 						<div class="h-1 w-1 rounded-full bg-primary"></div>
@@ -151,9 +201,9 @@
 									</div>
 								{/if}
 
-								{#if tool.durationMs}
+								{#if tool.durationMs !== undefined}
 									<div class="text-[9px] text-muted-foreground font-medium text-right italic">
-										Took {tool.durationMs}ms
+										Took {formatDurationSeconds(tool.durationMs)}
 									</div>
 								{/if}
 							</li>

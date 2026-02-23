@@ -104,6 +104,13 @@ export interface PlanDoneEvent {
 	timestamp: string;
 }
 
+export interface AnswerPhaseStartedEvent {
+	kind: 'answer_phase_started';
+	turnId: string;
+	iteration?: number;
+	timestamp: string;
+}
+
 export interface AssistantTokenEvent {
 	kind: 'assistant_token';
 	turnId: string;
@@ -129,11 +136,37 @@ export type AgentStreamEvent =
 	| IterationStartedEvent
 	| PlanChunkEvent
 	| PlanDoneEvent
+	| AnswerPhaseStartedEvent
 	| ToolCallStartedEvent
 	| ToolCallFinishedEvent
 	| AssistantTokenEvent
 	| AssistantDoneEvent
 	| AgentErrorEvent;
+
+export interface PlanReasoningStep {
+	id: string;
+	kind: 'plan';
+	iteration: number;
+	text: string;
+	timestamp: string;
+}
+
+export interface ToolReasoningStep {
+	id: string;
+	kind: 'tool';
+	tool: ToolCallTimelineItem;
+	timestamp: string;
+}
+
+export interface PhaseReasoningStep {
+	id: string;
+	kind: 'phase';
+	phase: 'answer_started';
+	iteration?: number;
+	timestamp: string;
+}
+
+export type ReasoningStep = PlanReasoningStep | ToolReasoningStep | PhaseReasoningStep;
 
 export interface ChatMessage {
 	id: string;
@@ -143,6 +176,7 @@ export interface ChatMessage {
 	plan?: AgentPlanView | null;
 	planText?: string;
 	toolCalls?: ToolCallTimelineItem[];
+	reasoningSteps?: ReasoningStep[];
 	isStreaming?: boolean;
 	thoughtDurationS?: number;
 	sources?: AssistantDoneEvent['sources'];

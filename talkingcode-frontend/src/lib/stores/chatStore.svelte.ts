@@ -1,5 +1,11 @@
 /** Chat store with multi-turn conversation support */
-import type { AgentStreamEvent, ToolCallTimelineItem, AgentPlanView, ChatMessage } from '$lib/models';
+import type {
+	AgentStreamEvent,
+	ToolCallTimelineItem,
+	AgentPlanView,
+	ChatMessage,
+	ReasoningStep
+} from '$lib/models';
 
 type TurnPhase = 'idle' | 'planning' | 'tools' | 'streaming' | 'done' | 'error';
 
@@ -12,6 +18,28 @@ function createChatStore() {
 
 	function generateId(): string {
 		return crypto.randomUUID();
+	}
+
+	function planStepId(iteration: number): string {
+		return `plan-${iteration}`;
+	}
+
+	function toolStepId(callId: string | undefined, toolName: string, timestamp: string): string {
+		return callId ? `tool-${callId}` : `tool-${toolName}-${timestamp}`;
+	}
+
+	function appendPlanText(existing: string | undefined, iteration: number, planText: string): string {
+		const trimmed = planText.trim();
+		if (!trimmed) {
+			return existing ?? '';
+		}
+
+		const block = `Plan ${iteration}\n${trimmed}`;
+		if (!existing || !existing.trim()) {
+			return block;
+		}
+
+		return `${existing.trimEnd()}\n\n${block}`;
 	}
 
 	return {
@@ -45,12 +73,13 @@ function createChatStore() {
 			const active = this.activeMessage;
 			if (!active || active.role === 'user') return 'idle';
 			if (active.error) return 'error';
+			const hasReasoning = !!active.reasoningSteps?.length;
 			if (active.isStreaming) {
 				if (active.content) return 'streaming';
-				if (active.plan || active.planText || active.toolCalls?.length) return 'tools';
+				if (hasReasoning || active.plan || active.planText || active.toolCalls?.length) return 'tools';
 				return 'planning';
 			}
-			if (active.plan || active.planText || active.toolCalls?.length) return 'done';
+			if (hasReasoning || active.plan || active.planText || active.toolCalls?.length) return 'done';
 			return 'idle';
 		},
 
@@ -76,6 +105,7 @@ function createChatStore() {
 				timestamp: new Date().toISOString(),
 				plan: null,
 				toolCalls: [],
+				reasoningSteps: [],
 				isStreaming: true,
 				error: null
 			};
@@ -96,23 +126,72 @@ function createChatStore() {
 				case 'iteration_started':
 					messages[idx] = {
 						...current,
-						planText: current.planText ?? ''
+						planText: current.planText ?? '',
+						reasoningSteps: current.reasoningSteps ?? []
 					};
 					break;
 
-				case 'plan_chunk':
-					messages[idx] = {
-						...current,
-						planText: (current.planText ?? '') + event.chunk
-					};
-					break;
+				case 'plan_chunk': {
+					const reasoningSteps = [...(current.reasoningSteps ?? [])];
+					const stepId = planStepId(event.iteration);
+					const existingIndex = reasoningSteps.findIndex((step) => step.id === stepId && step.kind === 'plan');
 
-				case 'plan_done':
+					if (existingIndex >= 0 && reasoningSteps[existingIndex].kind === 'plan') {
+						const existing = reasoningSteps[existingIndex];
+						reasoningSteps[existingIndex] = {
+							...existing,
+							text: existing.text + event.chunk,
+							timestamp: event.timestamp
+						};
+					} else {
+						reasoningSteps.push({
+							id: stepId,
+							kind: 'plan',
+							iteration: event.iteration,
+							text: event.chunk,
+							timestamp: event.timestamp
+						});
+					}
+
 					messages[idx] = {
 						...current,
-						planText: event.planText
+						reasoningSteps
 					};
 					break;
+				}
+
+				case 'plan_done': {
+					if (event.planText) {
+						const reasoningSteps = [...(current.reasoningSteps ?? [])];
+						const stepId = planStepId(event.iteration);
+						const existingIndex = reasoningSteps.findIndex((step) => step.id === stepId && step.kind === 'plan');
+
+						if (existingIndex >= 0) {
+							reasoningSteps[existingIndex] = {
+								id: stepId,
+								kind: 'plan',
+								iteration: event.iteration,
+								text: event.planText,
+								timestamp: event.timestamp
+							};
+						} else {
+							reasoningSteps.push({
+								id: stepId,
+								kind: 'plan',
+								iteration: event.iteration,
+								text: event.planText,
+								timestamp: event.timestamp
+							});
+						}
+
+						messages[idx] = {
+							...current,
+							planText: appendPlanText(current.planText, event.iteration, event.planText),
+							reasoningSteps
+						};
+					}
+					break;
+				}
 
 				case 'tool_call_started': {
 					const newToolCall: ToolCallTimelineItem = {
@@ -124,9 +203,21 @@ function createChatStore() {
 						status: 'started',
 						timestamp: event.timestamp
 					};
+
+					const reasoningSteps: ReasoningStep[] = [
+						...(current.reasoningSteps ?? []),
+						{
+							id: toolStepId(event.callId, event.toolName, event.timestamp),
+							kind: 'tool',
+							tool: newToolCall,
+							timestamp: event.timestamp
+						}
+					];
+
 					messages[idx] = {
 						...current,
-						toolCalls: [...(current.toolCalls ?? []), newToolCall]
+						toolCalls: [...(current.toolCalls ?? []), newToolCall],
+						reasoningSteps
 					};
 					break;
 				}
@@ -151,10 +242,51 @@ function createChatStore() {
 							status: event.success ? 'finished' : 'failed',
 							durationMs: event.durationMs
 						};
-						messages[idx] = { ...current, toolCalls: newToolCalls };
+
+						const reasoningSteps = [...(current.reasoningSteps ?? [])];
+						const stepId = toolStepId(event.callId, event.toolName, event.timestamp);
+						const stepIndex = reasoningSteps.findLastIndex(
+							(step) =>
+								step.kind === 'tool' &&
+								(step.id === stepId ||
+									(step.tool.toolName === event.toolName &&
+										step.tool.status === 'started' &&
+										(!event.callId || step.tool.callId === event.callId)))
+						);
+
+						if (stepIndex >= 0 && reasoningSteps[stepIndex].kind === 'tool') {
+							reasoningSteps[stepIndex] = {
+								...reasoningSteps[stepIndex],
+								tool: {
+									...reasoningSteps[stepIndex].tool,
+									status: event.success ? 'finished' : 'failed',
+									durationMs: event.durationMs,
+									errorCode: event.errorCode
+								},
+								timestamp: event.timestamp
+							};
+						}
+
+						messages[idx] = { ...current, toolCalls: newToolCalls, reasoningSteps };
 					}
 					break;
 				}
+
+				case 'answer_phase_started':
+					messages[idx] = {
+						...current,
+						reasoningSteps: [
+							...(current.reasoningSteps ?? []),
+							{
+								id: `phase-answer-${event.timestamp}`,
+								kind: 'phase',
+								phase: 'answer_started',
+								iteration: event.iteration,
+								timestamp: event.timestamp
+							}
+						]
+					};
+					break;
 
 				case 'assistant_token': {
 					const update: Partial<ChatMessage> = {

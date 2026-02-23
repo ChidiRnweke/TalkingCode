@@ -23,7 +23,7 @@ const planChunkSchema = baseSchema
 	.extend({
 		iteration: z.number().int().positive(),
 		message: z.string(),
-		visible_args: z.object({ chunk: z.string() }).strict()
+		visible_args: z.object({ chunk: z.string() })
 	})
 	.strict();
 
@@ -31,7 +31,14 @@ const planDoneSchema = baseSchema
 	.extend({
 		iteration: z.number().int().positive(),
 		message: z.string(),
-		visible_args: z.object({ plan_text: z.string() }).strict()
+		visible_args: z.object({ plan_text: z.string() })
+	})
+	.strict();
+
+const answerPhaseStartedSchema = baseSchema
+	.extend({
+		iteration: z.number().int().positive().optional(),
+		message: z.string().optional()
 	})
 	.strict();
 
@@ -169,6 +176,17 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 				timestamp: result.data.timestamp
 			};
 		}
+		case 'answer_phase_started': {
+			const result = answerPhaseStartedSchema.safeParse(parsed);
+			if (!result.success) return null;
+			return {
+				kind: 'answer_phase_started',
+				turnId: result.data.turn_id,
+				iteration: result.data.iteration,
+				timestamp: result.data.timestamp
+			};
+		}
+
 		case 'assistant_done': {
 			const result = assistantDoneSchema.safeParse(parsed);
 			if (!result.success) return null;

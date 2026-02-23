@@ -1,4 +1,4 @@
-"""Retriever tool for semantic search with auto-detected metadata filtering."""
+"""Retriever tool for semantic code search with conservative auto-filtering."""
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -16,7 +16,7 @@ logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
 @dataclass(slots=True)
 class RetrieverTool:
-    """Tool for retrieving relevant code chunks with auto metadata filtering."""
+    """Retrieve relevant code chunks with broad-first then refine behavior."""
 
     document_repository: DocumentRepository
     openrouter_client: IOpenRouterClient
@@ -32,11 +32,21 @@ class RetrieverTool:
     def schema(self) -> dict[str, Any]:
         """Tool schema."""
         return {
-            "description": "Vector search across Chidi's indexed GitHub code",
+            "description": (
+                "Semantic search across indexed GitHub repositories. "
+                "Use focused natural-language queries; avoid large boolean OR chains. "
+                "For vague questions, start broad, inspect results, then refine with follow-up searches."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Search query"},
+                    "query": {
+                        "type": "string",
+                        "description": (
+                            "A concise natural-language search phrase. "
+                            "Prefer one intent per call; avoid giant keyword bags like 'a OR b OR c ...'."
+                        ),
+                    },
                 },
                 "required": ["query"],
                 "additionalProperties": False,

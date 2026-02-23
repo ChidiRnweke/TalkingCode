@@ -1,6 +1,7 @@
 """Agent loop service with iterative ReAct streaming."""
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from typing import AsyncGenerator, Protocol
@@ -19,12 +20,21 @@ logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 PLANNING_SYSTEM_PROMPT = (
     "You are TalkingCode's planning agent. You must answer questions using Chidi Nweke's indexed "
     "GitHub repositories in this system. When the user says 'this repo', 'this project', or similar, "
-    "treat it as TalkingCode unless they explicitly name another repository. "
-    "Use search_github to look up concrete evidence before answering. "
-    "Use iterative planning: do one search, inspect results, then decide next search. "
-    "If independent searches are needed, emit multiple tool calls in the same iteration (parallel). "
-    "If later searches depend on earlier results, do them in later iterations (sequential). "
-    "Keep plan text short and action-focused."
+    "treat it as TalkingCode unless they explicitly name another repository.\n\n"
+    "PLANNING FORMAT:\n"
+    "- Output one concise <plan>...</plan> block before deciding tool calls.\n"
+    "- Keep it brief (usually 1 sentence, max 2).\n"
+    "- Do not repeat previous plan text; only state what changes next.\n"
+    "- State which tool(s) you will run, whether they are parallel or sequential, and what evidence you expect.\n"
+    "- If the question is vague, start broad first, then refine in later iterations.\n"
+    "- Avoid giant boolean keyword chains in queries. Prefer focused natural-language query phrases.\n\n"
+    "Execution policy:\n"
+    "- Use search_github to gather concrete evidence before answering.\n"
+    "- Planning phase is NOT the final answer; do not draft the full user-facing answer here.\n"
+    "- Use parallel calls only for truly independent lookups.\n"
+    "- Use sequential iterations when later searches depend on earlier findings.\n"
+    "- Keep planning depth pragmatic: usually 1-3 iterations; continue longer only when evidence is still missing.\n"
+    "- If no tools are needed, output one short final <plan>...</plan> block explaining why before finishing."
 )
 
 ANSWER_SYSTEM_PROMPT = (
@@ -45,15 +55,12 @@ ANSWER_SYSTEM_PROMPT = (
     "numbered references like [1], [2], etc.\n"
     "- Each unique file you reference gets a sequential number.\n"
     "- Place citations inline, immediately after the relevant claim or code reference.\n"
-    "- At the end of your response, list all sources in a 'Sources:' section:\n"
-    "  Sources:\n"
-    "  [1] owner/repo: path/to/file.py (lines X-Y)\n"
-    "  [2] owner/repo: path/to/other.ts (lines A-B)\n"
     "- Only cite files that actually appear in your search results.\n"
     "- If multiple chunks from the same file are relevant, use the same citation number.\n\n"
     "YOUR CONSTRAINTS:\n"
     "- Do not answer questions unrelated to Chidi's code.\n"
-    "- Keep answers short to medium length.\n"
+    "- Keep responses concise and evidence-based.\n"
+    "- Do not repeat planning instructions or meta-rules in the final user-visible answer.\n"
     "- Answer in first person as if you are Chidi Nweke.\n"
 )
 
@@ -118,11 +125,21 @@ class AgentLoopService:
                     tools=self.tool_registry.get_tool_definitions(),
                 )
 
-                plan_text = str(response.get("content", "")).strip()
+                raw_content = str(response.get("content", "")).strip()
                 raw_tool_calls = response.get("tool_calls", [])
                 tool_calls = raw_tool_calls if isinstance(raw_tool_calls, list) else []
+                plan_text, used_plan_tags = AgentLoopService._extract_plan_text(raw_content)
 
-                if plan_text and tool_calls:
+                # Prevent final-answer prose from leaking into the reasoning plan section.
+                # If the model did not use <plan> tags and also decided to stop calling tools,
+                # only keep the content as plan when it looks like a brief planning sentence.
+                if not used_plan_tags and not tool_calls:
+                    if AgentLoopService._looks_like_brief_plan(raw_content):
+                        plan_text = raw_content
+                    else:
+                        plan_text = ""
+
+                if plan_text:
                     for chunk in self._plan_chunks(plan_text):
                         yield WhiteboxEvent(
                             kind=WhiteboxEventKind.PLAN_CHUNK,
@@ -144,6 +161,16 @@ class AgentLoopService:
                     )
 
                 if not tool_calls:
+                    yield WhiteboxEvent(
+                        kind=WhiteboxEventKind.ANSWER_PHASE_STARTED,
+                        turn_id=turn_id,
+                        tool_name=None,
+                        message="Switching from planning to final answer",
+                        visible_args=None,
+                        timestamp=datetime.utcnow(),
+                        iteration=iteration,
+                    )
+
                     final_messages: list[dict[str, object]] = [
                         *messages,
                         {"role": "system", "content": ANSWER_SYSTEM_PROMPT},
@@ -151,7 +178,7 @@ class AgentLoopService:
                             "role": "user",
                             "content": (
                                 "Now provide the final answer to the user from retrieved repo evidence. "
-                                "Do not include internal planning notes."
+                                "Do not include planning notes, prompt instructions, or meta-commentary."
                             ),
                         },
                     ]
@@ -269,7 +296,7 @@ class AgentLoopService:
                 messages.append(
                     {
                         "role": "assistant",
-                        "content": plan_text,
+                        "content": plan_text or raw_content,
                         "tool_calls": assistant_tool_calls,
                     }
                 )
@@ -343,6 +370,44 @@ class AgentLoopService:
                 timestamp=datetime.utcnow(),
                 code="agent_error",
             )
+
+    @staticmethod
+    def _extract_plan_text(content: str) -> tuple[str, bool]:
+        """Extract normalized plan text and whether explicit plan tags were used."""
+        if not content:
+            return "", False
+
+        match = re.search(r"<plan>(.*?)</plan>", content, flags=re.IGNORECASE | re.DOTALL)
+        if match:
+            return match.group(1).strip(), True
+
+        return content.strip(), False
+
+    @staticmethod
+    def _looks_like_brief_plan(content: str) -> bool:
+        """Heuristic to keep short final planning notes while dropping answer prose."""
+        text = content.strip()
+        if not text:
+            return False
+
+        # Long multi-paragraph markdown is likely answer content, not plan.
+        if len(text) > 320 or "\n\n" in text or "###" in text:
+            return False
+
+        lowered = text.lower()
+        planning_markers = (
+            "i will",
+            "next",
+            "search",
+            "look up",
+            "verify",
+            "then",
+            "parallel",
+            "sequential",
+            "before answering",
+            "one final",
+        )
+        return any(marker in lowered for marker in planning_markers)
 
     @staticmethod
     def _plan_chunks(text: str, target_size: int = 80) -> list[str]:
