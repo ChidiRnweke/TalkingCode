@@ -956,7 +956,7 @@ Optional:
   - Frontend production runtime starts through launcher.
   - Telemetry safely no-ops when endpoint is absent.
 
-- [ ] **Step 8: Add Python provisioning and migration scripts (ReceiptToRecipe flow)**
+- [x] **Step 8: Add Python provisioning and migration scripts (ReceiptToRecipe flow)**
 
   **Files to create**
 
