@@ -120,7 +120,7 @@
 					<div class="space-y-2">
 						{#each sortedReasoningSteps as step (reasoningKey(step))}
 							{#if step.kind === 'plan'}
-								<div class="whitespace-pre-wrap rounded-md border border-border/40 bg-surface-2 p-4 text-[0.95rem] leading-7 text-foreground/90">
+								<div class="whitespace-pre-wrap wrap-break-word rounded-md border border-border/40 bg-surface-2 p-4 text-[0.95rem] leading-7 text-foreground/90">
 									<p class="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
 										Plan {step.iteration}
 									</p>
