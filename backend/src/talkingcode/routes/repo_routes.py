@@ -45,9 +45,7 @@ async def register_repo(
 
 
 @router.get("/repos")
-async def list_repos(
-    factory: FactoryDep, auth: IngestionAuthDep
-) -> list[RepositoryInfo]:
+async def list_repos(factory: FactoryDep) -> list[RepositoryInfo]:
     """List all tracked repositories."""
     controller = factory.get_ingestion_controller()
     repos = await controller.list_repos()

@@ -13,11 +13,11 @@ from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
 from talkingcode.dependencies import _get_cached_config
 from talkingcode.errors import AppError, InfraError, NotFoundError
+from talkingcode.repository.database import get_engine, init_db
+from talkingcode.telemetry import configure_telemetry
 
 if TYPE_CHECKING:
     from talkingcode.config import AppConfig
-from talkingcode.repository.database import get_engine, init_db
-from talkingcode.telemetry import configure_telemetry
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
