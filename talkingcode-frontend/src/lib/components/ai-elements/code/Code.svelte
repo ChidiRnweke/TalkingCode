@@ -32,7 +32,7 @@
 	</div>
 </div>
 
-<style>
+<style lang="postcss">
 	@reference '../../../../app.css';
 
 	/* Scoped global styles - only affect elements within .ai-code-wrapper */

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
 	import { MessageBranchClass, setMessageBranchContext } from './message-context.svelte.js';
-	import type { Snippet } from 'svelte';
+	import { type Snippet, untrack } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
 
 	interface Props extends HTMLAttributes<HTMLDivElement> {
@@ -20,14 +20,14 @@
 	}: Props = $props();
 
 	// Create the branch context class
-	const branchContext = new MessageBranchClass(defaultBranch);
+	const branchContext = new MessageBranchClass(untrack(() => defaultBranch));
 
 	// Set up the context
 	setMessageBranchContext(branchContext);
 
 	// Watch for branch changes and call the callback
 	// Using $derived to track changes without $effect
-	let previousBranch = $state(defaultBranch);
+	let previousBranch = $state(untrack(() => defaultBranch));
 
 	$effect.pre(() => {
 		if (branchContext.currentBranch !== previousBranch) {

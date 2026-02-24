@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { PromptInputController, setPromptInputProvider } from "./attachments-context.svelte.js";
+	import { untrack } from "svelte";
 
 	interface Props {
 		initialInput?: string;
@@ -10,7 +11,11 @@
 
 	let { initialInput = "", accept, multiple = true, children }: Props = $props();
 
-	let controller = new PromptInputController(initialInput, accept, multiple);
+	let controller = new PromptInputController(
+		untrack(() => initialInput),
+		untrack(() => accept),
+		untrack(() => multiple),
+	);
 
 	setPromptInputProvider(controller);
 </script>

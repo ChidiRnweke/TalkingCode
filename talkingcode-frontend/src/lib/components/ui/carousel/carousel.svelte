@@ -6,6 +6,7 @@
 		setEmblaContext,
 	} from "./context.js";
 	import { cn, type WithElementRef } from "$lib/utils.js";
+	import { untrack } from "svelte";
 
 	let {
 		ref = $bindable(null),
@@ -22,12 +23,12 @@
 		api: undefined,
 		scrollPrev,
 		scrollNext,
-		orientation,
+		orientation: untrack(() => orientation),
 		canScrollNext: false,
 		canScrollPrev: false,
 		handleKeyDown,
-		options: opts,
-		plugins,
+		options: untrack(() => opts),
+		plugins: untrack(() => plugins),
 		onInit,
 		scrollSnaps: [],
 		selectedIndex: 0,
@@ -35,6 +36,12 @@
 	});
 
 	setEmblaContext(carouselState);
+
+	$effect(() => {
+		carouselState.orientation = orientation;
+		carouselState.options = opts;
+		carouselState.plugins = plugins;
+	});
 
 	function scrollPrev() {
 		carouselState.api?.scrollPrev();

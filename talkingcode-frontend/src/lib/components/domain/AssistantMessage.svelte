@@ -102,7 +102,7 @@
 													<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
 														Plan {step.iteration}
 													</p>
-													<p class="text-sm whitespace-pre-wrap text-foreground/90">{step.text}</p>
+													<p class="text-sm whitespace-pre-wrap break-words text-foreground/90">{step.text}</p>
 												</div>
 											{:else if step.kind === 'tool'}
 												<span class="absolute -left-6 top-2.5 size-2.5 rounded-full border border-border bg-muted-foreground/70"></span>
@@ -123,7 +123,7 @@
 							{#if message.planText}
 								<div class="space-y-1 rounded-md border border-border/60 bg-background/50 px-3 py-2">
 									<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Plan</p>
-									<p class="text-sm whitespace-pre-wrap text-foreground/90">{message.planText}</p>
+									<p class="text-sm whitespace-pre-wrap wrap-break-word text-foreground/90">{message.planText}</p>
 								</div>
 							{/if}
 							{#if message.toolCalls?.length}
