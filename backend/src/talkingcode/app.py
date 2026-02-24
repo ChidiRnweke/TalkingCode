@@ -1,7 +1,7 @@
 """FastAPI app factory and error handlers."""
 import os
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import TYPE_CHECKING, AsyncGenerator
 
 import structlog
 from fastapi import FastAPI, Request
@@ -11,15 +11,18 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
 
-from talkingcode.config import AppConfig
+from talkingcode.dependencies import _get_cached_config
 from talkingcode.errors import AppError, InfraError, NotFoundError
+
+if TYPE_CHECKING:
+    from talkingcode.config import AppConfig
 from talkingcode.repository.database import get_engine, init_db
 from talkingcode.telemetry import configure_telemetry
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
 
-async def setup_database(config: AppConfig) -> None:
+async def setup_database(config: "AppConfig") -> None:
     """Initialize database tables."""
     engine = get_engine(config.database_url)
     await init_db(engine)
@@ -29,8 +32,8 @@ async def setup_database(config: AppConfig) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan events."""
-    # Startup
-    config = AppConfig.from_env()
+    # Startup — use cached config to avoid redundant Infisical calls
+    config = _get_cached_config()
 
     # Telemetry
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
