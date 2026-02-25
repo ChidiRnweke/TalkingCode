@@ -204,7 +204,7 @@ If needed for clean model mapping:
       - Added explicit mappers at `talkingcode-frontend/src/lib/server/api/mappers/repos.ts` and `talkingcode-frontend/src/lib/server/api/mappers/models.ts`.
       - Implemented explicit `{ data, error }` handling for every typed request and validated TypeScript via `pnpm run check`.
 
-- [ ] **Step 6: Refactor repos server load to preload all runs and stream**
+- [x] **Step 6: Refactor repos server load to preload all runs and stream**
       Update `talkingcode-frontend/src/routes/repos/+page.server.ts`:
       - call repo service to load repos
       - preload all ingestion runs for each repo server-side
@@ -214,6 +214,11 @@ If needed for clean model mapping:
       - repos list renders immediately
       - histories populate without client-side API calls
       - no usage of `/api/repos` endpoints
+
+      Execution notes:
+      - Replaced legacy server repo service usage with typed `createReposService(fetch)` in `talkingcode-frontend/src/routes/repos/+page.server.ts`.
+      - Added server-side preload of all per-repo ingestion histories as promise values in `runsByRepo` for streaming-friendly resolution.
+      - Verified no `/api/repos` usage in repos page server load and validated with `pnpm run check`.
 
 - [ ] **Step 7: Convert RepoCard to pure presentation component**
       Update `talkingcode-frontend/src/lib/components/domain/RepoCard.svelte`:
