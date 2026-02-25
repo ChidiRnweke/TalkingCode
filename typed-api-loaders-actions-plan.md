@@ -236,7 +236,7 @@ If needed for clean model mapping:
       - `RepoCard` now accepts `historyRuns` as a prop and uses local show/hide UI state only.
       - Wired `talkingcode-frontend/src/routes/repos/+page.svelte` to pass preloaded per-repo history promises from server load; validated with `pnpm run check`.
 
-- [ ] **Step 8: Remove obsolete repo proxy routes and unused repo services**
+- [x] **Step 8: Remove obsolete repo proxy routes and unused repo services**
       Delete all repo routes under `talkingcode-frontend/src/routes/api/repos/**`.
 
       Remove unused modules after rewiring:
@@ -247,6 +247,11 @@ If needed for clean model mapping:
       Verify:
       - `src/routes/api/` contains chat route only
       - global search returns zero `/api/repos` references
+
+      Execution notes:
+      - Deleted all frontend repo proxy route handlers under `talkingcode-frontend/src/routes/api/repos/**`.
+      - Removed obsolete repo service modules: `RepoService.ts`, `IRepoService.ts`, and `RepoServiceServer.ts`.
+      - Verified `src/routes/api/` now contains only `talkingcode-frontend/src/routes/api/chat/agentic/+server.ts` and confirmed zero endpoint-string references to `/api/repos`.
 
 - [ ] **Step 9: Align frontend models with generated transport + mapped domain models**
       Update `talkingcode-frontend/src/lib/models/index.ts` to avoid duplicate transport DTOs.
