@@ -17,15 +17,13 @@
 </script>
 
 {#if isStreaming && !hasPlan}
-	<Reasoning isStreaming={true} defaultOpen={false} class="w-full min-w-0 max-w-full overflow-hidden">
+	<Reasoning isStreaming={true} defaultOpen={false}>
 		<ReasoningTrigger />
 	</Reasoning>
 {:else if hasPlan}
-	<Reasoning isStreaming={isStreaming} defaultOpen={true} class="w-full min-w-0 max-w-full overflow-hidden">
-		<ReasoningTrigger class="text-left">
-			<span
-				class="block w-full min-w-0 max-w-full whitespace-normal text-sm leading-snug text-muted-foreground [overflow-wrap:anywhere]"
-			>
+	<Reasoning isStreaming={isStreaming} defaultOpen={true}>
+		<ReasoningTrigger>
+			<span class="text-sm leading-snug text-muted-foreground">
 				{planText || plan?.intent || 'Planning'}
 			</span>
 		</ReasoningTrigger>

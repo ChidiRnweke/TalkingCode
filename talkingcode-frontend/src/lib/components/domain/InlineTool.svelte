@@ -60,26 +60,28 @@
 </script>
 
 <div
-	class="flex items-center gap-2 py-1 text-sm min-w-0 {tool.status === 'failed'
+	class="flex w-full min-w-0 flex-wrap items-start gap-x-2 gap-y-0.5 py-1 text-sm {tool.status === 'failed'
 		? 'text-destructive'
 		: 'text-muted-foreground'}"
 >
-	{#if tool.status === 'started'}
-		<Loader class="size-3.5 animate-spin shrink-0" />
-	{:else if tool.status === 'finished'}
-		<Check class="size-3.5 text-emerald-600 shrink-0" />
-	{:else}
-		<X class="size-3.5 text-destructive shrink-0" />
-	{/if}
+	<div class="flex shrink-0 items-center gap-2">
+		{#if tool.status === 'started'}
+			<Loader class="size-3.5 shrink-0 animate-spin" />
+		{:else if tool.status === 'finished'}
+			<Check class="size-3.5 shrink-0 text-emerald-600" />
+		{:else}
+			<X class="size-3.5 shrink-0 text-destructive" />
+		{/if}
 
-	<Search class="size-3.5 text-muted-foreground/60 shrink-0" />
-	<span class="font-medium text-foreground/90 shrink-0">{toolName}</span>
+		<Search class="size-3.5 shrink-0 text-muted-foreground/60" />
+		<span class="font-medium text-foreground/90">{toolName}</span>
+	</div>
 
 	{#if detailText}
-		<span class="text-muted-foreground/80 truncate min-w-0 flex-1">{detailText}</span>
+		<span class="min-w-0 flex-1 text-muted-foreground/80 [overflow-wrap:anywhere]">{detailText}</span>
 	{/if}
 
 	{#if duration}
-		<span class="ml-auto text-xs tabular-nums text-muted-foreground/60 shrink-0">{duration}</span>
+		<span class="shrink-0 text-xs tabular-nums text-muted-foreground/60">{duration}</span>
 	{/if}
 </div>
