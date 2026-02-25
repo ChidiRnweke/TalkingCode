@@ -186,7 +186,7 @@ If needed for clean model mapping:
       - Added middleware that injects `X-API-Key` only for POST ingestion-protected schema paths (`/repos`, `/repos/ingest-owned`, `/repos/{owner}/{name}/ingest`).
       - Verified `openapi-fetch` client instantiation exists only in the factory module.
 
-- [ ] **Step 5: Create typed repo/model service modules with explicit DTO mapping**
+- [x] **Step 5: Create typed repo/model service modules with explicit DTO mapping**
       Add service modules that:
       - call typed endpoints via client
       - handle `{ data, error }` from each request
@@ -198,6 +198,11 @@ If needed for clean model mapping:
 
       Verify:
       - route server files can consume service methods without importing raw `components['schemas']` types
+
+      Execution notes:
+      - Added `talkingcode-frontend/src/lib/server/api/repos.service.ts` and `talkingcode-frontend/src/lib/server/api/models.service.ts` using `ApiClient` from the factory.
+      - Added explicit mappers at `talkingcode-frontend/src/lib/server/api/mappers/repos.ts` and `talkingcode-frontend/src/lib/server/api/mappers/models.ts`.
+      - Implemented explicit `{ data, error }` handling for every typed request and validated TypeScript via `pnpm run check`.
 
 - [ ] **Step 6: Refactor repos server load to preload all runs and stream**
       Update `talkingcode-frontend/src/routes/repos/+page.server.ts`:
