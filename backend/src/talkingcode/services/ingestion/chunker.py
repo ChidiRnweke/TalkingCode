@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import structlog
-
 from talkingcode.domain.models import ChunkResult
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
@@ -15,6 +14,7 @@ class IChunker(Protocol):
 
     def chunk(self, content: str, max_tokens: int = 512) -> list[ChunkResult]:
         """Split content into chunks."""
+        ...
 
 
 @dataclass(slots=True)
@@ -74,5 +74,7 @@ class LineChunker:
                     start_line + len(current_lines) - self.overlap_lines,
                 )
 
-        logger.debug("Chunked document", chunk_count=len(chunks), total_lines=len(lines))
+        logger.debug(
+            "Chunked document", chunk_count=len(chunks), total_lines=len(lines)
+        )
         return chunks

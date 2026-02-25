@@ -1,6 +1,5 @@
 """Tests for OpenRouter SDK-backed services."""
 
-import json
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -9,77 +8,11 @@ import pytest
 from talkingcode.domain.models import (
     AgentTurnInput,
     ExecuteToolGroupInput,
-    PlannedToolCall,
-    PlannerInput,
-    PlannerOutput,
-    RetrievalFilters,
-    StopRules,
     ToolExecutionResult,
-    ToolGroupPlan,
 )
 from talkingcode.enums import WhiteboxEventKind
 from talkingcode.services.agent.agent_loop import AgentLoopService
 from talkingcode.services.ingestion.embedder import OpenRouterEmbedder
-from talkingcode.services.planner.planner_service import PlannerService
-
-
-@pytest.mark.asyncio
-async def test_planner_uses_fallback_model_after_retries() -> None:
-    """Planner retries selected model and then falls back."""
-
-    class _StubClient:
-        def __init__(self) -> None:
-            self.models: list[str] = []
-            self.failures = 0
-
-        async def send_chat(self, *, model: str, messages: list[dict], response_format: dict | None = None) -> str:
-            self.models.append(model)
-            if self.failures < 2:
-                self.failures += 1
-                raise RuntimeError("transient failure")
-
-            return json.dumps(
-                {
-                    "intent": "find code",
-                    "filters": {
-                        "areas": [],
-                        "languages": ["python"],
-                        "file_types": [],
-                        "path_globs": [],
-                        "repo_scopes": [],
-                        "symbol_hints": [],
-                        "tags": [],
-                    },
-                    "tool_groups": [],
-                    "stop_rules": {"max_iterations": 8, "max_tools_per_turn": 3},
-                }
-            )
-
-        async def send_chat_with_tools(self, *, model: str, messages: list[dict], tools: list[dict]) -> dict:
-            return {"content": "", "tool_calls": []}
-
-        async def stream_chat(self, *, model: str, messages: list[dict]):
-            if False:
-                yield ""
-
-        async def generate_embeddings(self, *, model: str, texts: list[str], dimensions: int | None):
-            return []
-
-    client = _StubClient()
-    service = PlannerService(
-        openrouter_client=client,
-        default_model="anthropic/claude-3.5-sonnet",
-        fallback_model="google/gemini-3-flash",
-    )
-
-    result = await service.plan(PlannerInput(question="where is auth?"))
-
-    assert result.intent == "find code"
-    assert client.models == [
-        "anthropic/claude-3.5-sonnet",
-        "anthropic/claude-3.5-sonnet",
-        "google/gemini-3-flash",
-    ]
 
 
 @pytest.mark.asyncio

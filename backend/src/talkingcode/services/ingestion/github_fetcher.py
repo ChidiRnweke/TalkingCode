@@ -8,7 +8,6 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 import structlog
-
 from talkingcode.domain.models import GitHubFileContent, GitHubRepository
 from talkingcode.errors import InfraError
 from talkingcode.telemetry.ingestion_metrics import get_ingestion_metrics
@@ -85,14 +84,17 @@ class IGitHubFetcher(Protocol):
 
     async def list_owned_repositories(self) -> list[GitHubRepository]:
         """List repositories owned by the authenticated GitHub user."""
+        ...
 
     async def fetch_file_tree(self, owner: str, name: str, ref: str) -> list[str]:
         """Fetch list of indexable file paths in the repo."""
+        ...
 
     async def fetch_file_content(
         self, owner: str, name: str, ref: str, path: str
     ) -> GitHubFileContent:
         """Fetch content of a single file."""
+        ...
 
 
 @dataclass(slots=True)
@@ -126,8 +128,22 @@ class GitHubFetcher:
 
                 elapsed = time.perf_counter() - t0
                 status_class = f"{response.status_code // 100}xx"
-                metrics.ingestion_github_requests_total.add(1, attributes={"operation": "list_owned_repositories", "status_class": status_class, "provider": "github"})
-                metrics.ingestion_github_request_duration_seconds.record(elapsed, attributes={"operation": "list_owned_repositories", "status_class": status_class, "provider": "github"})
+                metrics.ingestion_github_requests_total.add(
+                    1,
+                    attributes={
+                        "operation": "list_owned_repositories",
+                        "status_class": status_class,
+                        "provider": "github",
+                    },
+                )
+                metrics.ingestion_github_request_duration_seconds.record(
+                    elapsed,
+                    attributes={
+                        "operation": "list_owned_repositories",
+                        "status_class": status_class,
+                        "provider": "github",
+                    },
+                )
 
                 if response.status_code in (403, 429):
                     raise InfraError(f"GitHub rate limit hit: {response.status_code}")
@@ -179,8 +195,22 @@ class GitHubFetcher:
 
             elapsed = time.perf_counter() - t0
             status_class = f"{response.status_code // 100}xx"
-            metrics.ingestion_github_requests_total.add(1, attributes={"operation": "fetch_file_tree", "status_class": status_class, "provider": "github"})
-            metrics.ingestion_github_request_duration_seconds.record(elapsed, attributes={"operation": "fetch_file_tree", "status_class": status_class, "provider": "github"})
+            metrics.ingestion_github_requests_total.add(
+                1,
+                attributes={
+                    "operation": "fetch_file_tree",
+                    "status_class": status_class,
+                    "provider": "github",
+                },
+            )
+            metrics.ingestion_github_request_duration_seconds.record(
+                elapsed,
+                attributes={
+                    "operation": "fetch_file_tree",
+                    "status_class": status_class,
+                    "provider": "github",
+                },
+            )
 
             if response.status_code in (403, 429):
                 raise InfraError(f"GitHub rate limit hit: {response.status_code}")
@@ -243,8 +273,22 @@ class GitHubFetcher:
 
             elapsed = time.perf_counter() - t0
             status_class = f"{response.status_code // 100}xx"
-            metrics.ingestion_github_requests_total.add(1, attributes={"operation": "fetch_file_content", "status_class": status_class, "provider": "github"})
-            metrics.ingestion_github_request_duration_seconds.record(elapsed, attributes={"operation": "fetch_file_content", "status_class": status_class, "provider": "github"})
+            metrics.ingestion_github_requests_total.add(
+                1,
+                attributes={
+                    "operation": "fetch_file_content",
+                    "status_class": status_class,
+                    "provider": "github",
+                },
+            )
+            metrics.ingestion_github_request_duration_seconds.record(
+                elapsed,
+                attributes={
+                    "operation": "fetch_file_content",
+                    "status_class": status_class,
+                    "provider": "github",
+                },
+            )
 
             if response.status_code in (403, 429):
                 raise InfraError(

@@ -5,7 +5,6 @@ from functools import wraps
 from typing import Any, Callable, Coroutine
 
 from opentelemetry.metrics import get_meter
-from structlog import getLogger
 
 from .helpers import C, P, T, function_metadata, suppress_stack_trace
 

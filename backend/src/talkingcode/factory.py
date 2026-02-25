@@ -1,12 +1,13 @@
 """Application factory."""
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from talkingcode.config import AppConfig
+from talkingcode.controllers.chat_controller import ChatController
+from talkingcode.controllers.ingestion_controller import IngestionController
 from talkingcode.repository.conversation_repository import ConversationRepository
 from talkingcode.repository.document_repository import DocumentRepository
 from talkingcode.repository.repo_repository import RepoRepository
@@ -18,15 +19,10 @@ from talkingcode.services.ingestion.embedder import OpenRouterEmbedder
 from talkingcode.services.ingestion.github_fetcher import GitHubFetcher
 from talkingcode.services.ingestion.ingestion_service import IngestionService
 from talkingcode.services.llm.openrouter_client import OpenRouterClient
-from talkingcode.services.planner.planner_service import PlannerService
 from talkingcode.services.tools.project_descriptions_tool import ProjectDescriptionsTool
 from talkingcode.services.tools.read_file_tool import ReadFileTool
 from talkingcode.services.tools.retriever_tool import RetrieverTool
 from talkingcode.services.tools.tool_registry import ToolRegistry
-
-if TYPE_CHECKING:
-    from talkingcode.controllers.chat_controller import ChatController
-    from talkingcode.controllers.ingestion_controller import IngestionController
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
@@ -59,14 +55,6 @@ class AppFactory:
     def get_openrouter_client(self) -> OpenRouterClient:
         """Get OpenRouter SDK client adapter."""
         return OpenRouterClient(api_key=self.config.openrouter_api_key)
-
-    def get_planner_service(self) -> PlannerService:
-        """Get planner service."""
-        return PlannerService(
-            openrouter_client=self.get_openrouter_client(),
-            default_model=self.config.default_model,
-            fallback_model=self.config.fallback_model,
-        )
 
     async def get_tool_registry(self) -> ToolRegistry:
         """Get tool registry with all tools."""
@@ -122,7 +110,6 @@ class AppFactory:
 
     async def get_chat_controller(self) -> "ChatController":
         """Get chat controller."""
-        from talkingcode.controllers.chat_controller import ChatController
 
         agent_service = await self.get_agent_loop_service()
         timeline_repo = self.get_timeline_repository()
@@ -151,7 +138,10 @@ class AppFactory:
         model = self.config.embedding_model
         dimensions = self.config.embedding_dimensions
 
-        if model == "text-embedding-3-small" or model == "openai/text-embedding-3-small":
+        if (
+            model == "text-embedding-3-small"
+            or model == "openai/text-embedding-3-small"
+        ):
             model = "openai/text-embedding-3-large"
             dimensions = 3072
 
@@ -175,7 +165,6 @@ class AppFactory:
 
     def get_ingestion_controller(self) -> "IngestionController":
         """Get ingestion controller."""
-        from talkingcode.controllers.ingestion_controller import IngestionController
 
         return IngestionController(
             repo_repository=self.get_repo_repository(),

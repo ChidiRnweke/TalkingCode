@@ -174,6 +174,76 @@ class DocumentRepository:
             )
         return summaries
 
+    async def search_repository_summaries(
+        self,
+        query_embedding: list[float],
+        top_k: int = 5,
+    ) -> list[RepositorySummary]:
+        """Rank repository summaries by vector similarity in Postgres."""
+        if len(query_embedding) != self._embedding_dimensions:
+            return []
+
+        distance = ChunkEmbedding.embedding.cosine_distance(query_embedding)
+        similarity = (1 - distance).label("similarity")
+
+        result = await self.session.execute(
+            select(
+                Repository.id,
+                Repository.owner,
+                Repository.name,
+                Repository.last_ingested_at,
+                func.count(func.distinct(Document.id)).label("document_count"),
+                func.max(similarity).label("similarity"),
+            )
+            .join(Document, Document.repository_id == Repository.id)
+            .join(DocumentChunk, DocumentChunk.document_id == Document.id)
+            .join(ChunkEmbedding, ChunkEmbedding.chunk_id == DocumentChunk.id)
+            .group_by(
+                Repository.id,
+                Repository.owner,
+                Repository.name,
+                Repository.last_ingested_at,
+            )
+            .order_by(func.max(similarity).desc())
+            .limit(top_k)
+        )
+
+        summaries: list[RepositorySummary] = []
+        for row in result.all():
+            lang_result = await self.session.execute(
+                select(func.distinct(DocumentChunk.language))
+                .join(Document, Document.id == DocumentChunk.document_id)
+                .where(
+                    Document.repository_id == row.id,
+                    DocumentChunk.language != "",
+                )
+            )
+            languages = [r[0] for r in lang_result.all()]
+
+            area_result = await self.session.execute(
+                select(func.distinct(DocumentChunk.area))
+                .join(Document, Document.id == DocumentChunk.document_id)
+                .where(
+                    Document.repository_id == row.id,
+                    DocumentChunk.area != Area.UNKNOWN.value,
+                )
+            )
+            areas = [r[0] for r in area_result.all()]
+
+            summaries.append(
+                RepositorySummary(
+                    repository_id=row.id,
+                    owner=row.owner,
+                    name=row.name,
+                    document_count=row.document_count,
+                    languages=languages,
+                    areas=areas,
+                    last_ingested_at=row.last_ingested_at,
+                )
+            )
+
+        return summaries
+
     async def get_file_details(
         self,
         repo: str,

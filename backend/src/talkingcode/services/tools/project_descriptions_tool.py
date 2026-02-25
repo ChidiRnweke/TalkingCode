@@ -4,6 +4,7 @@ from typing import Any
 
 import structlog
 
+from talkingcode.domain.models import RepositorySummary
 from talkingcode.repository.document_repository import DocumentRepository
 from talkingcode.services.llm.openrouter_client import IOpenRouterClient
 
@@ -12,7 +13,7 @@ logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
 @dataclass(slots=True)
 class ProjectDescriptionsTool:
-    """Tool that returns summaries of all indexed GitHub projects."""
+    """Tool that returns summaries of indexed GitHub projects."""
 
     document_repository: DocumentRepository
     openrouter_client: IOpenRouterClient
@@ -27,8 +28,8 @@ class ProjectDescriptionsTool:
         """Tool schema."""
         return {
             "description": (
-                "Get descriptions and names of all indexed GitHub projects. "
-                "Optionally filter by relevance to a query using semantic similarity."
+                "Get descriptions and names of indexed GitHub projects. "
+                "Optionally rank by relevance to a query using vector search in Postgres."
             ),
             "parameters": {
                 "type": "object",
@@ -44,11 +45,8 @@ class ProjectDescriptionsTool:
         }
 
     async def execute(self, query: str = "") -> dict[str, Any]:
-        """Return indexed project summaries, optionally ranked by query relevance."""
-        summaries = await self.document_repository.get_repository_summaries()
-
-        if not summaries:
-            return {"projects": [], "total": 0}
+        """Return project summaries, optionally ranked by query relevance."""
+        summaries = await self._load_summaries(query)
 
         projects = [
             {
@@ -61,30 +59,26 @@ class ProjectDescriptionsTool:
             for s in summaries
         ]
 
-        if query.strip():
-            # Rank by cosine similarity between query embedding and project description embedding
-            descriptions = [
-                f"{p['name']}: {p['document_count']} files, languages: {', '.join(p['languages'])}, areas: {', '.join(p['areas'])}"
-                for p in projects
-            ]
-            all_texts = [query] + descriptions
-
-            embeddings = await self.openrouter_client.generate_embeddings(
-                model=self.embedding_model,
-                texts=all_texts,
-                dimensions=self.embedding_dimensions,
-            )
-
-            if len(embeddings) == len(all_texts):
-                query_emb = embeddings[0]
-                from talkingcode.repository.document_repository import DocumentRepository
-
-                scored = []
-                for i, proj in enumerate(projects):
-                    score = DocumentRepository._cosine_similarity(query_emb, embeddings[i + 1])
-                    scored.append((score, proj))
-
-                scored.sort(key=lambda x: x[0], reverse=True)
-                projects = [p for _, p in scored[:5]]
-
         return {"projects": projects, "total": len(projects)}
+
+    async def _load_summaries(self, query: str) -> list[RepositorySummary]:
+        if not query.strip():
+            return await self.document_repository.get_repository_summaries()
+
+        embeddings = await self.openrouter_client.generate_embeddings(
+            model=self.embedding_model,
+            texts=[query],
+            dimensions=self.embedding_dimensions,
+        )
+        if not embeddings:
+            logger.warning("Project ranking embedding generation returned empty result")
+            return await self.document_repository.get_repository_summaries()
+
+        ranked = await self.document_repository.search_repository_summaries(
+            query_embedding=embeddings[0],
+            top_k=5,
+        )
+        if ranked:
+            return ranked
+
+        return await self.document_repository.get_repository_summaries()
