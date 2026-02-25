@@ -2,20 +2,16 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Github } from 'lucide-svelte';
-	import { RepoService } from '$lib/services/RepoService';
 	import type { IngestionRunInfo, RepositoryInfo } from '$lib/models';
 	import IngestionHistory from './IngestionHistory.svelte';
 
 	interface Props {
 		repo: RepositoryInfo;
+		historyRuns: IngestionRunInfo[] | Promise<IngestionRunInfo[]>;
 	}
 
-	let { repo }: Props = $props();
-
-	const repoService = new RepoService();
+	let { repo, historyRuns }: Props = $props();
 	let showHistory = $state(false);
-	let loadingHistory = $state(false);
-	let historyRuns = $state<IngestionRunInfo[] | null>(null);
 
 	function relativeLastIngested(timestamp: string | null): string {
 		if (!timestamp) return 'Last automated sync: not run yet';
@@ -29,26 +25,13 @@
 		return `Last automated sync: ${days}d ago`;
 	}
 
-	async function toggleHistory() {
+	function toggleHistory() {
 		if (showHistory) {
 			showHistory = false;
 			return;
 		}
 
 		showHistory = true;
-		if (historyRuns !== null) {
-			return;
-		}
-
-		loadingHistory = true;
-		try {
-			historyRuns = await repoService.listIngestionRuns(repo.owner, repo.name);
-		} catch (err) {
-			console.error(err);
-			historyRuns = [];
-		} finally {
-			loadingHistory = false;
-		}
 	}
 </script>
 
@@ -72,10 +55,12 @@
 	</div>
 
 	{#if showHistory}
-		{#if loadingHistory}
+		{#await historyRuns}
 			<p class="mt-3 text-sm text-muted-foreground">Loading ingestion history...</p>
-		{:else}
-			<IngestionHistory runs={historyRuns || []} />
-		{/if}
+		{:then runs}
+			<IngestionHistory {runs} />
+		{:catch}
+			<IngestionHistory runs={[]} />
+		{/await}
 	{/if}
 </div>

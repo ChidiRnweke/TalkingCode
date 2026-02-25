@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { EmptyState } from '$lib/components/layout';
 	import { RepoCard } from '$lib/components/domain';
-	import type { RepositoryInfo } from '$lib/models';
+	import type { IngestionRunInfo, RepositoryInfo } from '$lib/models';
 
 	interface Props {
 		data: {
 			repos: RepositoryInfo[];
+			runsByRepo: Record<string, Promise<IngestionRunInfo[]> | IngestionRunInfo[]>;
 		};
 	}
 
@@ -29,7 +30,7 @@
 		{:else}
 			<div class="grid gap-4">
 				{#each data.repos as repo (repo.id)}
-					<RepoCard {repo} />
+					<RepoCard {repo} historyRuns={data.runsByRepo[repo.id] ?? []} />
 				{/each}
 			</div>
 		{/if}

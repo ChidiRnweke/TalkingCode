@@ -220,7 +220,7 @@ If needed for clean model mapping:
       - Added server-side preload of all per-repo ingestion histories as promise values in `runsByRepo` for streaming-friendly resolution.
       - Verified no `/api/repos` usage in repos page server load and validated with `pnpm run check`.
 
-- [ ] **Step 7: Convert RepoCard to pure presentation component**
+- [x] **Step 7: Convert RepoCard to pure presentation component**
       Update `talkingcode-frontend/src/lib/components/domain/RepoCard.svelte`:
       - remove `RepoService` import
       - remove async network logic
@@ -230,6 +230,11 @@ If needed for clean model mapping:
       Verify:
       - history toggle works with preloaded data
       - no browser network for repo history
+
+      Execution notes:
+      - Refactored `talkingcode-frontend/src/lib/components/domain/RepoCard.svelte` to remove all service imports and network calls.
+      - `RepoCard` now accepts `historyRuns` as a prop and uses local show/hide UI state only.
+      - Wired `talkingcode-frontend/src/routes/repos/+page.svelte` to pass preloaded per-repo history promises from server load; validated with `pnpm run check`.
 
 - [ ] **Step 8: Remove obsolete repo proxy routes and unused repo services**
       Delete all repo routes under `talkingcode-frontend/src/routes/api/repos/**`.
