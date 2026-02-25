@@ -1,4 +1,4 @@
-import type { IngestionRunInfo, RegisterRepoInput, RepositoryInfo } from '$lib/models';
+import type { IngestionRunView, RegisterRepoInput, RepositoryView } from '$lib/models';
 import { createApiClient, type ApiClient } from './client';
 import { mapIngestionRun, mapRepository } from './mappers/repos';
 
@@ -13,14 +13,14 @@ function errorMessage(error: unknown): string {
 export class ReposService {
 	constructor(private readonly client: ApiClient) {}
 
-	async listRepos(): Promise<RepositoryInfo[]> {
+	async listRepos(): Promise<RepositoryView[]> {
 		const { data, error } = await this.client.GET('/repos');
 		if (error) throw new Error(`Failed to list repositories: ${errorMessage(error)}`);
 		if (!data) return [];
 		return data.map(mapRepository);
 	}
 
-	async listIngestionRuns(owner: string, name: string): Promise<IngestionRunInfo[]> {
+	async listIngestionRuns(owner: string, name: string): Promise<IngestionRunView[]> {
 		const { data, error } = await this.client.GET('/repos/{owner}/{name}/runs', {
 			params: {
 				path: { owner, name }
@@ -31,7 +31,7 @@ export class ReposService {
 		return data.map(mapIngestionRun);
 	}
 
-	async startIngestion(owner: string, name: string, gitRef?: string): Promise<IngestionRunInfo> {
+	async startIngestion(owner: string, name: string, gitRef?: string): Promise<IngestionRunView> {
 		const { data, error } = await this.client.POST('/repos/{owner}/{name}/ingest', {
 			params: {
 				path: { owner, name }
@@ -45,7 +45,7 @@ export class ReposService {
 		return mapIngestionRun(data);
 	}
 
-	async startOwnedIngestion(gitRef?: string): Promise<IngestionRunInfo[]> {
+	async startOwnedIngestion(gitRef?: string): Promise<IngestionRunView[]> {
 		const { data, error } = await this.client.POST('/repos/ingest-owned', {
 			body: {
 				git_ref: gitRef ?? null
@@ -56,7 +56,7 @@ export class ReposService {
 		return data.map(mapIngestionRun);
 	}
 
-	async registerRepo(input: RegisterRepoInput): Promise<RepositoryInfo> {
+	async registerRepo(input: RegisterRepoInput): Promise<RepositoryView> {
 		const { data, error } = await this.client.POST('/repos', {
 			body: {
 				owner: input.owner,

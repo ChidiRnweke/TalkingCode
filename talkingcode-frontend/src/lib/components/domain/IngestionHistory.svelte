@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge';
-	import type { IngestionRunInfo } from '$lib/models';
+	import type { IngestionRunView } from '$lib/models';
 
 	interface Props {
-		runs: IngestionRunInfo[];
+		runs: IngestionRunView[];
 	}
 
 	let { runs }: Props = $props();
@@ -19,7 +19,7 @@
 		return `${minutes}m ${remSeconds}s`;
 	}
 
-	function statusVariant(status: IngestionRunInfo['status']): 'default' | 'secondary' | 'destructive' {
+	function statusVariant(status: IngestionRunView['status']): 'default' | 'secondary' | 'destructive' {
 		if (status === 'done') return 'default';
 		if (status === 'failed') return 'destructive';
 		return 'secondary';
@@ -35,16 +35,16 @@
 				<div class="flex items-center justify-between gap-2">
 					<Badge variant={statusVariant(run.status)}>{run.status}</Badge>
 					<span class="text-xs text-muted-foreground">
-						{new Date(run.started_at).toLocaleString()}
+						{new Date(run.startedAt).toLocaleString()}
 					</span>
 				</div>
-				{#if formatDuration(run.started_at, run.completed_at)}
+				{#if formatDuration(run.startedAt, run.completedAt)}
 					<p class="mt-2 text-xs text-muted-foreground">
-						Duration: {formatDuration(run.started_at, run.completed_at)}
+						Duration: {formatDuration(run.startedAt, run.completedAt)}
 					</p>
 				{/if}
-				{#if run.error_message}
-					<p class="mt-2 line-clamp-2 text-xs text-destructive">{run.error_message}</p>
+				{#if run.errorMessage}
+					<p class="mt-2 line-clamp-2 text-xs text-destructive">{run.errorMessage}</p>
 				{/if}
 			</div>
 		{/each}

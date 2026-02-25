@@ -253,7 +253,7 @@ If needed for clean model mapping:
       - Removed obsolete repo service modules: `RepoService.ts`, `IRepoService.ts`, and `RepoServiceServer.ts`.
       - Verified `src/routes/api/` now contains only `talkingcode-frontend/src/routes/api/chat/agentic/+server.ts` and confirmed zero endpoint-string references to `/api/repos`.
 
-- [ ] **Step 9: Align frontend models with generated transport + mapped domain models**
+- [x] **Step 9: Align frontend models with generated transport + mapped domain models**
       Update `talkingcode-frontend/src/lib/models/index.ts` to avoid duplicate transport DTOs.
 
       Rule:
@@ -262,6 +262,11 @@ If needed for clean model mapping:
 
       Verify:
       - no duplicate repo/model transport interfaces conflicting with generated schema
+
+      Execution notes:
+      - Replaced repo transport-shaped interfaces in `talkingcode-frontend/src/lib/models/index.ts` with domain models `RepositoryView` and `IngestionRunView` (camelCase fields).
+      - Kept raw transport DTO usage confined to server API mapper/service files.
+      - Updated repos page and repo domain components to consume mapped domain models and validated with `pnpm run check`.
 
 - [ ] **Step 10: Validate chat exception and keep it isolated**
       Confirm chat still works and remains the only route under `src/routes/api/`.

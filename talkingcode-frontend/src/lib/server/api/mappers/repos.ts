@@ -1,28 +1,28 @@
-import type { IngestionRunInfo, RepositoryInfo } from '$lib/models';
+import type { IngestionRunView, RepositoryView } from '$lib/models';
 import type { components } from '$lib/api/schema';
 
 type RawRepositoryInfo = components['schemas']['RepositoryInfo'];
 type RawIngestionRunInfo = components['schemas']['IngestionRunInfo'];
 
-export function mapRepository(raw: RawRepositoryInfo): RepositoryInfo {
+export function mapRepository(raw: RawRepositoryInfo): RepositoryView {
 	return {
 		id: raw.id,
 		provider: raw.provider,
 		owner: raw.owner,
 		name: raw.name,
-		default_branch: raw.default_branch,
-		last_ingested_at: raw.last_ingested_at,
-		created_at: raw.created_at
+		defaultBranch: raw.default_branch,
+		lastIngestedAt: raw.last_ingested_at,
+		createdAt: raw.created_at
 	};
 }
 
-export function mapIngestionRun(raw: RawIngestionRunInfo): IngestionRunInfo {
+export function mapIngestionRun(raw: RawIngestionRunInfo): IngestionRunView {
 	return {
 		id: raw.id,
-		repository_id: raw.repository_id,
+		repositoryId: raw.repository_id,
 		status: raw.status,
-		started_at: raw.started_at,
-		completed_at: raw.completed_at,
-		error_message: raw.error_message
+		startedAt: raw.started_at,
+		completedAt: raw.completed_at,
+		errorMessage: raw.error_message
 	};
 }

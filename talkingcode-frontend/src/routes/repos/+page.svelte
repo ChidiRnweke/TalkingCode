@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { EmptyState } from '$lib/components/layout';
 	import { RepoCard } from '$lib/components/domain';
-	import type { IngestionRunInfo, RepositoryInfo } from '$lib/models';
+	import type { IngestionRunView, RepositoryView } from '$lib/models';
 
 	interface Props {
 		data: {
-			repos: RepositoryInfo[];
-			runsByRepo: Record<string, Promise<IngestionRunInfo[]> | IngestionRunInfo[]>;
+			repos: RepositoryView[];
+			runsByRepo: Record<string, Promise<IngestionRunView[]> | IngestionRunView[]>;
 		};
 	}
 

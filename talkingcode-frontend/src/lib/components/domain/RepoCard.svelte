@@ -2,12 +2,12 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Github } from 'lucide-svelte';
-	import type { IngestionRunInfo, RepositoryInfo } from '$lib/models';
+	import type { IngestionRunView, RepositoryView } from '$lib/models';
 	import IngestionHistory from './IngestionHistory.svelte';
 
 	interface Props {
-		repo: RepositoryInfo;
-		historyRuns: IngestionRunInfo[] | Promise<IngestionRunInfo[]>;
+		repo: RepositoryView;
+		historyRuns: IngestionRunView[] | Promise<IngestionRunView[]>;
 	}
 
 	let { repo, historyRuns }: Props = $props();
@@ -44,10 +44,10 @@
 					{repo.owner}/{repo.name}
 				</h3>
 			</div>
-			<p class="mt-2 text-xs text-muted-foreground">{relativeLastIngested(repo.last_ingested_at)}</p>
+			<p class="mt-2 text-xs text-muted-foreground">{relativeLastIngested(repo.lastIngestedAt)}</p>
 		</div>
 		<div class="flex items-center gap-2">
-			<Badge variant="secondary">{repo.default_branch}</Badge>
+			<Badge variant="secondary">{repo.defaultBranch}</Badge>
 			<Button variant="outline" size="sm" onclick={toggleHistory}>
 				{showHistory ? 'Hide history' : 'Show history'}
 			</Button>

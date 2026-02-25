@@ -187,23 +187,23 @@ export interface ChatMessage {
 // Repository Management
 // =============================================================================
 
-export interface RepositoryInfo {
+export interface RepositoryView {
 	id: string;
 	provider: string;
 	owner: string;
 	name: string;
-	default_branch: string;
-	last_ingested_at: string | null;
-	created_at: string;
+	defaultBranch: string;
+	lastIngestedAt: string | null;
+	createdAt: string;
 }
 
-export interface IngestionRunInfo {
+export interface IngestionRunView {
 	id: string;
-	repository_id: string;
+	repositoryId: string;
 	status: 'running' | 'done' | 'failed';
-	started_at: string;
-	completed_at: string | null;
-	error_message: string | null;
+	startedAt: string;
+	completedAt: string | null;
+	errorMessage: string | null;
 }
 
 export interface RegisterRepoInput {
