@@ -17,12 +17,8 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel_collector:4317
       - OTEL_SERVICE_NAME=talkingcode-backend
     networks:
-      - reverse-proxy
       - postgres-network
       - telemetry-network
-    labels:
-      caddy: api.talkingcode.chidinweke.be
-      caddy.reverse_proxy: "{{upstreams 8000}}"
 
   frontend:
     image: ghcr.io/chidirnweke/talkingcode-frontend:latest

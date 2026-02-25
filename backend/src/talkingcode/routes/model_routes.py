@@ -17,6 +17,8 @@ def _model_label(model_id: str) -> str:
         name = name.removesuffix(suffix)
     # Replace hyphens/underscores with spaces and title case
     return name.replace("-", " ").replace("_", " ").title()
+
+
 @router.get("/models")
 async def list_models(config: AppConfig = Depends(get_config)) -> ModelListResponse:
     """Return curated model list with labels and default."""

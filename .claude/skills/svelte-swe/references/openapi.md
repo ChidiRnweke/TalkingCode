@@ -7,8 +7,8 @@ Using `openapi-fetch` and `openapi-typescript` to get fully typed API calls.
 ## Setup
 
 ```bash
-npm install openapi-fetch
-npm install -D openapi-typescript
+pnpm install openapi-fetch
+pnpm install -D openapi-typescript
 ```
 
 Generate types from your OpenAPI spec (run whenever the spec changes):
@@ -16,14 +16,14 @@ Generate types from your OpenAPI spec (run whenever the spec changes):
 ```bash
 npx openapi-typescript http://localhost:8080/openapi.json -o src/lib/api/schema.d.ts
 # or from a local file:
-npx openapi-typescript ./openapi.yaml -o src/lib/api/schema.d.ts
+npx openapi-typescript ./openapi.json -o src/lib/api/schema.d.ts
 ```
 
 Add to `package.json` scripts:
 ```json
 {
   "scripts": {
-    "generate:api": "openapi-typescript ./openapi.yaml -o src/lib/api/schema.d.ts"
+    "generate:api": "openapi-typescript ./openapi.json -o src/lib/api/schema.d.ts"
   }
 }
 ```
