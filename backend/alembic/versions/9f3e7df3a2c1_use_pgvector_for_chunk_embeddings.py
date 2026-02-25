@@ -17,30 +17,24 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Migrate embeddings from JSON to pgvector and add ANN index."""
     op.execute("""
     ALTER TABLE chunk_embeddings
-    ALTER COLUMN embedding TYPE vector(3072)
-    USING (embedding::text::vector(3072))
+    ALTER COLUMN embedding TYPE halfvec(3072)
+    USING (embedding::text::halfvec(3072))
     """)
 
     op.execute("""
-    CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_embedding_ivfflat
+    CREATE INDEX IF NOT EXISTS idx_chunk_embeddings_embedding_hnsw
     ON chunk_embeddings
-    USING ivfflat (embedding vector_cosine_ops)
-    WITH (lists = 100)
+    USING hnsw (embedding halfvec_cosine_ops)
     """)
-    op.execute("ANALYZE chunk_embeddings")
 
 
 def downgrade() -> None:
-    """Revert embeddings from pgvector back to JSON."""
-    op.execute("DROP INDEX IF EXISTS idx_chunk_embeddings_embedding_ivfflat")
+    op.execute("DROP INDEX IF EXISTS idx_chunk_embeddings_embedding_hnsw")
 
-    op.execute(
-        """
-        ALTER TABLE chunk_embeddings
-        ALTER COLUMN embedding TYPE json
-        USING (to_json(embedding::float4[]))
-        """
-    )
+    op.execute("""
+    ALTER TABLE chunk_embeddings
+    ALTER COLUMN embedding TYPE json
+    USING (to_json(embedding::float4[]))
+    """)

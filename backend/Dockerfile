@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # Stage 1: Builder
 FROM python:3.12-slim AS builder
 
@@ -10,15 +12,13 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 COPY pyproject.toml uv.lock ./
 
 # Install dependencies (without dev dependencies)
-RUN uv sync --frozen --no-dev --no-install-project
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
 # Stage 2: Runtime
 FROM python:3.12-slim
 
 WORKDIR /app
-
-# Copy uv from builder
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Copy venv from builder
 COPY --from=builder /app/.venv /app/.venv
