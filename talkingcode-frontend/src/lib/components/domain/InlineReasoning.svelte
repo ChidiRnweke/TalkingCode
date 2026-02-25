@@ -22,8 +22,10 @@
 	</Reasoning>
 {:else if hasPlan}
 	<Reasoning isStreaming={isStreaming} defaultOpen={true}>
-		<ReasoningTrigger>
-			<span class="text-sm text-muted-foreground">{planText || plan?.intent || 'Planning'}</span>
+		<ReasoningTrigger class="text-left">
+			<span class="block min-w-0 wrap-break-word whitespace-normal text-sm leading-snug text-muted-foreground">
+				{planText || plan?.intent || 'Planning'}
+			</span>
 		</ReasoningTrigger>
 		<ReasoningContent>
 			{#if planText}

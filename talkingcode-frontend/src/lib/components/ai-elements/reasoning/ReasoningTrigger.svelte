@@ -31,30 +31,40 @@
 
 <CollapsibleTrigger
 	class={cn(
-		"text-muted-foreground hover:text-foreground flex w-full items-center gap-2 text-base transition-colors",
+		"text-muted-foreground hover:text-foreground flex w-full min-w-0 items-start gap-2 text-sm transition-colors sm:text-base",
 		className
 	)}
 	{onclick}
 >
-	<div class="flex items-center gap-2">
+	<div class="flex w-full min-w-0 items-start gap-2">
 		{#if reasoningContext.isStreaming}
-			<Loader size={14} class="text-primary" />
+			<Loader size={14} class="text-primary mt-0.5 shrink-0" />
 			{#if children}
-				<Shimmer>{@render children()}</Shimmer>
+				<div class="min-w-0 flex-1 text-left">
+					<Shimmer as="span" class="block min-w-0 wrap-break-word whitespace-normal leading-snug">
+						{@render children()}
+					</Shimmer>
+				</div>
 			{:else}
-				<Shimmer>{getThinkingMessage}</Shimmer>
+				<div class="min-w-0 flex-1 text-left">
+					<Shimmer as="span" class="block min-w-0 wrap-break-word whitespace-normal leading-snug">
+						{getThinkingMessage}
+					</Shimmer>
+				</div>
 			{/if}
 		{:else}
 			{#if children}
-				{@render children()}
+				<div class="min-w-0 flex-1 text-left wrap-break-word whitespace-normal leading-snug">
+					{@render children()}
+				</div>
 			{:else}
 				<ChevronRightIcon
 					class={cn(
-						"size-4 transition-transform",
+						"size-4 mt-0.5 shrink-0 transition-transform",
 						reasoningContext.isOpen ? "rotate-90" : "rotate-0"
 					)}
 				/>
-				<p>{getThinkingMessage}</p>
+				<p class="min-w-0 flex-1 wrap-break-word whitespace-normal leading-snug">{getThinkingMessage}</p>
 			{/if}
 		{/if}
 	</div>
