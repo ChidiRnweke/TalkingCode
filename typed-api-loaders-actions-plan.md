@@ -135,7 +135,7 @@ If needed for clean model mapping:
       - `RepoService` usage found in `talkingcode-frontend/src/lib/components/domain/RepoCard.svelte` and service-layer files.
       - Deletion targets and chat keep target paths exist exactly as listed.
 
-- [ ] **Step 2: Centralize backend API request/response models under models package**
+- [x] **Step 2: Centralize backend API request/response models under models package**
       Move route-local API schemas from:
       - `backend/src/talkingcode/routes/repo_routes.py`
       - `backend/src/talkingcode/routes/model_routes.py`
@@ -144,6 +144,11 @@ If needed for clean model mapping:
       Into shared API schema module(s) in `backend/src/talkingcode/models/`.
 
       Ensure route function signatures explicitly reference these models so OpenAPI emits concrete schemas.
+
+      Execution notes:
+      - Added shared schema module `backend/src/talkingcode/models/api.py`.
+      - Routes now import `RegisterRepoRequest`, `StartIngestionRequest`, `ModelInfoResponse`, `ModelListResponse`, `ChatAgenticRequest`, `ToolCallInfoResponse`, and `ToolTimelineResponse` from shared models.
+      - Removed route-local schema class definitions in repo/model/chat route modules.
 
 
 - [ ] **Step 3: Add/normalize OpenAPI generation workflow in frontend**

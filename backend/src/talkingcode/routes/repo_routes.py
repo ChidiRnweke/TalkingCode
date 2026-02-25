@@ -1,31 +1,15 @@
 """Repository management routes."""
 
 from fastapi import APIRouter
-from pydantic import BaseModel
 from talkingcode.dependencies import FactoryDep, IngestionAuthDep
 from talkingcode.domain.models import (
     IngestionRunInfo,
     RegisterRepoInput,
     RepositoryInfo,
 )
+from talkingcode.models.api import RegisterRepoRequest, StartIngestionRequest
 
 router = APIRouter()
-
-
-class RegisterRepoRequest(BaseModel):
-    """Request body for registering a repository."""
-
-    owner: str
-    name: str
-    default_branch: str = "main"
-
-
-class StartIngestionRequest(BaseModel):
-    """Request body for starting an ingestion run."""
-
-    git_ref: str | None = None
-
-
 @router.post("/repos")
 async def register_repo(
     body: RegisterRepoRequest,

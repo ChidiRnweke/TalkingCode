@@ -1,7 +1,6 @@
 """Chat routes with SSE streaming."""
 
 import json
-from dataclasses import dataclass
 from typing import Any, AsyncGenerator
 from uuid import UUID
 
@@ -12,6 +11,11 @@ from talkingcode.config import AppConfig
 from talkingcode.dependencies import get_config, get_db_session
 from talkingcode.domain.models import WhiteboxEvent
 from talkingcode.factory import AppFactory
+from talkingcode.models.api import (
+    ChatAgenticRequest,
+    ToolCallInfoResponse,
+    ToolTimelineResponse,
+)
 
 router = APIRouter()
 
@@ -46,17 +50,17 @@ def _format_sse_event(event: WhiteboxEvent) -> str:
 
 @router.post("/agentic")
 async def chat_agentic(
-    request: dict,
+    request: ChatAgenticRequest,
     session: AsyncSession = Depends(get_db_session),
     config: AppConfig = Depends(get_config),
 ) -> StreamingResponse:
     """Agentic chat endpoint with SSE streaming."""
-    conversation_id = request.get("conversation_id")
+    conversation_id = request.conversation_id
     if conversation_id:
         conversation_id = UUID(conversation_id)
 
-    question = request.get("question", "")
-    selected_model = request.get("selected_model")
+    question = request.question
+    selected_model = request.selected_model
 
     factory = AppFactory(session=session, config=config)
     controller = await factory.get_chat_controller()
@@ -74,38 +78,6 @@ async def chat_agentic(
         media_type="text/event-stream",
     )
 
-
-@dataclass(slots=True, frozen=True)
-class IngestionRunInfo:
-    """Information about an ingestion run."""
-
-    id: str
-    git_ref: str | None
-    status: str
-    started_at: str | None
-    finished_at: str | None
-
-
-@dataclass(slots=True, frozen=True)
-class ToolCallInfo:
-    """Information about a tool call."""
-
-    turn_id: str
-    tool_name: str
-    visible_args: dict[str, Any]
-    status: str
-    duration_ms: int | None
-    timestamp: str
-
-
-@dataclass(slots=True, frozen=True)
-class ToolTimelineResponse:
-    """Response model for tool timeline endpoint."""
-
-    conversation_id: str
-    timeline: list[ToolCallInfo]
-
-
 @router.get("/timeline")
 async def get_chat_timeline(
     conversation_id: UUID = Query(...),
@@ -121,7 +93,7 @@ async def get_chat_timeline(
     return ToolTimelineResponse(
         conversation_id=str(conversation_id),
         timeline=[
-            ToolCallInfo(
+            ToolCallInfoResponse(
                 turn_id=item.turn_id,
                 tool_name=item.tool_name,
                 visible_args=item.visible_args,
