@@ -39,4 +39,16 @@ npm run build
 
 You can preview the production build with `npm run preview`.
 
+## OpenAPI types
+
+Generate typed API schema for frontend server modules:
+
+```sh
+pnpm run generate:api
+```
+
+This command refreshes `openapi.json` from backend route schemas, then regenerates
+`src/lib/api/schema.d.ts`. Re-run it after any backend request/response schema or route
+signature change.
+
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.

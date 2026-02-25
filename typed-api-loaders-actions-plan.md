@@ -151,7 +151,7 @@ If needed for clean model mapping:
       - Removed route-local schema class definitions in repo/model/chat route modules.
 
 
-- [ ] **Step 3: Add/normalize OpenAPI generation workflow in frontend**
+- [x] **Step 3: Add/normalize OpenAPI generation workflow in frontend**
       Ensure generation script is authoritative and deterministic:
       - script should produce `src/lib/api/schema.d.ts`
       - document that schema regeneration is required after backend schema changes
@@ -161,6 +161,11 @@ If needed for clean model mapping:
       Verify:
       - `talkingcode-frontend/src/lib/api/schema.d.ts` exists
       - file includes `paths` and `components` types for repo/model/chat routes
+
+      Execution notes:
+      - Added deterministic export script `talkingcode-frontend/scripts/export-openapi.py` (builds OpenAPI directly from backend app factory).
+      - Updated frontend scripts: `export:openapi` and `generate:api` now regenerate `openapi.json` and `src/lib/api/schema.d.ts`.
+      - Documented regeneration rule in `talkingcode-frontend/README.md`.
 
 - [ ] **Step 4: Implement typed client factory with middleware auth**
       Create `talkingcode-frontend/src/lib/server/api/client.ts`:

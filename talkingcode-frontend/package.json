@@ -16,7 +16,8 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright test",
-		"generate:api": "curl -fsS http://localhost:8000/openapi.json -o /tmp/openapi.json && openapi-typescript /tmp/openapi.json -o src/lib/api/schema.d.ts"
+		"export:openapi": "PYTHONPATH=../backend/src ../backend/.venv/bin/python scripts/export-openapi.py",
+		"generate:api": "pnpm run export:openapi && openapi-typescript openapi.json -o src/lib/api/schema.d.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "latest",
