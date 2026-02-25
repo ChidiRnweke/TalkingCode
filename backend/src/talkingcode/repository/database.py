@@ -9,8 +9,6 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from talkingcode.models.orm import Base
-
 
 def get_engine(database_url: str) -> AsyncEngine:
     """Create async database engine."""
@@ -50,9 +48,3 @@ async def get_session(
             await session.close()
     
     await engine.dispose()
-
-
-async def init_db(engine: AsyncEngine) -> None:
-    """Initialize database tables."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)

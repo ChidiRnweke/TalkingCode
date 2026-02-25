@@ -10,10 +10,11 @@ from fastapi.responses import JSONResponse
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+from sqlalchemy import text
 
 from talkingcode.dependencies import _get_cached_config
 from talkingcode.errors import AppError, InfraError, NotFoundError
-from talkingcode.repository.database import get_engine, init_db
+from talkingcode.repository.database import get_engine
 from talkingcode.telemetry import configure_telemetry
 
 if TYPE_CHECKING:
@@ -23,9 +24,10 @@ logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
 
 async def setup_database(config: "AppConfig") -> None:
-    """Initialize database tables."""
+    """Verify database connectivity without mutating schema."""
     engine = get_engine(config.database_url)
-    await init_db(engine)
+    async with engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
     await engine.dispose()
 
 

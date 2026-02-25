@@ -2,6 +2,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import JSON, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -116,7 +117,7 @@ class ChunkEmbedding(Base):
         PGUUID(as_uuid=True), ForeignKey("document_chunks.id"), unique=True, nullable=False
     )
     embedding_model: Mapped[str] = mapped_column(String(100), nullable=False)
-    embedding: Mapped[list[float]] = mapped_column(JSON, nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(Vector(3072), nullable=False)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     
     chunk: Mapped[DocumentChunk] = relationship(back_populates="embedding")

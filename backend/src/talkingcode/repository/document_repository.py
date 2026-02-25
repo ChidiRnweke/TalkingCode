@@ -1,5 +1,4 @@
 """Document repository."""
-import math
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -18,6 +17,7 @@ class DocumentRepository:
     """Repository for document operations."""
 
     session: AsyncSession
+    _embedding_dimensions: int = 3072
 
     async def search_chunks(
         self,
@@ -26,11 +26,18 @@ class DocumentRepository:
         top_k: int = 10,
     ) -> list[RetrievedChunk]:
         """Search chunks by cosine similarity with optional metadata filtering."""
+        if len(query_embedding) != self._embedding_dimensions:
+            return []
+
+        distance = ChunkEmbedding.embedding.cosine_distance(query_embedding)
+        similarity = (1 - distance).label("similarity")
         stmt = (
-            select(DocumentChunk, ChunkEmbedding, Document, Repository)
+            select(DocumentChunk, Document, Repository, similarity)
             .join(ChunkEmbedding, ChunkEmbedding.chunk_id == DocumentChunk.id)
             .join(Document, Document.id == DocumentChunk.document_id)
             .join(Repository, Repository.id == Document.repository_id)
+            .order_by(distance)
+            .limit(top_k)
         )
 
         if filters:
@@ -62,19 +69,14 @@ class DocumentRepository:
         result = await self.session.execute(stmt)
 
         candidates: list[RetrievedChunk] = []
-        for chunk, embedding_row, document, repo in result.all():
-            embedding = embedding_row.embedding
-            if not isinstance(embedding, list):
-                continue
-
-            score = self._cosine_similarity(query_embedding, embedding)
+        for chunk, document, repo, score in result.all():
             repo_str = f"{repo.owner}/{repo.name}" if repo else ""
             candidates.append(
                 RetrievedChunk(
                     chunk_id=chunk.id,
                     document_id=document.id,
                     content=chunk.content,
-                    score=score,
+                    score=float(score),
                     metadata={
                         "path": document.path,
                         "git_ref": document.git_ref,
@@ -88,21 +90,7 @@ class DocumentRepository:
                 )
             )
 
-        ranked = sorted(candidates, key=lambda c: c.score, reverse=True)
-        return ranked[:top_k]
-
-    @staticmethod
-    def _cosine_similarity(a: list[float], b: list[float]) -> float:
-        if not a or not b or len(a) != len(b):
-            return 0.0
-
-        dot = sum(x * y for x, y in zip(a, b, strict=True))
-        mag_a = math.sqrt(sum(x * x for x in a))
-        mag_b = math.sqrt(sum(y * y for y in b))
-        if mag_a == 0 or mag_b == 0:
-            return 0.0
-
-        return dot / (mag_a * mag_b)
+        return candidates
     
     async def get_file_chunks(
         self,
