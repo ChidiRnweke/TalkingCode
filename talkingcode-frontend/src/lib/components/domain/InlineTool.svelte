@@ -60,11 +60,11 @@
 </script>
 
 <div
-	class="flex w-full min-w-0 flex-wrap items-start gap-x-2 gap-y-0.5 py-1 text-sm {tool.status === 'failed'
+	class="min-w-0 py-1 text-sm {tool.status === 'failed'
 		? 'text-destructive'
 		: 'text-muted-foreground'}"
 >
-	<div class="flex shrink-0 items-center gap-2">
+	<div class="flex items-center gap-2">
 		{#if tool.status === 'started'}
 			<Loader class="size-3.5 shrink-0 animate-spin" />
 		{:else if tool.status === 'finished'}
@@ -75,13 +75,13 @@
 
 		<Search class="size-3.5 shrink-0 text-muted-foreground/60" />
 		<span class="font-medium text-foreground/90">{toolName}</span>
+
+		{#if duration}
+			<span class="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground/60">{duration}</span>
+		{/if}
 	</div>
 
 	{#if detailText}
-		<span class="min-w-0 flex-1 text-muted-foreground/80 [overflow-wrap:anywhere]">{detailText}</span>
-	{/if}
-
-	{#if duration}
-		<span class="shrink-0 text-xs tabular-nums text-muted-foreground/60">{duration}</span>
+		<p class="mt-0.5 min-w-0 text-muted-foreground/80 wrap-anywhere">{detailText}</p>
 	{/if}
 </div>
