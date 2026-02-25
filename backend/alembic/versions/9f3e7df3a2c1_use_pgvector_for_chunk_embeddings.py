@@ -18,7 +18,6 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Migrate embeddings from JSON to pgvector and add ANN index."""
-    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
     op.execute(
         """
         ALTER TABLE chunk_embeddings
@@ -37,7 +36,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Revert embeddings from pgvector back to JSON."""
-    op.execute("DROP INDEX IF EXISTS idx_chunk_embeddings_embedding_hnsw")
     op.execute(
         """
         ALTER TABLE chunk_embeddings
