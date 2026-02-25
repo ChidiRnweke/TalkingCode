@@ -167,7 +167,7 @@ If needed for clean model mapping:
       - Updated frontend scripts: `export:openapi` and `generate:api` now regenerate `openapi.json` and `src/lib/api/schema.d.ts`.
       - Documented regeneration rule in `talkingcode-frontend/README.md`.
 
-- [ ] **Step 4: Implement typed client factory with middleware auth**
+- [x] **Step 4: Implement typed client factory with middleware auth**
       Create `talkingcode-frontend/src/lib/server/api/client.ts`:
       - instantiate `openapi-fetch` once via factory
       - use env base URL
@@ -180,6 +180,11 @@ If needed for clean model mapping:
       Verify:
       - service modules consume `ApiClient` type from factory only
       - no direct client instantiation outside factory
+
+      Execution notes:
+      - Added `talkingcode-frontend/src/lib/server/api/client.ts` with `createApiClient()` and exported `ApiClient` type.
+      - Added middleware that injects `X-API-Key` only for POST ingestion-protected schema paths (`/repos`, `/repos/ingest-owned`, `/repos/{owner}/{name}/ingest`).
+      - Verified `openapi-fetch` client instantiation exists only in the factory module.
 
 - [ ] **Step 5: Create typed repo/model service modules with explicit DTO mapping**
       Add service modules that:
