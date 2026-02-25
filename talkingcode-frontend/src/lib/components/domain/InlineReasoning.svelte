@@ -17,21 +17,23 @@
 </script>
 
 {#if isStreaming && !hasPlan}
-	<Reasoning isStreaming={true} defaultOpen={false}>
+	<Reasoning isStreaming={true} defaultOpen={false} class="w-full min-w-0 max-w-full overflow-hidden">
 		<ReasoningTrigger />
 	</Reasoning>
 {:else if hasPlan}
-	<Reasoning isStreaming={isStreaming} defaultOpen={true}>
+	<Reasoning isStreaming={isStreaming} defaultOpen={true} class="w-full min-w-0 max-w-full overflow-hidden">
 		<ReasoningTrigger class="text-left">
-			<span class="block min-w-0 wrap-break-word whitespace-normal text-sm leading-snug text-muted-foreground">
+			<span
+				class="block w-full min-w-0 max-w-full whitespace-normal text-sm leading-snug text-muted-foreground [overflow-wrap:anywhere]"
+			>
 				{planText || plan?.intent || 'Planning'}
 			</span>
 		</ReasoningTrigger>
 		<ReasoningContent>
 			{#if planText}
-				<p class="text-sm text-foreground">{planText}</p>
+				<p class="text-sm text-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">{planText}</p>
 			{:else if plan}
-				<div class="flex flex-wrap gap-2">
+				<div class="flex min-w-0 flex-wrap gap-2">
 					{#if plan.filters.areas.length > 0}
 						{#each plan.filters.areas as area}
 							<Badge variant="secondary">{area}</Badge>

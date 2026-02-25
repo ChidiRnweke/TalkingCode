@@ -31,30 +31,36 @@
 
 <CollapsibleTrigger
 	class={cn(
-		"text-muted-foreground hover:text-foreground flex w-full min-w-0 items-start gap-2 text-sm transition-colors sm:text-base",
+		"text-muted-foreground hover:text-foreground flex w-full min-w-0 max-w-full items-start gap-2 overflow-hidden text-sm transition-colors sm:text-base",
 		className
 	)}
 	{onclick}
 >
-	<div class="flex w-full min-w-0 items-start gap-2">
+	<div class="flex w-full min-w-0 max-w-full items-start gap-2 overflow-hidden">
 		{#if reasoningContext.isStreaming}
 			<Loader size={14} class="text-primary mt-0.5 shrink-0" />
 			{#if children}
-				<div class="min-w-0 flex-1 text-left">
-					<Shimmer as="span" class="block min-w-0 wrap-break-word whitespace-normal leading-snug">
+				<div class="w-full min-w-0 max-w-full flex-1 text-left">
+					<Shimmer
+						as="span"
+						class="block w-full min-w-0 max-w-full whitespace-normal leading-snug wrap-anywhere"
+					>
 						{@render children()}
 					</Shimmer>
 				</div>
 			{:else}
-				<div class="min-w-0 flex-1 text-left">
-					<Shimmer as="span" class="block min-w-0 wrap-break-word whitespace-normal leading-snug">
+				<div class="w-full min-w-0 max-w-full flex-1 text-left">
+					<Shimmer
+						as="span"
+						class="block w-full min-w-0 max-w-full whitespace-normal leading-snug wrap-anywhere"
+					>
 						{getThinkingMessage}
 					</Shimmer>
 				</div>
 			{/if}
 		{:else}
 			{#if children}
-				<div class="min-w-0 flex-1 text-left wrap-break-word whitespace-normal leading-snug">
+				<div class="w-full min-w-0 max-w-full flex-1 text-left whitespace-normal leading-snug wrap-anywhere">
 					{@render children()}
 				</div>
 			{:else}
@@ -64,7 +70,9 @@
 						reasoningContext.isOpen ? "rotate-90" : "rotate-0"
 					)}
 				/>
-				<p class="min-w-0 flex-1 wrap-break-word whitespace-normal leading-snug">{getThinkingMessage}</p>
+				<p class="w-full min-w-0 max-w-full flex-1 whitespace-normal leading-snug wrap-anywhere">
+					{getThinkingMessage}
+				</p>
 			{/if}
 		{/if}
 	</div>
