@@ -268,7 +268,7 @@ If needed for clean model mapping:
       - Kept raw transport DTO usage confined to server API mapper/service files.
       - Updated repos page and repo domain components to consume mapped domain models and validated with `pnpm run check`.
 
-- [ ] **Step 10: Validate chat exception and keep it isolated**
+- [x] **Step 10: Validate chat exception and keep it isolated**
       Confirm chat still works and remains the only route under `src/routes/api/`.
 
       Optional hardening:
@@ -277,6 +277,11 @@ If needed for clean model mapping:
       Verify:
       - `/chat` SSE flow unchanged
       - non-chat does not use raw client fetch
+
+      Execution notes:
+      - Verified `talkingcode-frontend/src/routes/api/` contains only `chat/agentic/+server.ts`.
+      - Kept chat SSE path unchanged (`/chat/agentic` direct browser flow remains intact).
+      - Removed remaining non-chat raw server fetch by switching `talkingcode-frontend/src/routes/chat/+page.server.ts` to typed `ModelsService`; remaining raw `fetch()` usage is chat flow (plus blob URL conversion utility only).
 
 - [ ] **Step 11: Test and finalize docs**
       Run checks:
