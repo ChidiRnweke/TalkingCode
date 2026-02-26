@@ -229,7 +229,7 @@ export class ChatService implements IChatService {
 	}
 
 	async *askAgentic(input: AgenticAskInput, signal?: AbortSignal): AsyncGenerator<AgentStreamEvent> {
-		const response = await fetch(`${this.backendUrl}/chat/agentic`, {
+		const response = await fetch(`api/chat/agentic`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			signal,

@@ -2,7 +2,6 @@
 import type {
 	AgentStreamEvent,
 	ToolCallTimelineItem,
-	AgentPlanView,
 	ChatMessage,
 	ReasoningStep
 } from '$lib/models';
