@@ -35,17 +35,6 @@
 <style lang="postcss">
 	@reference '../../../../app.css';
 
-	/* Scoped global styles - only affect elements within .ai-code-wrapper */
-	/* Dark mode: check dark class on parent, then scope to wrapper */
-	:global(.dark) .ai-code-wrapper :global(.shiki),
-	:global(.dark) .ai-code-wrapper :global(.shiki span) {
-		color: var(--shiki-dark) !important;
-		font-style: var(--shiki-dark-font-style) !important;
-		font-weight: var(--shiki-dark-font-weight) !important;
-		text-decoration: var(--shiki-dark-text-decoration) !important;
-	}
-
-	/* Shiki see: https://shiki.matsu.io/guide/dual-themes#class-based-dark-mode */
 	:global(html.dark) .ai-code-wrapper :global(.shiki),
 	:global(html.dark) .ai-code-wrapper :global(.shiki span) {
 		color: var(--shiki-dark) !important;
@@ -55,7 +44,7 @@
 	}
 
 	.ai-code-wrapper :global(pre.shiki) {
-		@apply overflow-x-auto rounded-lg bg-inherit py-4 text-sm;
+		@apply overflow-x-auto rounded-lg bg-transparent py-4 text-sm;
 	}
 
 	.ai-code-wrapper :global(pre.shiki:not([data-code-overflow] *):not([data-code-overflow])) {
@@ -64,7 +53,7 @@
 	}
 
 	.ai-code-wrapper :global(pre.shiki code) {
-		@apply grid min-w-full rounded-none border-0 bg-transparent p-0 break-words;
+		@apply grid min-w-full rounded-none border-0 bg-transparent p-0 wrap-break-word;
 		counter-reset: line;
 		box-decoration-break: clone;
 	}
