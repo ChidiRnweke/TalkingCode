@@ -27,11 +27,16 @@ function createChatStore() {
 		return `text-${timestamp}-${count}`;
 	}
 
-	function appendTextPart(parts: AssistantPart[] | undefined, token: string, timestamp: string): AssistantPart[] {
+	function appendTextPart(
+		parts: AssistantPart[] | undefined,
+		token: string,
+		iteration: number | undefined,
+		timestamp: string
+	): AssistantPart[] {
 		const next = [...(parts ?? [])];
 		const last = next.at(-1);
 
-		if (last?.kind === 'text') {
+		if (last?.kind === 'text' && last.iteration === iteration) {
 			next[next.length - 1] = {
 				...last,
 				text: last.text + token,
@@ -44,6 +49,35 @@ function createChatStore() {
 			id: textPartId(timestamp, next.length),
 			kind: 'text',
 			text: token,
+			iteration,
+			timestamp
+		});
+		return next;
+	}
+
+	function appendReasoningPart(
+		parts: AssistantPart[] | undefined,
+		token: string,
+		iteration: number | undefined,
+		timestamp: string
+	): AssistantPart[] {
+		const next = [...(parts ?? [])];
+		const last = next.at(-1);
+
+		if (last?.kind === 'reasoning' && last.iteration === iteration) {
+			next[next.length - 1] = {
+				...last,
+				text: last.text + token,
+				timestamp
+			};
+			return next;
+		}
+
+		next.push({
+			id: `reasoning-${iteration ?? 0}-${timestamp}-${next.length}`,
+			kind: 'reasoning',
+			text: token,
+			iteration,
 			timestamp
 		});
 		return next;
@@ -191,6 +225,7 @@ function createChatStore() {
 							id: toolStepId(event.callId, event.toolName, event.timestamp),
 							kind: 'tool',
 							tool: newToolCall,
+							iteration: event.iteration,
 							timestamp: event.timestamp
 						}
 					];
@@ -273,7 +308,7 @@ function createChatStore() {
 					const update: Partial<ChatMessage> = {
 						content: current.content + event.token,
 						isStreaming: true,
-						parts: appendTextPart(current.parts, event.token, event.timestamp)
+						parts: appendTextPart(current.parts, event.token, event.iteration, event.timestamp)
 					};
 
 					if (!current.content && currentTurnStartTime) {
@@ -282,6 +317,27 @@ function createChatStore() {
 					}
 
 					messages[idx] = { ...current, ...update };
+					break;
+				}
+
+				case 'reasoning.delta': {
+					messages[idx] = {
+						...current,
+						isStreaming: true,
+						parts: appendReasoningPart(current.parts, event.text, event.iteration, event.timestamp)
+					};
+					break;
+				}
+
+				case 'step.summary': {
+					if (event.iteration === undefined) break;
+					messages[idx] = {
+						...current,
+						stepSummaries: {
+							...(current.stepSummaries ?? {}),
+							[event.iteration]: event.summary
+						}
+					};
 					break;
 				}
 

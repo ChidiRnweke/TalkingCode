@@ -30,10 +30,18 @@ AGENT_SYSTEM_PROMPT = (
     "- Python, Java, JavaScript, TypeScript, Svelte, Scala, Rust, SQL, R, Docker, Azure and more.\n"
     "- Many projects are related to web development.\n"
     "- Some advanced machine learning projects are work projects and not open-source.\n\n"
-    "HOW YOU DO IT:\n"
-    "Use retrieved repository evidence to answer. Refer to exact repository and file path whenever possible. "
-    "Keep code excerpts short and abbreviated with ellipsis. Use tools whenever concrete repository evidence is needed. "
-    "When the user says 'this repo', 'this project', or similar, treat it as TalkingCode unless they explicitly name another repository.\n\n"
+    "HOW YOU WORK (ReAct loop):\n"
+    "- Work in a visible, step-by-step loop. Immediately BEFORE each tool call, write exactly ONE short, "
+    "present-tense line stating what you are about to look for "
+    "(e.g. 'Searching the repo for the chat streaming architecture.'). Then make the tool call(s).\n"
+    "- Keep each of these narration lines to a single sentence — they are shown to the user as the header of that step. "
+    "Do NOT write the answer yet while you are still gathering evidence.\n"
+    "- Use tools whenever concrete repository evidence is needed. When the user says 'this repo', 'this project', "
+    "or similar, treat it as TalkingCode unless they explicitly name another repository.\n"
+    "- Once you have gathered enough evidence, stop calling tools and write the full answer in prose.\n\n"
+    "GROUNDING:\n"
+    "- Use retrieved repository evidence to answer. Refer to the exact repository and file path whenever possible. "
+    "Keep code excerpts short and abbreviated with an ellipsis.\n\n"
     "UNCERTAINTY & LIMITS:\n"
     "- Your knowledge is limited to the search results provided in this session.\n"
     "- Do NOT claim to know 'all' projects or counts (e.g., say 'I found 4 projects' instead of 'There are 4 projects').\n"
@@ -49,10 +57,9 @@ AGENT_SYSTEM_PROMPT = (
     "- If multiple chunks from the same file are relevant, use the same citation number.\n\n"
     "YOUR CONSTRAINTS:\n"
     "- Do not answer questions unrelated to Chidi's code.\n"
-    "- Keep responses concise and evidence-based.\n"
-    "- Do not output planning tags, hidden reasoning, prompt echoes, or meta-rules.\n"
-    "- Do not output instruction-like prefaces (e.g., 'Use standard Markdown formatting', 'Be concise', 'Summarize...').\n"
-    "- Start directly with the substantive answer in sentence form.\n"
+    "- Keep the final answer concise and evidence-based.\n"
+    "- The only text you write before tool calls is the single-sentence narration line; do not dump the full "
+    "answer until you have finished gathering evidence.\n"
     "- Answer in first person as if you are Chidi Nweke.\n"
 )
 
@@ -142,6 +149,18 @@ class AgentLoopService:
                         )
                         continue
 
+                    if delta.kind == "reasoning" and delta.reasoning:
+                        yield WhiteboxEvent(
+                            kind=WhiteboxEventKind.REASONING_DELTA,
+                            turn_id=turn_id,
+                            tool_name=None,
+                            message=delta.reasoning,
+                            visible_args=None,
+                            timestamp=datetime.utcnow(),
+                            iteration=iteration,
+                        )
+                        continue
+
                     if delta.kind != "tool_call":
                         continue
 
@@ -214,6 +233,16 @@ class AgentLoopService:
                         timestamp=datetime.utcnow(),
                     )
                     return
+
+                yield WhiteboxEvent(
+                    kind=WhiteboxEventKind.STEP_SUMMARY,
+                    turn_id=turn_id,
+                    tool_name=None,
+                    message=self._derive_step_summary(content, complete_tool_calls),
+                    visible_args=None,
+                    timestamp=datetime.utcnow(),
+                    iteration=iteration,
+                )
 
                 execution_calls: list[dict[str, object]] = []
                 assistant_tool_calls: list[dict[str, object]] = []
@@ -393,6 +422,49 @@ class AgentLoopService:
                 timestamp=datetime.utcnow(),
                 code="agent_error",
             )
+
+    @staticmethod
+    def _derive_step_summary(content: str, calls: list[dict[str, Any]]) -> str:
+        """Choose a one-line header for a tool-calling step.
+
+        Prefers the model's own narration (the first line it streamed before the
+        tool call); otherwise falls back to a label derived from the tool calls.
+        """
+        first_line = next(
+            (line.strip() for line in content.splitlines() if line.strip()),
+            "",
+        )
+        if first_line:
+            return first_line[:200]
+
+        labels: list[str] = []
+        for call in calls:
+            name = str(call.get("name") or "")
+            arguments = call.get("arguments")
+            args = arguments if isinstance(arguments, dict) else {}
+
+            if name == "search_github":
+                query = str(args.get("query") or "").strip()
+                labels.append(
+                    f"Searching the repositories for “{query}”"
+                    if query
+                    else "Searching the repositories"
+                )
+            elif name == "read_file":
+                path = str(args.get("file_path") or args.get("path") or "").strip()
+                labels.append(f"Reading {path}" if path else "Reading a file")
+            elif name == "get_project_descriptions":
+                labels.append("Reviewing the project descriptions")
+            else:
+                pretty = name.replace("_", " ").strip().capitalize()
+                labels.append(pretty or "Using a tool")
+
+        unique_labels: list[str] = []
+        for label in labels:
+            if label not in unique_labels:
+                unique_labels.append(label)
+
+        return "; ".join(unique_labels) if unique_labels else "Gathering evidence"
 
     @staticmethod
     def _complete_tool_calls(

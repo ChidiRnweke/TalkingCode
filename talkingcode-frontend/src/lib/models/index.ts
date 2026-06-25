@@ -121,6 +121,22 @@ export interface AssistantTokenEvent {
 	timestamp: string;
 }
 
+export interface ReasoningDeltaEvent {
+	kind: 'reasoning.delta';
+	turnId: string;
+	text: string;
+	iteration?: number;
+	timestamp: string;
+}
+
+export interface StepSummaryEvent {
+	kind: 'step.summary';
+	turnId: string;
+	summary: string;
+	iteration?: number;
+	timestamp: string;
+}
+
 export interface AssistantDoneEvent {
 	kind: 'turn.done';
 	turnId: string;
@@ -142,6 +158,8 @@ export type AgentStreamEvent =
 	| ToolCallFinishedEvent
 	| ToolResultAvailableEvent
 	| AssistantTokenEvent
+	| ReasoningDeltaEvent
+	| StepSummaryEvent
 	| AssistantDoneEvent
 	| AgentErrorEvent;
 
@@ -174,6 +192,7 @@ export interface AssistantTextPart {
 	id: string;
 	kind: 'text';
 	text: string;
+	iteration?: number;
 	timestamp: string;
 }
 
@@ -181,10 +200,19 @@ export interface AssistantToolPart {
 	id: string;
 	kind: 'tool';
 	tool: ToolCallTimelineItem;
+	iteration?: number;
 	timestamp: string;
 }
 
-export type AssistantPart = AssistantTextPart | AssistantToolPart;
+export interface AssistantReasoningPart {
+	id: string;
+	kind: 'reasoning';
+	text: string;
+	iteration?: number;
+	timestamp: string;
+}
+
+export type AssistantPart = AssistantTextPart | AssistantToolPart | AssistantReasoningPart;
 
 export interface ChatMessage {
 	id: string;
@@ -196,6 +224,7 @@ export interface ChatMessage {
 	toolCalls?: ToolCallTimelineItem[];
 	reasoningSteps?: ReasoningStep[];
 	parts?: AssistantPart[];
+	stepSummaries?: Record<number, string>;
 	isStreaming?: boolean;
 	thoughtDurationS?: number;
 	sources?: AssistantDoneEvent['sources'];

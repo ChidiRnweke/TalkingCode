@@ -5,9 +5,12 @@
 	import MessageToolbar from '$lib/components/ai-elements/new-message/MessageToolbar.svelte';
 	import MessageActions from '$lib/components/ai-elements/new-message/MessageActions.svelte';
 	import MessageAction from '$lib/components/ai-elements/new-message/MessageAction.svelte';
+	import { ChainOfThought, ChainOfThoughtStep } from '$lib/components/ai-elements/chain-of-thought';
+	import { ThinkingBar } from '$lib/components/ai-elements/thinking-bar';
 	import InlineTool from './InlineTool.svelte';
 	import { Copy, RotateCcw } from 'lucide-svelte';
 	import type { ChatMessage } from '$lib/models';
+	import { buildAssistantBlocks } from '$lib/utils/assistantBlocks';
 	import { chatStore } from '$lib/stores';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import portrait from '$lib/assets/portrait.png';
@@ -20,7 +23,7 @@
 	let { message, onRetry }: Props = $props();
 
 	function handleCopy() {
-		navigator.clipboard.writeText(message.content);
+		navigator.clipboard.writeText(answerText);
 	}
 
 	function handleRetry() {
@@ -30,9 +33,22 @@
 		}
 	}
 
-	let visibleParts = $derived(message.parts ?? []);
-	let fallbackToolCalls = $derived(message.toolCalls ?? []);
-	let hasInlineParts = $derived(visibleParts.length > 0);
+	let blocks = $derived(buildAssistantBlocks(message));
+	// The answer prose only (excludes per-step narration headers).
+	let answerText = $derived(
+		blocks
+			.filter((block) => block.kind === 'text')
+			.map((block) => block.text)
+			.join('\n\n')
+	);
+	let lastTextBlockId = $derived.by(() => {
+		for (let i = blocks.length - 1; i >= 0; i--) {
+			if (blocks[i].kind === 'text') return blocks[i].id;
+		}
+		return null;
+	});
+	// Before the first token/tool arrives, show a lightweight "thinking" status.
+	let showInitialThinking = $derived(!!message.isStreaming && blocks.length === 0);
 </script>
 
 <Message from="assistant" class="max-w-none text-base">
@@ -43,35 +59,46 @@
 		</Avatar.Root>
 
 		<div class="flex-1 min-w-0">
-			{#if hasInlineParts}
-				<div class="flex min-w-0 flex-col gap-4">
-					{#each visibleParts as part, index (part.id)}
-						{#if part.kind === 'text' && part.text.trim()}
-							<MessageContent class={index > 0 ? 'mt-1' : ''}>
-								<MessageResponse
-									content={part.text}
-									isStreaming={!!message.isStreaming && index === visibleParts.length - 1}
-									sources={index === visibleParts.length - 1 ? message.sources : undefined}
-								/>
-							</MessageContent>
-						{:else if part.kind === 'tool'}
-							<div class="max-w-2xl">
-								<InlineTool tool={part.tool} />
-							</div>
-						{/if}
-					{/each}
-				</div>
-			{:else if message.content}
-				<MessageContent>
-					<MessageResponse content={message.content} isStreaming={!!message.isStreaming} sources={message.sources} />
-				</MessageContent>
-			{:else if fallbackToolCalls.length}
-				<div class="min-w-0 max-w-2xl space-y-2">
-					{#each fallbackToolCalls as tool (tool.callId ?? tool.toolName + tool.timestamp)}
-						<InlineTool {tool} />
-					{/each}
-				</div>
-			{/if}
+			<div class="flex min-w-0 flex-col gap-4">
+				{#if showInitialThinking}
+					<ThinkingBar text="Thinking" />
+				{/if}
+
+				{#each blocks as block (block.id)}
+					{#if block.kind === 'step'}
+						<ChainOfThought>
+							<ChainOfThoughtStep
+								summary={block.summary}
+								status={block.status}
+								durationLabel={block.durationLabel}
+							>
+								{#if block.reasoning || block.tools.length}
+									<div class="flex min-w-0 flex-col gap-2">
+										{#if block.reasoning}
+											<div
+												class="min-w-0 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]"
+											>
+												{block.reasoning}
+											</div>
+										{/if}
+										{#each block.tools as tool (tool.callId ?? tool.toolName + tool.timestamp)}
+											<InlineTool {tool} />
+										{/each}
+									</div>
+								{/if}
+							</ChainOfThoughtStep>
+						</ChainOfThought>
+					{:else}
+						<MessageContent>
+							<MessageResponse
+								content={block.text}
+								isStreaming={!!message.isStreaming && block.id === lastTextBlockId}
+								sources={block.id === lastTextBlockId ? message.sources : undefined}
+							/>
+						</MessageContent>
+					{/if}
+				{/each}
+			</div>
 
 			{#if message.error}
 				<div class="rounded-md bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive">
@@ -83,7 +110,7 @@
 			{#if !message.isStreaming}
 				<MessageToolbar class="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
 					<MessageActions>
-						{#if message.content}
+						{#if answerText}
 							<MessageAction tooltip="Copy message" onclick={handleCopy}>
 								<Copy class="size-4" />
 							</MessageAction>

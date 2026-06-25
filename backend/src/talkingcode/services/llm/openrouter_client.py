@@ -16,8 +16,9 @@ logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 class ChatStreamDelta:
     """Normalized streamed chat delta."""
 
-    kind: Literal["content", "tool_call"]
+    kind: Literal["content", "reasoning", "tool_call"]
     content: str = ""
+    reasoning: str = ""
     index: int | None = None
     call_id: str | None = None
     tool_name: str | None = None
@@ -158,6 +159,9 @@ class OpenRouterClient:
                     messages=cast(Any, messages),
                     tools=cast(Any, tools),
                     stream=True,
+                    # Request reasoning tokens. OpenRouter ignores this for models
+                    # that do not support it, so it degrades gracefully.
+                    reasoning=cast(Any, {"effort": "low"}),
                 )
                 async with stream:
                     async for chunk in stream:
@@ -278,6 +282,10 @@ def _extract_stream_deltas(chunk: Any) -> list[ChatStreamDelta]:
         content = getattr(delta, "content", "")
         if isinstance(content, str) and content:
             output.append(ChatStreamDelta(kind="content", content=content))
+
+        reasoning = getattr(delta, "reasoning", "")
+        if isinstance(reasoning, str) and reasoning:
+            output.append(ChatStreamDelta(kind="reasoning", reasoning=reasoning))
 
         raw_tool_calls = getattr(delta, "tool_calls", None) or []
         for raw_call in raw_tool_calls:

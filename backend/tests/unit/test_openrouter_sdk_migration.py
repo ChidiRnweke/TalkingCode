@@ -205,6 +205,82 @@ async def test_agent_loop_streams_text_tool_text_in_order() -> None:
 
 
 @pytest.mark.asyncio
+async def test_agent_loop_emits_reasoning_and_step_summary() -> None:
+    """A tool step emits reasoning deltas and a single narration-derived summary."""
+
+    class _StubOpenRouterClient:
+        async def send_chat(self, *, model: str, messages: list[dict], response_format: dict | None = None) -> str:
+            return ""
+
+        async def send_chat_with_tools(self, *, model: str, messages: list[dict], tools: list[dict]) -> dict:
+            return {"content": "", "tool_calls": []}
+
+        async def stream_chat_with_tools(self, *, model: str, messages: list[dict], tools: list[dict]):
+            tool_observation_present = any(msg.get("role") == "tool" for msg in messages)
+            if not tool_observation_present:
+                yield ChatStreamDelta(kind="reasoning", reasoning="Let me think. ")
+                yield ChatStreamDelta(kind="content", content="Searching the repo.")
+                yield ChatStreamDelta(
+                    kind="tool_call",
+                    index=0,
+                    call_id="call_1",
+                    tool_name="search_github",
+                )
+                yield ChatStreamDelta(kind="tool_call", index=0, arguments_delta='{"query":"hello"}')
+                return
+            yield ChatStreamDelta(kind="content", content="Grounded answer.")
+
+        async def stream_chat(self, *, model: str, messages: list[dict]):
+            yield ""
+
+        async def generate_embeddings(self, *, model: str, texts: list[str], dimensions: int | None):
+            return []
+
+    service = AgentLoopService(
+        openrouter_client=_StubOpenRouterClient(),
+        tool_registry=_StubToolRegistry(),
+        timeline_repository=_StubTimelineRepo(),
+        default_model="anthropic/claude-3.5-sonnet",
+    )
+    input_data = AgentTurnInput(
+        turn_id=uuid4(),
+        conversation_id=None,
+        question="Summarize retrieval",
+        selected_model=None,
+    )
+
+    events = [event async for event in service.run_turn(input_data)]
+    kinds = [event.kind for event in events]
+
+    assert WhiteboxEventKind.REASONING_DELTA in kinds
+    reasoning_text = "".join(
+        event.message for event in events if event.kind == WhiteboxEventKind.REASONING_DELTA
+    )
+    assert reasoning_text == "Let me think. "
+
+    summaries = [event for event in events if event.kind == WhiteboxEventKind.STEP_SUMMARY]
+    assert len(summaries) == 1
+    assert summaries[0].message == "Searching the repo."
+    assert summaries[0].iteration == 1
+
+    # The summary heads its tool execution.
+    assert kinds.index(WhiteboxEventKind.STEP_SUMMARY) < kinds.index(
+        WhiteboxEventKind.TOOL_CALL_STARTED
+    )
+
+
+def test_derive_step_summary_prefers_narration_then_tool_label() -> None:
+    """Summary uses the model's narration line, falling back to a tool-derived label."""
+    assert AgentLoopService._derive_step_summary("First line.\nrest", []) == "First line."
+
+    label = AgentLoopService._derive_step_summary(
+        "", [{"name": "search_github", "arguments": {"query": "chat loop"}}]
+    )
+    assert "Searching the repositories for" in label
+    assert "chat loop" in label
+
+
+@pytest.mark.asyncio
 async def test_embedder_uses_openrouter_embeddings_client() -> None:
     """Embedder delegates to OpenRouter client generate_embeddings."""
     client = AsyncMock()

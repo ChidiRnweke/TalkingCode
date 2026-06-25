@@ -25,6 +25,20 @@ const messageDeltaSchema = baseSchema
 	})
 	.strict();
 
+const reasoningDeltaSchema = baseSchema
+	.extend({
+		message: z.string(),
+		iteration: z.number().int().positive().optional()
+	})
+	.strict();
+
+const stepSummarySchema = baseSchema
+	.extend({
+		message: z.string(),
+		iteration: z.number().int().positive().optional()
+	})
+	.strict();
+
 const toolCallStartedSchema = baseSchema
 	.extend({
 		message: z.string().optional(),
@@ -133,6 +147,28 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 				turnId: result.data.turn_id,
 				iteration: result.data.iteration,
 				token: result.data.message,
+				timestamp: result.data.timestamp
+			};
+		}
+		case 'reasoning.delta': {
+			const result = reasoningDeltaSchema.safeParse(parsed);
+			if (!result.success) return null;
+			return {
+				kind: 'reasoning.delta',
+				turnId: result.data.turn_id,
+				iteration: result.data.iteration,
+				text: result.data.message,
+				timestamp: result.data.timestamp
+			};
+		}
+		case 'step.summary': {
+			const result = stepSummarySchema.safeParse(parsed);
+			if (!result.success) return null;
+			return {
+				kind: 'step.summary',
+				turnId: result.data.turn_id,
+				iteration: result.data.iteration,
+				summary: result.data.message,
 				timestamp: result.data.timestamp
 			};
 		}
