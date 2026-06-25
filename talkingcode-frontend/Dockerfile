@@ -12,8 +12,11 @@ FROM base AS deps
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy package files and pnpm build-script approvals
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy Svelte config so the prepare script can sync during install
+COPY svelte.config.js ./
 
 # Install dependencies
 RUN --mount=type=cache,target=/pnpm/store \
