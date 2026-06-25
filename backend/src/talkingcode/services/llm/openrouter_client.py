@@ -2,7 +2,7 @@
 
 import json
 from dataclasses import dataclass
-from typing import Any, AsyncGenerator, Protocol, cast
+from typing import Any, AsyncGenerator, Literal, Protocol, cast
 
 from openrouter import OpenRouter
 import structlog
@@ -10,6 +10,18 @@ import structlog
 from talkingcode.errors import InfraError
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+
+
+@dataclass(slots=True, frozen=True)
+class ChatStreamDelta:
+    """Normalized streamed chat delta."""
+
+    kind: Literal["content", "tool_call"]
+    content: str = ""
+    index: int | None = None
+    call_id: str | None = None
+    tool_name: str | None = None
+    arguments_delta: str = ""
 
 
 class IOpenRouterClient(Protocol):
@@ -32,6 +44,16 @@ class IOpenRouterClient(Protocol):
         messages: list[dict[str, Any]],
     ) -> AsyncGenerator[str, None]:
         """Stream chat completion delta content chunks."""
+        ...
+
+    def stream_chat_with_tools(
+        self,
+        *,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+    ) -> AsyncGenerator[ChatStreamDelta, None]:
+        """Stream chat completion deltas, including tool call deltas."""
         ...
 
     async def generate_embeddings(
@@ -115,6 +137,36 @@ class OpenRouterClient:
                             yield token
         except Exception as exc:  # noqa: BLE001
             raise InfraError(f"OpenRouter streaming request failed: {exc}") from exc
+
+    async def stream_chat_with_tools(
+        self,
+        *,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+    ) -> AsyncGenerator[ChatStreamDelta, None]:
+        """Stream chat completion token and tool call deltas."""
+        try:
+            async with OpenRouter(
+                api_key=self.api_key,
+                http_referer=self.http_referer,
+                x_title=self.x_title,
+                timeout_ms=self.timeout_ms,
+            ) as client:
+                stream = await client.chat.send_async(
+                    model=model,
+                    messages=cast(Any, messages),
+                    tools=cast(Any, tools),
+                    stream=True,
+                )
+                async with stream:
+                    async for chunk in stream:
+                        for delta in _extract_stream_deltas(chunk):
+                            yield delta
+        except Exception as exc:  # noqa: BLE001
+            raise InfraError(
+                f"OpenRouter tool streaming request failed: {exc}"
+            ) from exc
 
     async def generate_embeddings(
         self,
@@ -210,6 +262,45 @@ def _extract_delta_content(chunk: Any) -> str:
 
     content = getattr(delta, "content", "")
     return content if isinstance(content, str) else ""
+
+
+def _extract_stream_deltas(chunk: Any) -> list[ChatStreamDelta]:
+    choices = getattr(chunk, "choices", [])
+    if not choices:
+        return []
+
+    output: list[ChatStreamDelta] = []
+    for choice in choices:
+        delta = getattr(choice, "delta", None)
+        if delta is None:
+            continue
+
+        content = getattr(delta, "content", "")
+        if isinstance(content, str) and content:
+            output.append(ChatStreamDelta(kind="content", content=content))
+
+        raw_tool_calls = getattr(delta, "tool_calls", None) or []
+        for raw_call in raw_tool_calls:
+            raw_index = getattr(raw_call, "index", None)
+            index = int(raw_index) if isinstance(raw_index, (int, float)) else None
+            function = getattr(raw_call, "function", None)
+            tool_name = getattr(function, "name", None) if function else None
+            arguments_delta = (
+                getattr(function, "arguments", "") if function else ""
+            )
+            output.append(
+                ChatStreamDelta(
+                    kind="tool_call",
+                    index=index,
+                    call_id=getattr(raw_call, "id", None),
+                    tool_name=tool_name if isinstance(tool_name, str) else None,
+                    arguments_delta=arguments_delta
+                    if isinstance(arguments_delta, str)
+                    else "",
+                )
+            )
+
+    return output
 
 
 def _extract_tool_calls(response: Any) -> list[dict[str, Any]]:

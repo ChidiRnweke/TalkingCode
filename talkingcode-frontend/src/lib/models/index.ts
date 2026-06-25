@@ -52,74 +52,77 @@ export interface ToolCallTimelineItem {
 }
 
 export interface AgentErrorEvent {
-	kind: 'agent_error';
+	kind: 'turn.error';
 	turnId: string;
 	message: string;
 	code?: string | null;
 	timestamp: string;
 }
 
+export interface TurnStartedEvent {
+	kind: 'turn.started';
+	turnId: string;
+	model?: string;
+	timestamp: string;
+}
+
 export interface ToolCallStartedEvent {
-	kind: 'tool_call_started';
+	kind: 'tool_call.started';
 	turnId: string;
 	toolName: string;
 	callId?: string;
 	iteration?: number;
+	index?: number;
 	visibleArgs: Record<string, unknown>;
 	timestamp: string;
 }
 
+export interface ToolCallDeltaEvent {
+	kind: 'tool_call.delta';
+	turnId: string;
+	toolName?: string;
+	callId?: string;
+	iteration?: number;
+	index?: number;
+	phase?: string;
+	timestamp: string;
+}
+
 export interface ToolCallFinishedEvent {
-	kind: 'tool_call_finished';
+	kind: 'tool_call.completed';
 	turnId: string;
 	toolName: string;
 	callId?: string;
 	iteration?: number;
+	index?: number;
 	success: boolean;
 	durationMs: number;
 	errorCode?: string;
 	timestamp: string;
 }
 
-export interface IterationStartedEvent {
-	kind: 'iteration_started';
+export interface ToolResultAvailableEvent {
+	kind: 'tool_result.available';
 	turnId: string;
-	iteration: number;
-	timestamp: string;
-}
-
-export interface PlanChunkEvent {
-	kind: 'plan_chunk';
-	turnId: string;
-	iteration: number;
-	chunk: string;
-	timestamp: string;
-}
-
-export interface PlanDoneEvent {
-	kind: 'plan_done';
-	turnId: string;
-	iteration: number;
-	planText: string;
-	timestamp: string;
-}
-
-export interface AnswerPhaseStartedEvent {
-	kind: 'answer_phase_started';
-	turnId: string;
+	toolName: string;
+	callId?: string;
 	iteration?: number;
+	index?: number;
+	success: boolean;
+	errorCode?: string;
 	timestamp: string;
 }
 
 export interface AssistantTokenEvent {
-	kind: 'assistant_token';
+	kind: 'message.delta';
 	turnId: string;
 	token: string;
+	iteration?: number;
 	timestamp: string;
 }
 
 export interface AssistantDoneEvent {
-	kind: 'assistant_done';
+	kind: 'turn.done';
 	turnId: string;
 	sources?: Array<{
 		index: number;
@@ -133,12 +136,11 @@ export interface AssistantDoneEvent {
 }
 
 export type AgentStreamEvent =
-	| IterationStartedEvent
-	| PlanChunkEvent
-	| PlanDoneEvent
-	| AnswerPhaseStartedEvent
+	| TurnStartedEvent
 	| ToolCallStartedEvent
+	| ToolCallDeltaEvent
 	| ToolCallFinishedEvent
+	| ToolResultAvailableEvent
 	| AssistantTokenEvent
 	| AssistantDoneEvent
 	| AgentErrorEvent;
@@ -161,12 +163,28 @@ export interface ToolReasoningStep {
 export interface PhaseReasoningStep {
 	id: string;
 	kind: 'phase';
-	phase: 'answer_started';
+	phase: 'tool_streamed' | 'tool_result';
 	iteration?: number;
 	timestamp: string;
 }
 
 export type ReasoningStep = PlanReasoningStep | ToolReasoningStep | PhaseReasoningStep;
+
+export interface AssistantTextPart {
+	id: string;
+	kind: 'text';
+	text: string;
+	timestamp: string;
+}
+
+export interface AssistantToolPart {
+	id: string;
+	kind: 'tool';
+	tool: ToolCallTimelineItem;
+	timestamp: string;
+}
+
+export type AssistantPart = AssistantTextPart | AssistantToolPart;
 
 export interface ChatMessage {
 	id: string;
@@ -177,6 +195,7 @@ export interface ChatMessage {
 	planText?: string;
 	toolCalls?: ToolCallTimelineItem[];
 	reasoningSteps?: ReasoningStep[];
+	parts?: AssistantPart[];
 	isStreaming?: boolean;
 	thoughtDurationS?: number;
 	sources?: AssistantDoneEvent['sources'];

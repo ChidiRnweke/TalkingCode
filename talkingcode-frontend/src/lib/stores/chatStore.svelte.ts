@@ -3,7 +3,8 @@ import type {
 	AgentStreamEvent,
 	ToolCallTimelineItem,
 	ChatMessage,
-	ReasoningStep
+	ReasoningStep,
+	AssistantPart
 } from '$lib/models';
 
 type TurnPhase = 'idle' | 'planning' | 'tools' | 'streaming' | 'done' | 'error';
@@ -11,7 +12,6 @@ type TurnPhase = 'idle' | 'planning' | 'tools' | 'streaming' | 'done' | 'error';
 function createChatStore() {
 	let messages = $state<ChatMessage[]>([]);
 	let activeMessageId = $state<string | null>(null);
-	let detailPanelMessageId = $state<string | null>(null);
 	let selectedModel = $state<string | null>(null);
 	let currentTurnStartTime = $state<number | null>(null);
 
@@ -19,26 +19,60 @@ function createChatStore() {
 		return crypto.randomUUID();
 	}
 
-	function planStepId(iteration: number): string {
-		return `plan-${iteration}`;
-	}
-
 	function toolStepId(callId: string | undefined, toolName: string, timestamp: string): string {
 		return callId ? `tool-${callId}` : `tool-${toolName}-${timestamp}`;
 	}
 
-	function appendPlanText(existing: string | undefined, iteration: number, planText: string): string {
-		const trimmed = planText.trim();
-		if (!trimmed) {
-			return existing ?? '';
+	function textPartId(timestamp: string, count: number): string {
+		return `text-${timestamp}-${count}`;
+	}
+
+	function appendTextPart(parts: AssistantPart[] | undefined, token: string, timestamp: string): AssistantPart[] {
+		const next = [...(parts ?? [])];
+		const last = next.at(-1);
+
+		if (last?.kind === 'text') {
+			next[next.length - 1] = {
+				...last,
+				text: last.text + token,
+				timestamp
+			};
+			return next;
 		}
 
-		const block = `Plan ${iteration}\n${trimmed}`;
-		if (!existing || !existing.trim()) {
-			return block;
+		next.push({
+			id: textPartId(timestamp, next.length),
+			kind: 'text',
+			text: token,
+			timestamp
+		});
+		return next;
+	}
+
+	function updateToolPart(
+		parts: AssistantPart[] | undefined,
+		callId: string | undefined,
+		toolName: string,
+		update: Partial<ToolCallTimelineItem>,
+		timestamp: string
+	): AssistantPart[] {
+		const next = [...(parts ?? [])];
+		const index = next.findLastIndex((part) => {
+			if (part.kind !== 'tool') return false;
+			if (callId && part.tool.callId) return part.tool.callId === callId;
+			return part.tool.toolName === toolName && part.tool.status === 'started';
+		});
+
+		if (index >= 0 && next[index].kind === 'tool') {
+			const part = next[index];
+			next[index] = {
+				...part,
+				tool: { ...part.tool, ...update },
+				timestamp
+			};
 		}
 
-		return `${existing.trimEnd()}\n\n${block}`;
+		return next;
 	}
 
 	return {
@@ -48,19 +82,12 @@ function createChatStore() {
 		get activeMessageId() {
 			return activeMessageId;
 		},
-		get detailPanelMessageId() {
-			return detailPanelMessageId;
-		},
 		get selectedModel() {
 			return selectedModel;
 		},
 		get activeMessage(): ChatMessage | null {
 			if (!activeMessageId) return null;
 			return messages.find((m) => m.id === activeMessageId) ?? null;
-		},
-		get detailMessage(): ChatMessage | null {
-			if (!detailPanelMessageId) return null;
-			return messages.find((m) => m.id === detailPanelMessageId) ?? null;
 		},
 		get isStreaming(): boolean {
 			return messages.some((m) => m.role === 'assistant' && m.isStreaming);
@@ -124,77 +151,21 @@ function createChatStore() {
 			const current = messages[idx];
 
 			switch (event.kind) {
-				case 'iteration_started':
+				case 'turn.started':
 					messages[idx] = {
 						...current,
-						planText: current.planText ?? '',
 						reasoningSteps: current.reasoningSteps ?? []
 					};
 					break;
 
-				case 'plan_chunk': {
-					const reasoningSteps = [...(current.reasoningSteps ?? [])];
-					const stepId = planStepId(event.iteration);
-					const existingIndex = reasoningSteps.findIndex((step) => step.id === stepId && step.kind === 'plan');
-
-					if (existingIndex >= 0 && reasoningSteps[existingIndex].kind === 'plan') {
-						const existing = reasoningSteps[existingIndex];
-						reasoningSteps[existingIndex] = {
-							...existing,
-							text: existing.text + event.chunk,
-							timestamp: event.timestamp
-						};
-					} else {
-						reasoningSteps.push({
-							id: stepId,
-							kind: 'plan',
-							iteration: event.iteration,
-							text: event.chunk,
-							timestamp: event.timestamp
-						});
-					}
-
+				case 'tool_call.delta':
 					messages[idx] = {
 						...current,
-						reasoningSteps
+						reasoningSteps: current.reasoningSteps ?? []
 					};
 					break;
-				}
 
-				case 'plan_done': {
-					if (event.planText) {
-						const reasoningSteps = [...(current.reasoningSteps ?? [])];
-						const stepId = planStepId(event.iteration);
-						const existingIndex = reasoningSteps.findIndex((step) => step.id === stepId && step.kind === 'plan');
-
-						if (existingIndex >= 0) {
-							reasoningSteps[existingIndex] = {
-								id: stepId,
-								kind: 'plan',
-								iteration: event.iteration,
-								text: event.planText,
-								timestamp: event.timestamp
-							};
-						} else {
-							reasoningSteps.push({
-								id: stepId,
-								kind: 'plan',
-								iteration: event.iteration,
-								text: event.planText,
-								timestamp: event.timestamp
-							});
-						}
-
-						messages[idx] = {
-							...current,
-							planText: appendPlanText(current.planText, event.iteration, event.planText),
-							reasoningSteps
-						};
-					}
-					break;
-				}
-
-				case 'tool_call_started': {
+				case 'tool_call.started': {
 					const newToolCall: ToolCallTimelineItem = {
 						turnId: event.turnId,
 						toolName: event.toolName,
@@ -214,16 +185,26 @@ function createChatStore() {
 							timestamp: event.timestamp
 						}
 					];
+					const parts: AssistantPart[] = [
+						...(current.parts ?? []),
+						{
+							id: toolStepId(event.callId, event.toolName, event.timestamp),
+							kind: 'tool',
+							tool: newToolCall,
+							timestamp: event.timestamp
+						}
+					];
 
 					messages[idx] = {
 						...current,
 						toolCalls: [...(current.toolCalls ?? []), newToolCall],
-						reasoningSteps
+						reasoningSteps,
+						parts
 					};
 					break;
 				}
 
-				case 'tool_call_finished': {
+				case 'tool_call.completed': {
 					const toolCalls = current.toolCalls ?? [];
 					const idxToUpdate = toolCalls.findLastIndex((t) => {
 						if (event.callId && t.callId) {
@@ -268,31 +249,31 @@ function createChatStore() {
 							};
 						}
 
-						messages[idx] = { ...current, toolCalls: newToolCalls, reasoningSteps };
+						const parts = updateToolPart(
+							current.parts,
+							event.callId,
+							event.toolName,
+							{
+								status: event.success ? 'finished' : 'failed',
+								durationMs: event.durationMs,
+								errorCode: event.errorCode
+							},
+							event.timestamp
+						);
+
+						messages[idx] = { ...current, toolCalls: newToolCalls, reasoningSteps, parts };
 					}
 					break;
 				}
 
-				case 'answer_phase_started':
-					messages[idx] = {
-						...current,
-						reasoningSteps: [
-							...(current.reasoningSteps ?? []),
-							{
-								id: `phase-answer-${event.timestamp}`,
-								kind: 'phase',
-								phase: 'answer_started',
-								iteration: event.iteration,
-								timestamp: event.timestamp
-							}
-						]
-					};
+				case 'tool_result.available':
 					break;
 
-				case 'assistant_token': {
+				case 'message.delta': {
 					const update: Partial<ChatMessage> = {
 						content: current.content + event.token,
-						isStreaming: true
+						isStreaming: true,
+						parts: appendTextPart(current.parts, event.token, event.timestamp)
 					};
 
 					if (!current.content && currentTurnStartTime) {
@@ -304,7 +285,7 @@ function createChatStore() {
 					break;
 				}
 
-				case 'assistant_done': {
+				case 'turn.done': {
 					const update: Partial<ChatMessage> = {
 						isStreaming: false,
 						sources: event.sources
@@ -319,7 +300,7 @@ function createChatStore() {
 					break;
 				}
 
-				case 'agent_error':
+				case 'turn.error':
 					messages[idx] = {
 						...current,
 						isStreaming: false,
@@ -330,17 +311,9 @@ function createChatStore() {
 			}
 		},
 
-		openDetailPanel(messageId: string) {
-			detailPanelMessageId = messageId;
-		},
-
-		closeDetailPanel() {
-			detailPanelMessageId = null;
-		},
-
-		setSelectedModel(model: string) {
-			selectedModel = model;
-		},
+			setSelectedModel(model: string) {
+				selectedModel = model;
+			},
 
 		initializeSelectedModel(defaultModel: string | null) {
 			if (!selectedModel && defaultModel) {
@@ -369,13 +342,12 @@ function createChatStore() {
 			return userMsgContent;
 		},
 
-		clear() {
-			messages = [];
-			activeMessageId = null;
-			detailPanelMessageId = null;
-			selectedModel = null;
-			currentTurnStartTime = null;
-		}
+			clear() {
+				messages = [];
+				activeMessageId = null;
+				selectedModel = null;
+				currentTurnStartTime = null;
+			}
 	};
 }
 

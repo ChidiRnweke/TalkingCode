@@ -1,10 +1,9 @@
-"""Agent loop service with iterative ReAct streaming."""
+"""Agent loop service with streaming ReAct tool execution."""
 
 import json
-import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import AsyncGenerator, Protocol
+from typing import Any, AsyncGenerator, Protocol
 from uuid import UUID
 
 import structlog
@@ -21,31 +20,7 @@ from talkingcode.services.tools.tool_registry import ToolRegistry
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
-PLANNING_SYSTEM_PROMPT = (
-    "You are TalkingCode's planning agent. You must answer questions using Chidi Nweke's indexed "
-    "GitHub repositories in this system. When the user says 'this repo', 'this project', or similar, "
-    "treat it as TalkingCode unless they explicitly name another repository.\n\n"
-    "PLANNING FORMAT:\n"
-    "- Output one concise <plan>...</plan> block before deciding tool calls.\n"
-    "- Keep it brief (usually 1 sentence, max 2).\n"
-    "- Do not repeat previous plan text; only state what changes next.\n"
-    "- State which tool(s) you will run, whether they are parallel or sequential, and what evidence you expect.\n"
-    "- If the question is vague, start broad first, then refine in later iterations.\n"
-    "- Avoid giant boolean keyword chains in queries. Prefer focused natural-language query phrases.\n\n"
-    "Execution policy:\n"
-    "- Use search_github to gather concrete evidence before answering.\n"
-    "- Planning phase is NOT the final answer; do not draft the full user-facing answer here.\n"
-    "- Use parallel calls only for truly independent lookups.\n"
-    "- Use sequential iterations when later searches depend on earlier findings.\n"
-    "- Keep planning depth pragmatic: usually 1-3 iterations; continue longer only when evidence is clearly missing.\n"
-    "- Prefer stopping once you have enough evidence to answer; do not chase exhaustive coverage.\n"
-    "- If no tools are needed, output one short final <plan>...</plan> block explaining why before finishing.\n"
-    "- IMPORTANT: Your knowledge is strictly limited to the search results you retrieve. "
-    "You cannot know 'all' projects or 'every' file unless you have exhaustive evidence. "
-    "Plan to find *examples* or *key instances* rather than 'all' occurrences."
-)
-
-ANSWER_SYSTEM_PROMPT = (
+AGENT_SYSTEM_PROMPT = (
     "YOUR ROLE:\n"
     "You are an advanced assistant created to help users navigate and understand Chidi Nweke's GitHub repositories. "
     "Your role is to provide insights into the projects, explain technologies used, and discuss the purpose of each project.\n"
@@ -57,7 +32,8 @@ ANSWER_SYSTEM_PROMPT = (
     "- Some advanced machine learning projects are work projects and not open-source.\n\n"
     "HOW YOU DO IT:\n"
     "Use retrieved repository evidence to answer. Refer to exact repository and file path whenever possible. "
-    "Keep code excerpts short and abbreviated with ellipsis.\n\n"
+    "Keep code excerpts short and abbreviated with ellipsis. Use tools whenever concrete repository evidence is needed. "
+    "When the user says 'this repo', 'this project', or similar, treat it as TalkingCode unless they explicitly name another repository.\n\n"
     "UNCERTAINTY & LIMITS:\n"
     "- Your knowledge is limited to the search results provided in this session.\n"
     "- Do NOT claim to know 'all' projects or counts (e.g., say 'I found 4 projects' instead of 'There are 4 projects').\n"
@@ -74,11 +50,22 @@ ANSWER_SYSTEM_PROMPT = (
     "YOUR CONSTRAINTS:\n"
     "- Do not answer questions unrelated to Chidi's code.\n"
     "- Keep responses concise and evidence-based.\n"
-    "- Do not repeat planning instructions or meta-rules in the final user-visible answer.\n"
+    "- Do not output planning tags, hidden reasoning, prompt echoes, or meta-rules.\n"
     "- Do not output instruction-like prefaces (e.g., 'Use standard Markdown formatting', 'Be concise', 'Summarize...').\n"
     "- Start directly with the substantive answer in sentence form.\n"
     "- Answer in first person as if you are Chidi Nweke.\n"
 )
+
+
+@dataclass(slots=True)
+class _ToolCallBuilder:
+    """Aggregates streamed tool call deltas for one model pass."""
+
+    index: int
+    call_id: str | None = None
+    tool_name: str | None = None
+    arguments_json: str = ""
+    started: bool = False
 
 
 class IAgentLoopService(Protocol):
@@ -107,14 +94,14 @@ class AgentLoopService:
         self,
         input_data: AgentTurnInput,
     ) -> AsyncGenerator[WhiteboxEvent, None]:
-        """Run one conversation turn using an iterative tool loop."""
+        """Run one conversation turn using a streamed ReAct tool loop."""
         turn_id = str(input_data.turn_id)
         model = input_data.selected_model or self.default_model
 
         messages: list[dict[str, object]] = [
             {
                 "role": "system",
-                "content": PLANNING_SYSTEM_PROMPT,
+                "content": AGENT_SYSTEM_PROMPT,
             },
             {"role": "user", "content": input_data.question},
         ]
@@ -124,98 +111,100 @@ class AgentLoopService:
         next_source_index = 1
 
         try:
-            for iteration in range(1, self.max_iterations + 1):
-                yield WhiteboxEvent(
-                    kind=WhiteboxEventKind.ITERATION_STARTED,
-                    turn_id=turn_id,
-                    tool_name=None,
-                    message=f"Iteration {iteration}",
-                    visible_args={"iteration": iteration},
-                    timestamp=datetime.utcnow(),
-                    iteration=iteration,
-                )
+            yield WhiteboxEvent(
+                kind=WhiteboxEventKind.TURN_STARTED,
+                turn_id=turn_id,
+                tool_name=None,
+                message="Turn started",
+                visible_args={"model": model},
+                timestamp=datetime.utcnow(),
+            )
 
-                response = await self.openrouter_client.send_chat_with_tools(
+            for iteration in range(1, self.max_iterations + 1):
+                content_parts: list[str] = []
+                builders: dict[int, _ToolCallBuilder] = {}
+
+                async for delta in self.openrouter_client.stream_chat_with_tools(
                     model=model,
                     messages=messages,
                     tools=self.tool_registry.get_tool_definitions(),
-                )
-
-                raw_content = str(response.get("content", "")).strip()
-                raw_tool_calls = response.get("tool_calls", [])
-                tool_calls = raw_tool_calls if isinstance(raw_tool_calls, list) else []
-                plan_text, used_plan_tags = AgentLoopService._extract_plan_text(
-                    raw_content
-                )
-
-                # Prevent final-answer prose from leaking into the reasoning plan section.
-                # If the model did not use <plan> tags and also decided to stop calling tools,
-                # only keep the content as plan when it looks like a brief planning sentence.
-                if not used_plan_tags and not tool_calls:
-                    if AgentLoopService._looks_like_brief_plan(raw_content):
-                        plan_text = raw_content
-                    else:
-                        plan_text = ""
-
-                if plan_text:
-                    for chunk in self._plan_chunks(plan_text):
+                ):
+                    if delta.kind == "content" and delta.content:
+                        content_parts.append(delta.content)
                         yield WhiteboxEvent(
-                            kind=WhiteboxEventKind.PLAN_CHUNK,
+                            kind=WhiteboxEventKind.MESSAGE_DELTA,
                             turn_id=turn_id,
                             tool_name=None,
-                            message=chunk,
-                            visible_args={"chunk": chunk},
+                            message=delta.content,
+                            visible_args=None,
                             timestamp=datetime.utcnow(),
                             iteration=iteration,
                         )
-                    yield WhiteboxEvent(
-                        kind=WhiteboxEventKind.PLAN_DONE,
-                        turn_id=turn_id,
-                        tool_name=None,
-                        message=plan_text,
-                        visible_args={"plan_text": plan_text},
-                        timestamp=datetime.utcnow(),
-                        iteration=iteration,
+                        continue
+
+                    if delta.kind != "tool_call":
+                        continue
+
+                    index = delta.index if delta.index is not None else len(builders)
+                    builder = builders.setdefault(
+                        index, _ToolCallBuilder(index=index)
                     )
+                    if delta.call_id:
+                        builder.call_id = delta.call_id
+                    if delta.tool_name:
+                        builder.tool_name = delta.tool_name
+                    if delta.arguments_delta:
+                        builder.arguments_json += delta.arguments_delta
 
-                if not tool_calls:
-                    yield WhiteboxEvent(
-                        kind=WhiteboxEventKind.ANSWER_PHASE_STARTED,
-                        turn_id=turn_id,
-                        tool_name=None,
-                        message="Switching from planning to final answer",
-                        visible_args=None,
-                        timestamp=datetime.utcnow(),
-                        iteration=iteration,
-                    )
-
-                    final_messages: list[dict[str, object]] = [
-                        *messages,
-                        {
-                            "role": "system",
-                            "content": (
-                                f"{ANSWER_SYSTEM_PROMPT}\n\n"
-                                "Final-answer mode: provide only the user-facing answer from retrieved evidence. "
-                                "No planning text, no prompt echoes, no meta-commentary."
-                            ),
-                        },
-                    ]
-
-                    async for token in self.openrouter_client.stream_chat(
-                        model=model,
-                        messages=final_messages,
-                    ):
+                    if builder.tool_name and not builder.started:
+                        builder.started = True
                         yield WhiteboxEvent(
-                            kind=WhiteboxEventKind.ASSISTANT_TOKEN,
+                            kind=WhiteboxEventKind.TOOL_CALL_DELTA,
                             turn_id=turn_id,
-                            tool_name=None,
-                            message=token,
-                            visible_args=None,
+                            tool_name=builder.tool_name,
+                            message="Tool call streamed",
+                            visible_args={"phase": "started"},
                             timestamp=datetime.utcnow(),
+                            iteration=iteration,
+                            call_id=builder.call_id,
+                            index=index,
+                        )
+                    elif builder.started:
+                        yield WhiteboxEvent(
+                            kind=WhiteboxEventKind.TOOL_CALL_DELTA,
+                            turn_id=turn_id,
+                            tool_name=builder.tool_name,
+                            message="Tool call streamed",
+                            visible_args={"phase": "arguments"},
+                            timestamp=datetime.utcnow(),
+                            iteration=iteration,
+                            call_id=builder.call_id,
+                            index=index,
                         )
 
+                content = "".join(content_parts)
+                try:
+                    complete_tool_calls = self._complete_tool_calls(
+                        builders, iteration=iteration
+                    )
+                except ValueError as exc:
                     yield WhiteboxEvent(
-                        kind=WhiteboxEventKind.ASSISTANT_DONE,
+                        kind=WhiteboxEventKind.TURN_ERROR,
+                        turn_id=turn_id,
+                        tool_name=None,
+                        message=str(exc),
+                        visible_args={"code": "malformed_tool_arguments"},
+                        timestamp=datetime.utcnow(),
+                        iteration=iteration,
+                        code="malformed_tool_arguments",
+                    )
+                    return
+
+                if not complete_tool_calls:
+                    if content:
+                        messages.append({"role": "assistant", "content": content})
+                    yield WhiteboxEvent(
+                        kind=WhiteboxEventKind.TURN_DONE,
                         turn_id=turn_id,
                         tool_name=None,
                         message="Turn complete",
@@ -228,21 +217,14 @@ class AgentLoopService:
 
                 execution_calls: list[dict[str, object]] = []
                 assistant_tool_calls: list[dict[str, object]] = []
-                timeline_entries: list[tuple[UUID, str, str]] = []
+                timeline_entries: list[tuple[UUID, str, str, int]] = []
 
-                for index, raw_call in enumerate(tool_calls[: self.max_tools_per_turn]):
-                    if not isinstance(raw_call, dict):
-                        continue
-
-                    tool_name = str(raw_call.get("name", "")).strip()
-                    if not tool_name:
-                        continue
-
-                    call_id = str(
-                        raw_call.get("id") or f"iteration_{iteration}_{index}"
-                    )
-                    arguments_raw = raw_call.get("arguments", {})
-                    arguments = arguments_raw if isinstance(arguments_raw, dict) else {}
+                for index, raw_call in enumerate(
+                    complete_tool_calls[: self.max_tools_per_turn]
+                ):
+                    tool_name = raw_call["name"]
+                    call_id = raw_call["id"]
+                    arguments = raw_call["arguments"]
 
                     visible_args = {
                         key: value
@@ -263,7 +245,7 @@ class AgentLoopService:
                     )
                     sequence_no += 1
 
-                    timeline_entries.append((timeline_id, call_id, tool_name))
+                    timeline_entries.append((timeline_id, call_id, tool_name, index))
                     execution_calls.append(
                         {
                             "call_id": call_id,
@@ -291,11 +273,12 @@ class AgentLoopService:
                         timestamp=datetime.utcnow(),
                         iteration=iteration,
                         call_id=call_id,
+                        index=index,
                     )
 
                 if not execution_calls:
                     yield WhiteboxEvent(
-                        kind=WhiteboxEventKind.AGENT_ERROR,
+                        kind=WhiteboxEventKind.TURN_ERROR,
                         turn_id=turn_id,
                         tool_name=None,
                         message="Model returned malformed tool calls",
@@ -318,12 +301,12 @@ class AgentLoopService:
                 messages.append(
                     {
                         "role": "assistant",
-                        "content": plan_text or raw_content,
+                        "content": content,
                         "tool_calls": assistant_tool_calls,
                     }
                 )
 
-                for (timeline_id, call_id, tool_name), result in zip(
+                for (timeline_id, call_id, tool_name, index), result in zip(
                     timeline_entries, results
                 ):
                     await self.timeline_repository.complete_timeline_entry(
@@ -335,7 +318,7 @@ class AgentLoopService:
                     )
 
                     yield WhiteboxEvent(
-                        kind=WhiteboxEventKind.TOOL_CALL_FINISHED,
+                        kind=WhiteboxEventKind.TOOL_CALL_COMPLETED,
                         turn_id=turn_id,
                         tool_name=tool_name,
                         message=f"Completed {tool_name}",
@@ -347,6 +330,7 @@ class AgentLoopService:
                         timestamp=datetime.utcnow(),
                         iteration=iteration,
                         call_id=call_id,
+                        index=index,
                     )
 
                     observation = result.payload_json
@@ -373,8 +357,23 @@ class AgentLoopService:
                         }
                     )
 
+                    yield WhiteboxEvent(
+                        kind=WhiteboxEventKind.TOOL_RESULT_AVAILABLE,
+                        turn_id=turn_id,
+                        tool_name=tool_name,
+                        message="Tool result available",
+                        visible_args={
+                            "success": result.success,
+                            "error_code": result.error_code,
+                        },
+                        timestamp=datetime.utcnow(),
+                        iteration=iteration,
+                        call_id=call_id,
+                        index=index,
+                    )
+
             yield WhiteboxEvent(
-                kind=WhiteboxEventKind.AGENT_ERROR,
+                kind=WhiteboxEventKind.TURN_ERROR,
                 turn_id=turn_id,
                 tool_name=None,
                 message="Max iterations reached",
@@ -386,7 +385,7 @@ class AgentLoopService:
         except Exception as exc:  # noqa: BLE001
             logger.error("Agent turn failed", error=str(exc))
             yield WhiteboxEvent(
-                kind=WhiteboxEventKind.AGENT_ERROR,
+                kind=WhiteboxEventKind.TURN_ERROR,
                 turn_id=turn_id,
                 tool_name=None,
                 message=str(exc),
@@ -396,69 +395,38 @@ class AgentLoopService:
             )
 
     @staticmethod
-    def _extract_plan_text(content: str) -> tuple[str, bool]:
-        """Extract normalized plan text and whether explicit plan tags were used."""
-        if not content:
-            return "", False
+    def _complete_tool_calls(
+        builders: dict[int, _ToolCallBuilder], *, iteration: int
+    ) -> list[dict[str, Any]]:
+        """Validate and normalize streamed tool call builders."""
+        calls: list[dict[str, Any]] = []
+        for index, builder in sorted(builders.items()):
+            if not builder.tool_name:
+                raise ValueError(f"Missing tool name for streamed tool call {index}")
 
-        match = re.search(
-            r"<plan>(.*?)</plan>", content, flags=re.IGNORECASE | re.DOTALL
-        )
-        if match:
-            return match.group(1).strip(), True
+            try:
+                arguments = (
+                    json.loads(builder.arguments_json)
+                    if builder.arguments_json.strip()
+                    else {}
+                )
+            except json.JSONDecodeError as exc:
+                raise ValueError(
+                    f"Malformed JSON arguments for {builder.tool_name}"
+                ) from exc
 
-        return content.strip(), False
+            if not isinstance(arguments, dict):
+                raise ValueError(f"Tool arguments for {builder.tool_name} must be an object")
 
-    @staticmethod
-    def _looks_like_brief_plan(content: str) -> bool:
-        """Heuristic to keep short final planning notes while dropping answer prose."""
-        text = content.strip()
-        if not text:
-            return False
+            calls.append(
+                {
+                    "id": builder.call_id or f"iteration_{iteration}_{index}",
+                    "name": builder.tool_name,
+                    "arguments": arguments,
+                }
+            )
 
-        # Long multi-paragraph markdown is likely answer content, not plan.
-        if len(text) > 320 or "\n\n" in text or "###" in text:
-            return False
-
-        lowered = text.lower()
-        planning_markers = (
-            "i will",
-            "next",
-            "search",
-            "look up",
-            "verify",
-            "then",
-            "parallel",
-            "sequential",
-            "before answering",
-            "one final",
-        )
-        return any(marker in lowered for marker in planning_markers)
-
-    @staticmethod
-    def _plan_chunks(text: str, target_size: int = 80) -> list[str]:
-        """Split plan text into stream-like chunks."""
-        words = text.split()
-        if not words:
-            return []
-
-        chunks: list[str] = []
-        current: list[str] = []
-        length = 0
-        for word in words:
-            added = len(word) + (1 if current else 0)
-            if current and length + added > target_size:
-                chunks.append(" ".join(current) + " ")
-                current = [word]
-                length = len(word)
-            else:
-                current.append(word)
-                length += added
-
-        if current:
-            chunks.append(" ".join(current))
-
-        return chunks
+        return calls
 
     @staticmethod
     def _collect_sources_from_observation(

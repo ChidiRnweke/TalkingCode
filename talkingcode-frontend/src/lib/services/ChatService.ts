@@ -11,34 +11,17 @@ const baseSchema = z
 	})
 	.strict();
 
-const iterationStartedSchema = baseSchema
+const turnStartedSchema = baseSchema
 	.extend({
-		iteration: z.number().int().positive(),
 		message: z.string().optional(),
-		visible_args: z.record(z.string(), z.unknown()).optional()
+		visible_args: z.object({ model: z.string().optional() }).optional()
 	})
 	.strict();
 
-const planChunkSchema = baseSchema
+const messageDeltaSchema = baseSchema
 	.extend({
-		iteration: z.number().int().positive(),
 		message: z.string(),
-		visible_args: z.object({ chunk: z.string() })
-	})
-	.strict();
-
-const planDoneSchema = baseSchema
-	.extend({
-		iteration: z.number().int().positive(),
-		message: z.string(),
-		visible_args: z.object({ plan_text: z.string() })
-	})
-	.strict();
-
-const answerPhaseStartedSchema = baseSchema
-	.extend({
-		iteration: z.number().int().positive().optional(),
-		message: z.string().optional()
+		iteration: z.number().int().positive().optional()
 	})
 	.strict();
 
@@ -46,9 +29,21 @@ const toolCallStartedSchema = baseSchema
 	.extend({
 		message: z.string().optional(),
 		iteration: z.number().int().positive().optional(),
+		index: z.number().int().nonnegative().optional(),
 		call_id: z.string().min(1).optional(),
 		tool_name: z.string().min(1),
 		visible_args: z.record(z.string(), z.unknown()).optional()
+	})
+	.strict();
+
+const toolCallDeltaSchema = baseSchema
+	.extend({
+		message: z.string().optional(),
+		iteration: z.number().int().positive().optional(),
+		index: z.number().int().nonnegative().optional(),
+		call_id: z.string().min(1).optional(),
+		tool_name: z.string().min(1).optional(),
+		visible_args: z.object({ phase: z.string().optional() }).optional()
 	})
 	.strict();
 
@@ -56,6 +51,7 @@ const toolCallFinishedSchema = baseSchema
 	.extend({
 		message: z.string().optional(),
 		iteration: z.number().int().positive().optional(),
+		index: z.number().int().nonnegative().optional(),
 		call_id: z.string().min(1).optional(),
 		tool_name: z.string().min(1),
 		visible_args: z.object({
@@ -67,7 +63,20 @@ const toolCallFinishedSchema = baseSchema
 	})
 	.strict();
 
-const assistantTokenSchema = baseSchema.extend({ message: z.string() }).strict();
+const toolResultAvailableSchema = baseSchema
+	.extend({
+		message: z.string().optional(),
+		iteration: z.number().int().positive().optional(),
+		index: z.number().int().nonnegative().optional(),
+		call_id: z.string().min(1).optional(),
+		tool_name: z.string().min(1),
+		visible_args: z.object({
+			success: z.boolean(),
+			error_code: z.string().nullish()
+		})
+	})
+	.strict();
+
 const assistantDoneSchema = baseSchema
 	.extend({
 		message: z.string().optional(),
@@ -106,92 +115,91 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 	}
 
 	switch (eventType) {
-		case 'iteration_started': {
-			const result = iterationStartedSchema.safeParse(parsed);
+		case 'turn.started': {
+			const result = turnStartedSchema.safeParse(parsed);
 			if (!result.success) return null;
 			return {
-				kind: 'iteration_started',
+				kind: 'turn.started',
 				turnId: result.data.turn_id,
-				iteration: result.data.iteration,
+				model: result.data.visible_args?.model,
 				timestamp: result.data.timestamp
 			};
 		}
-		case 'plan_chunk': {
-			const result = planChunkSchema.safeParse(parsed);
+		case 'message.delta': {
+			const result = messageDeltaSchema.safeParse(parsed);
 			if (!result.success) return null;
 			return {
-				kind: 'plan_chunk',
+				kind: 'message.delta',
 				turnId: result.data.turn_id,
 				iteration: result.data.iteration,
-				chunk: result.data.visible_args.chunk,
+				token: result.data.message,
 				timestamp: result.data.timestamp
 			};
 		}
-		case 'plan_done': {
-			const result = planDoneSchema.safeParse(parsed);
-			if (!result.success) return null;
-			return {
-				kind: 'plan_done',
-				turnId: result.data.turn_id,
-				iteration: result.data.iteration,
-				planText: result.data.visible_args.plan_text,
-				timestamp: result.data.timestamp
-			};
-		}
-		case 'tool_call_started': {
+		case 'tool_call.started': {
 			const result = toolCallStartedSchema.safeParse(parsed);
 			if (!result.success) return null;
 			return {
-				kind: 'tool_call_started',
+				kind: 'tool_call.started',
 				turnId: result.data.turn_id,
 				toolName: result.data.tool_name,
 				callId: result.data.call_id,
 				iteration: result.data.iteration,
+				index: result.data.index,
 				visibleArgs: result.data.visible_args ?? {},
 				timestamp: result.data.timestamp
 			};
 		}
-		case 'tool_call_finished': {
-			const result = toolCallFinishedSchema.safeParse(parsed);
+		case 'tool_call.delta': {
+			const result = toolCallDeltaSchema.safeParse(parsed);
 			if (!result.success) return null;
 			return {
-				kind: 'tool_call_finished',
+				kind: 'tool_call.delta',
 				turnId: result.data.turn_id,
 				toolName: result.data.tool_name,
 				callId: result.data.call_id,
 				iteration: result.data.iteration,
+				index: result.data.index,
+				phase: result.data.visible_args?.phase,
+				timestamp: result.data.timestamp
+			};
+		}
+		case 'tool_call.completed': {
+			const result = toolCallFinishedSchema.safeParse(parsed);
+			if (!result.success) return null;
+			return {
+				kind: 'tool_call.completed',
+				turnId: result.data.turn_id,
+				toolName: result.data.tool_name,
+				callId: result.data.call_id,
+				iteration: result.data.iteration,
+				index: result.data.index,
 				success: result.data.visible_args.success,
 				durationMs: result.data.visible_args.duration_ms,
 				errorCode: result.data.visible_args.error_code ?? result.data.code ?? undefined,
 				timestamp: result.data.timestamp
 			};
 		}
-		case 'assistant_token': {
-			const result = assistantTokenSchema.safeParse(parsed);
+		case 'tool_result.available': {
+			const result = toolResultAvailableSchema.safeParse(parsed);
 			if (!result.success) return null;
 			return {
-				kind: 'assistant_token',
+				kind: 'tool_result.available',
 				turnId: result.data.turn_id,
-				token: result.data.message,
-				timestamp: result.data.timestamp
-			};
-		}
-		case 'answer_phase_started': {
-			const result = answerPhaseStartedSchema.safeParse(parsed);
-			if (!result.success) return null;
-			return {
-				kind: 'answer_phase_started',
-				turnId: result.data.turn_id,
+				toolName: result.data.tool_name,
+				callId: result.data.call_id,
 				iteration: result.data.iteration,
+				index: result.data.index,
+				success: result.data.visible_args.success,
+				errorCode: result.data.visible_args.error_code ?? undefined,
 				timestamp: result.data.timestamp
 			};
 		}
-
-		case 'assistant_done': {
+		case 'turn.done': {
 			const result = assistantDoneSchema.safeParse(parsed);
 			if (!result.success) return null;
 			return {
-				kind: 'assistant_done',
+				kind: 'turn.done',
 				turnId: result.data.turn_id,
 				sources: (result.data.visible_args?.sources ?? []).map((source) => ({
 					index: source.index,
@@ -204,11 +212,11 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 				timestamp: result.data.timestamp
 			};
 		}
-		case 'agent_error': {
+		case 'turn.error': {
 			const result = agentErrorSchema.safeParse(parsed);
 			if (!result.success) return null;
 			return {
-				kind: 'agent_error',
+				kind: 'turn.error',
 				turnId: result.data.turn_id,
 				message: result.data.message,
 				code: result.data.code || result.data.visible_args?.code || null,

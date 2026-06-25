@@ -12,12 +12,11 @@
 
 	interface Props {
 		messages: ChatMessage[];
-		onOpenDetail?: (id: string) => void;
 		onSuggestionClick?: (suggestion: string) => void;
 		onRetry?: (question: string) => void;
 	}
 
-	let { messages, onOpenDetail, onSuggestionClick, onRetry }: Props = $props();
+	let { messages, onSuggestionClick, onRetry }: Props = $props();
 </script>
 
 <Conversation>
@@ -42,7 +41,7 @@
 					{#if message.role === 'user'}
 						<UserMessage {message} />
 					{:else}
-						<AssistantMessage {message} {onOpenDetail} {onRetry} />
+						<AssistantMessage {message} {onRetry} />
 					{/if}
 				{/each}
 			</div>

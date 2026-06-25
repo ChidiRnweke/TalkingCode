@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChatThread, ChatComposer, TurnDetailPanel, ModelSelector } from '$lib/components/domain';
+	import { ChatThread, ChatComposer, ModelSelector } from '$lib/components/domain';
 	import { chatStore } from '$lib/stores';
 	import { AppFactory } from '$lib/factories/AppFactory';
 	import { onDestroy, onMount } from 'svelte';
@@ -45,7 +45,7 @@
 			}
 
 			chatStore.handleEvent({
-				kind: 'agent_error',
+				kind: 'turn.error',
 				turnId: localTurnId,
 				message: err instanceof Error ? err.message : 'Unexpected error',
 				code: 'stream_error',
@@ -74,9 +74,6 @@
 		chatStore.clear();
 	});
 
-	function handleOpenDetail(messageId: string) {
-		chatStore.openDetailPanel(messageId);
-	}
 </script>
 
 <main class="relative flex flex-1 overflow-hidden">
@@ -89,7 +86,6 @@
 
 		<ChatThread
 			messages={chatStore.messages}
-			onOpenDetail={handleOpenDetail}
 			onSuggestionClick={handleSubmit}
 			onRetry={(question) => handleSubmit(question, true)}
 		/>
@@ -103,9 +99,4 @@
 			defaultModel={data.defaultModel}
 		/>
 	</div>
-
-	<TurnDetailPanel
-		message={chatStore.detailMessage}
-		onClose={() => chatStore.closeDetailPanel()}
-	/>
 </main>

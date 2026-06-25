@@ -40,7 +40,7 @@ class ChatController:
         except Exception as exc:  # noqa: BLE001
             logger.error("Failed to create conversation turn", error=str(exc))
             yield WhiteboxEvent(
-                kind=WhiteboxEventKind.AGENT_ERROR,
+                kind=WhiteboxEventKind.TURN_ERROR,
                 turn_id=str(uuid4()),
                 tool_name=None,
                 message=str(exc),
@@ -59,7 +59,7 @@ class ChatController:
 
         status = TurnStatus.DONE
         async for event in self.agent_service.run_turn(input_data):
-            if event.kind == WhiteboxEventKind.AGENT_ERROR:
+            if event.kind == WhiteboxEventKind.TURN_ERROR:
                 status = TurnStatus.ERROR
             yield event
 

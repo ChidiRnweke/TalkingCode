@@ -78,6 +78,7 @@ class WhiteboxEvent:
     timestamp: datetime
     iteration: int | None = None
     call_id: str | None = None
+    index: int | None = None
     code: str | None = None
 
 

@@ -36,6 +36,9 @@ def _format_sse_event(event: WhiteboxEvent) -> str:
     if event.iteration is not None:
         data["iteration"] = event.iteration
 
+    if event.index is not None:
+        data["index"] = event.index
+
     if event.code:
         data["code"] = event.code
 

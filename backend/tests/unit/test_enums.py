@@ -33,7 +33,11 @@ class TestTurnStatus:
 
 class TestWhiteboxEventKind:
     def test_values(self):
-        assert WhiteboxEventKind.ITERATION_STARTED.value == "iteration_started"
-        assert WhiteboxEventKind.PLAN_DONE.value == "plan_done"
-        assert WhiteboxEventKind.TOOL_CALL_STARTED.value == "tool_call_started"
-        assert WhiteboxEventKind.ASSISTANT_DONE.value == "assistant_done"
+        assert WhiteboxEventKind.TURN_STARTED.value == "turn.started"
+        assert WhiteboxEventKind.MESSAGE_DELTA.value == "message.delta"
+        assert WhiteboxEventKind.TOOL_CALL_STARTED.value == "tool_call.started"
+        assert WhiteboxEventKind.TOOL_CALL_DELTA.value == "tool_call.delta"
+        assert WhiteboxEventKind.TOOL_CALL_COMPLETED.value == "tool_call.completed"
+        assert WhiteboxEventKind.TOOL_RESULT_AVAILABLE.value == "tool_result.available"
+        assert WhiteboxEventKind.TURN_DONE.value == "turn.done"
+        assert WhiteboxEventKind.TURN_ERROR.value == "turn.error"

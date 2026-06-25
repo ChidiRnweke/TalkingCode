@@ -5,22 +5,19 @@
 	import MessageToolbar from '$lib/components/ai-elements/new-message/MessageToolbar.svelte';
 	import MessageActions from '$lib/components/ai-elements/new-message/MessageActions.svelte';
 	import MessageAction from '$lib/components/ai-elements/new-message/MessageAction.svelte';
-	import { Reasoning, ReasoningTrigger } from '$lib/components/ai-elements/reasoning';
-	import ReasoningContent from '$lib/components/ai-elements/reasoning/ReasoningContent.svelte';
 	import InlineTool from './InlineTool.svelte';
 	import { Copy, RotateCcw } from 'lucide-svelte';
-	import type { ChatMessage, ReasoningStep } from '$lib/models';
+	import type { ChatMessage } from '$lib/models';
 	import { chatStore } from '$lib/stores';
 	import * as Avatar from '$lib/components/ui/avatar';
 	import portrait from '$lib/assets/portrait.png';
 
 	interface Props {
 		message: ChatMessage;
-		onOpenDetail?: (id: string) => void;
 		onRetry?: (question: string) => void;
 	}
 
-	let { message, onOpenDetail, onRetry }: Props = $props();
+	let { message, onRetry }: Props = $props();
 
 	function handleCopy() {
 		navigator.clipboard.writeText(message.content);
@@ -33,43 +30,9 @@
 		}
 	}
 
-	const sortedReasoningSteps = $derived.by(() => {
-		const steps = [...(message.reasoningSteps ?? [])];
-		return steps.sort((a, b) => {
-			const timeDiff = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-			if (timeDiff !== 0) return timeDiff;
-			if (a.kind === 'plan' && b.kind === 'tool') return -1;
-			if (a.kind === 'tool' && b.kind === 'plan') return 1;
-			return 0;
-		});
-	});
-
-	function reasoningKey(step: ReasoningStep): string {
-		if (step.kind === 'plan') {
-			return step.id;
-		}
-		if (step.kind === 'tool') {
-			return step.tool.callId ?? step.id;
-		}
-		return step.id;
-	}
-
-	let isThinking = $derived(message.isStreaming && !message.content);
-	let hasContent = $derived(
-		(message.reasoningSteps?.length ?? 0) > 0 || !!message.planText || !!message.toolCalls?.length
-	);
-	let hasThought = $derived(hasContent || !!message.plan || !!message.planText || !!message.toolCalls?.length);
-
-	// Auto-open when content arrives, stay closed until then
-	let reasoningOpen = $state(false);
-	let hasAutoOpened = $state(false);
-
-	$effect(() => {
-		if (hasContent && !hasAutoOpened) {
-			reasoningOpen = true;
-			hasAutoOpened = true;
-		}
-	});
+	let visibleParts = $derived(message.parts ?? []);
+	let fallbackToolCalls = $derived(message.toolCalls ?? []);
+	let hasInlineParts = $derived(visibleParts.length > 0);
 </script>
 
 <Message from="assistant" class="max-w-none text-base">
@@ -80,72 +43,34 @@
 		</Avatar.Root>
 
 		<div class="flex-1 min-w-0">
-			{#if isThinking || hasThought}
-				<Reasoning
-					isStreaming={isThinking}
-					bind:open={reasoningOpen}
-					defaultOpen={false}
-					duration={message.thoughtDurationS}
-					class="mb-2"
-				>
-					<ReasoningTrigger class="cursor-pointer" />
-					<ReasoningContent>
-						{#if sortedReasoningSteps.length > 0}
-						<div class="relative min-w-0 pl-6">
-							<div class="absolute left-2.5 top-2 bottom-2 w-px bg-border/70"></div>
-							<ol class="min-w-0 space-y-3">
-									{#each sortedReasoningSteps as step (reasoningKey(step))}
-									<li class="relative min-w-0">
-										{#if step.kind === 'plan'}
-											<span class="absolute -left-6 top-2.5 size-2.5 rounded-full border border-primary/40 bg-primary/80"></span>
-											<div class="min-w-0 space-y-1 rounded-md border border-border/60 bg-background/50 px-3 py-2">
-												<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-													Plan {step.iteration}
-												</p>
-												<p class="min-w-0 text-sm whitespace-pre-wrap text-foreground/90 [overflow-wrap:anywhere]">{step.text}</p>
-											</div>
-										{:else if step.kind === 'tool'}
-											<span class="absolute -left-6 top-2.5 size-2.5 rounded-full border border-border bg-muted-foreground/70"></span>
-											<div class="min-w-0 rounded-md border border-border/60 bg-background/30 px-3 py-2">
-												<InlineTool tool={step.tool} />
-											</div>
-											{:else if step.phase === 'answer_started'}
-												<span class="absolute -left-6 top-2.5 size-2.5 rounded-full border border-accent/40 bg-accent"></span>
-												<p class="rounded-md border border-border/60 bg-background/40 px-3 py-2 text-xs font-medium italic text-muted-foreground/80">
-													Switching to final answer
-												</p>
-											{/if}
-										</li>
-									{/each}
-								</ol>
-							</div>
-						{:else}
-						{#if message.planText}
-							<div class="min-w-0 space-y-1 rounded-md border border-border/60 bg-background/50 px-3 py-2">
-								<p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Plan</p>
-								<p class="min-w-0 text-sm whitespace-pre-wrap text-foreground/90 [overflow-wrap:anywhere]">{message.planText}</p>
+			{#if hasInlineParts}
+				<div class="flex min-w-0 flex-col gap-4">
+					{#each visibleParts as part, index (part.id)}
+						{#if part.kind === 'text' && part.text.trim()}
+							<MessageContent class={index > 0 ? 'mt-1' : ''}>
+								<MessageResponse
+									content={part.text}
+									isStreaming={!!message.isStreaming && index === visibleParts.length - 1}
+									sources={index === visibleParts.length - 1 ? message.sources : undefined}
+								/>
+							</MessageContent>
+						{:else if part.kind === 'tool'}
+							<div class="max-w-2xl">
+								<InlineTool tool={part.tool} />
 							</div>
 						{/if}
-						{#if message.toolCalls?.length}
-							<div class="min-w-0 space-y-2">
-								{#each message.toolCalls as tool (tool.callId ?? tool.toolName + tool.timestamp)}
-									<InlineTool {tool} />
-								{/each}
-							</div>
-						{/if}
-						{/if}
-					</ReasoningContent>
-				</Reasoning>
-			{/if}
-
-			{#if message.content}
-				<MessageContent class={hasThought ? 'mt-3' : ''}>
-					<MessageResponse
-						content={message.content}
-						isStreaming={!!message.isStreaming}
-						sources={message.sources}
-					/>
+					{/each}
+				</div>
+			{:else if message.content}
+				<MessageContent>
+					<MessageResponse content={message.content} isStreaming={!!message.isStreaming} sources={message.sources} />
 				</MessageContent>
+			{:else if fallbackToolCalls.length}
+				<div class="min-w-0 max-w-2xl space-y-2">
+					{#each fallbackToolCalls as tool (tool.callId ?? tool.toolName + tool.timestamp)}
+						<InlineTool {tool} />
+					{/each}
+				</div>
 			{/if}
 
 			{#if message.error}

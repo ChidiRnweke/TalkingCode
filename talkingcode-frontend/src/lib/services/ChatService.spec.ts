@@ -3,108 +3,121 @@ import { describe, expect, it } from 'vitest';
 import { parseAgentEvent } from './ChatService';
 
 describe('parseAgentEvent', () => {
-	it('parses valid plan_done event', () => {
+	it('parses turn.started event', () => {
 		const event = parseAgentEvent(
-			'plan_done',
+			'turn.started',
 			JSON.stringify({
 				turn_id: 'turn-1',
-				iteration: 1,
 				timestamp: '2026-01-01T00:00:00Z',
-				message: 'done',
-				visible_args: { plan_text: 'Plan text' }
+				message: 'Turn started',
+				visible_args: { model: 'test-model' }
 			})
 		);
 
 		expect(event).toEqual({
-			kind: 'plan_done',
+			kind: 'turn.started',
 			turnId: 'turn-1',
-			iteration: 1,
-			planText: 'Plan text',
+			model: 'test-model',
 			timestamp: '2026-01-01T00:00:00Z'
 		});
 	});
 
-	it('rejects unknown fields on strict schemas', () => {
+	it('parses message.delta event', () => {
 		const event = parseAgentEvent(
-			'assistant_done',
-			JSON.stringify({
-				turn_id: 'turn-1',
-				timestamp: '2026-01-01T00:00:00Z',
-				extra: true
-			})
-		);
-
-		expect(event).toBeNull();
-	});
-
-	it('rejects missing required fields', () => {
-		const event = parseAgentEvent(
-			'tool_call_finished',
-			JSON.stringify({
-				turn_id: 'turn-1',
-				timestamp: '2026-01-01T00:00:00Z',
-				tool_name: 'search_github',
-				visible_args: { success: true }
-			})
-		);
-
-		expect(event).toBeNull();
-	});
-
-	it('rejects unknown event type', () => {
-		const event = parseAgentEvent(
-			'planner_ready',
-			JSON.stringify({ turn_id: 'turn-1', timestamp: '2026-01-01T00:00:00Z' })
-		);
-
-		expect(event).toBeNull();
-	});
-
-	it('rejects invalid json payload', () => {
-		const event = parseAgentEvent('assistant_done', '{not-json');
-		expect(event).toBeNull();
-	});
-
-	it('accepts backend-style iteration_started payload', () => {
-		const event = parseAgentEvent(
-			'iteration_started',
+			'message.delta',
 			JSON.stringify({
 				turn_id: 'turn-1',
 				timestamp: '2026-01-01T00:00:00Z',
 				iteration: 2,
-				message: 'Iteration 2',
-				visible_args: { iteration: 2 }
+				message: 'Hello'
 			})
 		);
 
 		expect(event).toEqual({
-			kind: 'iteration_started',
+			kind: 'message.delta',
 			turnId: 'turn-1',
 			iteration: 2,
+			token: 'Hello',
 			timestamp: '2026-01-01T00:00:00Z'
 		});
 	});
 
-	it('accepts tool_call_finished with null error_code', () => {
+	it('parses streamed tool call delta without raw arguments', () => {
 		const event = parseAgentEvent(
-			'tool_call_finished',
+			'tool_call.delta',
 			JSON.stringify({
 				turn_id: 'turn-1',
 				timestamp: '2026-01-01T00:00:00Z',
 				tool_name: 'search_github',
 				call_id: 'call-1',
 				iteration: 1,
+				index: 0,
+				message: 'Tool call streamed',
+				visible_args: { phase: 'arguments' }
+			})
+		);
+
+		expect(event).toEqual({
+			kind: 'tool_call.delta',
+			turnId: 'turn-1',
+			toolName: 'search_github',
+			callId: 'call-1',
+			iteration: 1,
+			index: 0,
+			phase: 'arguments',
+			timestamp: '2026-01-01T00:00:00Z'
+		});
+	});
+
+	it('parses tool_call.started with sanitized visible args', () => {
+		const event = parseAgentEvent(
+			'tool_call.started',
+			JSON.stringify({
+				turn_id: 'turn-1',
+				timestamp: '2026-01-01T00:00:00Z',
+				tool_name: 'search_github',
+				call_id: 'call-1',
+				iteration: 1,
+				index: 0,
+				message: 'Starting search_github',
+				visible_args: { query: 'auth' }
+			})
+		);
+
+		expect(event).toEqual({
+			kind: 'tool_call.started',
+			turnId: 'turn-1',
+			toolName: 'search_github',
+			callId: 'call-1',
+			iteration: 1,
+			index: 0,
+			visibleArgs: { query: 'auth' },
+			timestamp: '2026-01-01T00:00:00Z'
+		});
+	});
+
+	it('parses tool_call.completed with null error_code', () => {
+		const event = parseAgentEvent(
+			'tool_call.completed',
+			JSON.stringify({
+				turn_id: 'turn-1',
+				timestamp: '2026-01-01T00:00:00Z',
+				tool_name: 'search_github',
+				call_id: 'call-1',
+				iteration: 1,
+				index: 0,
 				message: 'Completed search_github',
 				visible_args: { success: true, duration_ms: 1234, error_code: null }
 			})
 		);
 
 		expect(event).toEqual({
-			kind: 'tool_call_finished',
+			kind: 'tool_call.completed',
 			turnId: 'turn-1',
 			toolName: 'search_github',
 			callId: 'call-1',
 			iteration: 1,
+			index: 0,
 			success: true,
 			durationMs: 1234,
 			errorCode: undefined,
@@ -112,32 +125,37 @@ describe('parseAgentEvent', () => {
 		});
 	});
 
-	it('accepts backend-style tool_call_started without visible_args', () => {
+	it('parses tool_result.available', () => {
 		const event = parseAgentEvent(
-			'tool_call_started',
+			'tool_result.available',
 			JSON.stringify({
 				turn_id: 'turn-1',
 				timestamp: '2026-01-01T00:00:00Z',
 				tool_name: 'search_github',
 				call_id: 'call-1',
-				message: 'Starting search_github'
+				iteration: 1,
+				index: 0,
+				message: 'Tool result available',
+				visible_args: { success: true, error_code: null }
 			})
 		);
 
 		expect(event).toEqual({
-			kind: 'tool_call_started',
+			kind: 'tool_result.available',
 			turnId: 'turn-1',
 			toolName: 'search_github',
 			callId: 'call-1',
-			iteration: undefined,
-			visibleArgs: {},
+			iteration: 1,
+			index: 0,
+			success: true,
+			errorCode: undefined,
 			timestamp: '2026-01-01T00:00:00Z'
 		});
 	});
 
-	it('accepts assistant_done with citation sources', () => {
+	it('parses turn.done with citation sources', () => {
 		const event = parseAgentEvent(
-			'assistant_done',
+			'turn.done',
 			JSON.stringify({
 				turn_id: 'turn-1',
 				timestamp: '2026-01-01T00:00:00Z',
@@ -158,7 +176,7 @@ describe('parseAgentEvent', () => {
 		);
 
 		expect(event).toEqual({
-			kind: 'assistant_done',
+			kind: 'turn.done',
 			turnId: 'turn-1',
 			sources: [
 				{
@@ -172,5 +190,43 @@ describe('parseAgentEvent', () => {
 			],
 			timestamp: '2026-01-01T00:00:00Z'
 		});
+	});
+
+	it('parses turn.error', () => {
+		const event = parseAgentEvent(
+			'turn.error',
+			JSON.stringify({
+				turn_id: 'turn-1',
+				timestamp: '2026-01-01T00:00:00Z',
+				message: 'failed',
+				code: 'agent_error'
+			})
+		);
+
+		expect(event).toEqual({
+			kind: 'turn.error',
+			turnId: 'turn-1',
+			message: 'failed',
+			code: 'agent_error',
+			timestamp: '2026-01-01T00:00:00Z'
+		});
+	});
+
+	it('rejects unknown fields on strict schemas', () => {
+		const event = parseAgentEvent(
+			'turn.done',
+			JSON.stringify({
+				turn_id: 'turn-1',
+				timestamp: '2026-01-01T00:00:00Z',
+				extra: true
+			})
+		);
+
+		expect(event).toBeNull();
+	});
+
+	it('rejects invalid json payload', () => {
+		const event = parseAgentEvent('turn.done', '{not-json');
+		expect(event).toBeNull();
 	});
 });

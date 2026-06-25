@@ -13,33 +13,90 @@ from talkingcode.domain.models import (
 from talkingcode.enums import WhiteboxEventKind
 from talkingcode.services.agent.agent_loop import AgentLoopService
 from talkingcode.services.ingestion.embedder import OpenRouterEmbedder
+from talkingcode.services.llm.openrouter_client import ChatStreamDelta
+
+
+class _StubToolRegistry:
+    def get_tool_definitions(self) -> list[dict]:
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_github",
+                    "description": "retrieve",
+                    "parameters": {"type": "object", "properties": {"query": {"type": "string"}}},
+                },
+            }
+        ]
+
+    async def execute_group(self, input_data: ExecuteToolGroupInput) -> list[ToolExecutionResult]:
+        return [
+            ToolExecutionResult(
+                call_id="call_1",
+                tool_name="search_github",
+                success=True,
+                payload_json='{"items": []}',
+                duration_ms=12,
+            )
+        ]
+
+
+class _StubTimelineRepo:
+    async def create_timeline_entry(
+        self,
+        turn_id,
+        sequence_no: int,
+        group_name: str,
+        tool_name: str,
+        visible_args: dict,
+    ):
+        return uuid4()
+
+    async def complete_timeline_entry(
+        self,
+        entry_id,
+        success: bool,
+        duration_ms: int,
+        error_code: str | None = None,
+        error_message: str | None = None,
+    ) -> None:
+        return None
 
 
 @pytest.mark.asyncio
-async def test_agent_loop_streams_assistant_tokens() -> None:
-    """Agent loop emits incremental assistant token events."""
+async def test_agent_loop_streams_tool_calls_and_message_deltas() -> None:
+    """Agent loop emits streamed tool call and assistant message events."""
 
     class _StubOpenRouterClient:
         async def send_chat(self, *, model: str, messages: list[dict], response_format: dict | None = None) -> str:
             return ""
 
         async def send_chat_with_tools(self, *, model: str, messages: list[dict], tools: list[dict]) -> dict:
+            return {"content": "", "tool_calls": []}
+
+        async def stream_chat_with_tools(self, *, model: str, messages: list[dict], tools: list[dict]):
             tool_observation_present = any(msg.get("role") == "tool" for msg in messages)
             if not tool_observation_present:
-                return {
-                    "content": "Planning retrieval",
-                    "tool_calls": [
-                        {
-                            "id": "call_1",
-                            "name": "search_github",
-                            "arguments": {"query": "hello"},
-                        }
-                    ],
-                }
-            return {
-                "content": "Hello world",
-                "tool_calls": [],
-            }
+                yield ChatStreamDelta(
+                    kind="tool_call",
+                    index=0,
+                    call_id="call_1",
+                    tool_name="search_github",
+                )
+                yield ChatStreamDelta(
+                    kind="tool_call",
+                    index=0,
+                    arguments_delta='{"query":',
+                )
+                yield ChatStreamDelta(
+                    kind="tool_call",
+                    index=0,
+                    arguments_delta='"hello"}',
+                )
+                return
+
+            for token in ["Hello", " world"]:
+                yield ChatStreamDelta(kind="content", content=token)
 
         async def stream_chat(self, *, model: str, messages: list[dict]):
             for token in ["Hello", " world"]:
@@ -47,51 +104,6 @@ async def test_agent_loop_streams_assistant_tokens() -> None:
 
         async def generate_embeddings(self, *, model: str, texts: list[str], dimensions: int | None):
             return []
-
-    class _StubToolRegistry:
-        def get_tool_definitions(self) -> list[dict]:
-            return [
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "search_github",
-                        "description": "retrieve",
-                        "parameters": {"type": "object", "properties": {"query": {"type": "string"}}},
-                    },
-                }
-            ]
-
-        async def execute_group(self, input_data: ExecuteToolGroupInput) -> list[ToolExecutionResult]:
-            return [
-                ToolExecutionResult(
-                    call_id="call_1",
-                    tool_name="search_github",
-                    success=True,
-                    payload_json='{"items": []}',
-                    duration_ms=12,
-                )
-            ]
-
-    class _StubTimelineRepo:
-        async def create_timeline_entry(
-            self,
-            turn_id,
-            sequence_no: int,
-            group_name: str,
-            tool_name: str,
-            visible_args: dict,
-        ):
-            return uuid4()
-
-        async def complete_timeline_entry(
-            self,
-            entry_id,
-            success: bool,
-            duration_ms: int,
-            error_code: str | None = None,
-            error_message: str | None = None,
-        ) -> None:
-            return None
 
     service = AgentLoopService(
         openrouter_client=_StubOpenRouterClient(),
@@ -110,15 +122,86 @@ async def test_agent_loop_streams_assistant_tokens() -> None:
     events = [event async for event in service.run_turn(input_data)]
 
     kinds = [event.kind for event in events]
-    assert WhiteboxEventKind.ITERATION_STARTED in kinds
-    assert WhiteboxEventKind.PLAN_DONE in kinds
+    assert WhiteboxEventKind.TURN_STARTED in kinds
+    assert WhiteboxEventKind.TOOL_CALL_DELTA in kinds
     assert WhiteboxEventKind.TOOL_CALL_STARTED in kinds
-    assert WhiteboxEventKind.TOOL_CALL_FINISHED in kinds
-    assert kinds.count(WhiteboxEventKind.ASSISTANT_TOKEN) >= 1
-    assert kinds[-1] == WhiteboxEventKind.ASSISTANT_DONE
+    assert WhiteboxEventKind.TOOL_CALL_COMPLETED in kinds
+    assert WhiteboxEventKind.TOOL_RESULT_AVAILABLE in kinds
+    assert kinds.count(WhiteboxEventKind.MESSAGE_DELTA) >= 1
+    assert kinds[-1] == WhiteboxEventKind.TURN_DONE
 
-    tokens = [event.message for event in events if event.kind == WhiteboxEventKind.ASSISTANT_TOKEN]
+    tokens = [event.message for event in events if event.kind == WhiteboxEventKind.MESSAGE_DELTA]
     assert "".join(tokens) == "Hello world"
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_streams_text_tool_text_in_order() -> None:
+    """Content streamed around a tool call remains ordered in the event stream."""
+
+    class _StubOpenRouterClient:
+        async def send_chat(self, *, model: str, messages: list[dict], response_format: dict | None = None) -> str:
+            return ""
+
+        async def send_chat_with_tools(self, *, model: str, messages: list[dict], tools: list[dict]) -> dict:
+            return {"content": "", "tool_calls": []}
+
+        async def stream_chat_with_tools(self, *, model: str, messages: list[dict], tools: list[dict]):
+            tool_observation_present = any(msg.get("role") == "tool" for msg in messages)
+            if not tool_observation_present:
+                yield ChatStreamDelta(kind="content", content="I'll search first. ")
+                yield ChatStreamDelta(
+                    kind="tool_call",
+                    index=0,
+                    call_id="call_1",
+                    tool_name="search_github",
+                )
+                yield ChatStreamDelta(
+                    kind="tool_call",
+                    index=0,
+                    arguments_delta='{"query":"hello"}',
+                )
+                return
+
+            yield ChatStreamDelta(kind="content", content="Grounded answer.")
+
+        async def stream_chat(self, *, model: str, messages: list[dict]):
+            yield ""
+
+        async def generate_embeddings(self, *, model: str, texts: list[str], dimensions: int | None):
+            return []
+
+    service = AgentLoopService(
+        openrouter_client=_StubOpenRouterClient(),
+        tool_registry=_StubToolRegistry(),
+        timeline_repository=_StubTimelineRepo(),
+        default_model="anthropic/claude-3.5-sonnet",
+    )
+
+    input_data = AgentTurnInput(
+        turn_id=uuid4(),
+        conversation_id=None,
+        question="Summarize retrieval",
+        selected_model=None,
+    )
+
+    events = [event async for event in service.run_turn(input_data)]
+
+    sequence = [
+        event.message if event.kind == WhiteboxEventKind.MESSAGE_DELTA else event.kind.value
+        for event in events
+        if event.kind
+        in {
+            WhiteboxEventKind.MESSAGE_DELTA,
+            WhiteboxEventKind.TOOL_CALL_STARTED,
+            WhiteboxEventKind.TOOL_CALL_COMPLETED,
+        }
+    ]
+    assert sequence == [
+        "I'll search first. ",
+        "tool_call.started",
+        "tool_call.completed",
+        "Grounded answer.",
+    ]
 
 
 @pytest.mark.asyncio
