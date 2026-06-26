@@ -76,7 +76,7 @@
 									<div class="flex min-w-0 flex-col gap-2">
 										{#if block.reasoning}
 											<div
-												class="min-w-0 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]"
+												class="min-w-0 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground wrap-anywhere"
 											>
 												{block.reasoning}
 											</div>
@@ -93,7 +93,7 @@
 							<MessageResponse
 								content={block.text}
 								isStreaming={!!message.isStreaming && block.id === lastTextBlockId}
-								sources={block.id === lastTextBlockId ? message.sources : undefined}
+								sources={message.sources}
 							/>
 						</MessageContent>
 					{/if}

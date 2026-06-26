@@ -65,7 +65,7 @@ describe('buildAssistantBlocks', () => {
 		expect((blocks[2] as TextBlock).text).toBe('The final answer.');
 	});
 
-	it('folds a tool iteration narration line into the step header, not into prose', () => {
+	it('keeps a tool iteration prose line as its own block (does not fold it into the header)', () => {
 		const blocks = buildAssistantBlocks(
 			message([textPart(1, 'Let me look.'), toolPart(1, tool('search_github', 'finished'))], {
 				stepSummaries: { 1: 'Searching the repo' },
@@ -73,9 +73,9 @@ describe('buildAssistantBlocks', () => {
 			})
 		);
 
-		expect(blocks).toHaveLength(1);
-		expect(blocks[0].kind).toBe('step');
+		expect(blocks.map((b) => b.kind)).toEqual(['step', 'text']);
 		expect((blocks[0] as StepBlock).summary).toBe('Searching the repo');
+		expect((blocks[1] as TextBlock).text).toBe('Let me look.');
 	});
 
 	it('splits final-iteration reasoning into a thinking step before the answer', () => {

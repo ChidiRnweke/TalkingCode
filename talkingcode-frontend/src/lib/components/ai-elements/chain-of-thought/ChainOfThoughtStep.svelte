@@ -78,13 +78,13 @@
 					<TextShimmer
 						as="span"
 						contentLength={summary.length}
-						class="block min-w-0 whitespace-normal text-sm leading-snug [overflow-wrap:anywhere]"
+						class="block min-w-0 whitespace-normal text-sm leading-snug wrap-anywhere"
 					>
 						{summary}
 					</TextShimmer>
 				{:else}
 					<span
-						class="block min-w-0 whitespace-normal text-sm leading-snug text-muted-foreground [overflow-wrap:anywhere]"
+						class="block min-w-0 whitespace-normal text-sm leading-snug text-[hsl(var(--color-text-subtle))] wrap-anywhere"
 					>
 						{summary}
 					</span>

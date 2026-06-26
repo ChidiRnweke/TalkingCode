@@ -40,7 +40,7 @@ class AppConfig:
             log_level=reader.read_or_default("LOG_LEVEL", "INFO"),
             default_model=reader.read_or_default("DEFAULT_MODEL", "anthropic/claude-3.5-sonnet"),
             fallback_model=reader.read_or_default("FALLBACK_MODEL", "google/gemini-3-flash"),
-            max_iterations=int(reader.read_or_default("MAX_ITERATIONS", "8")),
+            max_iterations=int(reader.read_or_default("MAX_ITERATIONS", "16")),
             max_tools_per_turn=int(reader.read_or_default("MAX_TOOLS_PER_TURN", "3")),
             default_tool_timeout=int(reader.read_or_default("DEFAULT_TOOL_TIMEOUT", "15")),
             embedding_model=reader.read_or_default("EMBEDDING_MODEL", "openai/text-embedding-3-large"),

@@ -32,14 +32,6 @@ export interface TextBlock {
 
 export type AssistantBlock = StepBlock | TextBlock;
 
-function firstLine(text: string): string | undefined {
-	const line = text
-		.split('\n')
-		.map((l) => l.trim())
-		.find(Boolean);
-	return line || undefined;
-}
-
 function prettyToolName(name: string): string {
 	return name
 		.split('_')
@@ -107,37 +99,26 @@ export function buildAssistantBlocks(message: ChatMessage): AssistantBlock[] {
 			.join('');
 
 		const summary = message.stepSummaries?.[iteration];
+		const hasStep = tools.length > 0 || reasoning.trim().length > 0;
 
-		if (tools.length > 0) {
-			const anyRunning = tools.some((t) => t.status === 'started');
+		// 1. The "thinking / acting" step: reasoning + tool calls, behind a header.
+		if (hasStep) {
+			const anyToolRunning = tools.some((t) => t.status === 'started');
 			const status: StepBlock['status'] =
-				anyRunning || (streaming && isLastGroup) ? 'running' : 'done';
+				anyToolRunning || (streaming && isLastGroup && !text.trim()) ? 'running' : 'done';
 			blocks.push({
 				kind: 'step',
-				id: `step-${iteration}`,
-				summary: summary ?? firstLine(text) ?? deriveFromTools(tools),
+				id: tools.length > 0 ? `step-${iteration}` : `think-${iteration}`,
+				summary: tools.length > 0 ? (summary ?? deriveFromTools(tools)) : (summary ?? 'Thinking'),
 				status,
 				durationLabel: totalDurationLabel(tools),
 				reasoning: reasoning.trim() || undefined,
 				tools
 			});
-			return;
 		}
 
-		// No tools this iteration: any reasoning is a "thinking" step, then the answer.
-		if (reasoning.trim()) {
-			const status: StepBlock['status'] =
-				streaming && isLastGroup && !text.trim() ? 'running' : 'done';
-			blocks.push({
-				kind: 'step',
-				id: `think-${iteration}`,
-				summary: summary ?? 'Thinking',
-				status,
-				reasoning,
-				tools: []
-			});
-		}
-
+		// 2. The model's prose is the real, progressive answer — always its own
+		//    block (never folded into a step header), so it doesn't flash.
 		if (text.trim()) {
 			blocks.push({ kind: 'text', id: `text-${iteration}`, text });
 		}

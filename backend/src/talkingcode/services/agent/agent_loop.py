@@ -30,15 +30,14 @@ AGENT_SYSTEM_PROMPT = (
     "- Python, Java, JavaScript, TypeScript, Svelte, Scala, Rust, SQL, R, Docker, Azure and more.\n"
     "- Many projects are related to web development.\n"
     "- Some advanced machine learning projects are work projects and not open-source.\n\n"
-    "HOW YOU WORK (ReAct loop):\n"
-    "- Work in a visible, step-by-step loop. Immediately BEFORE each tool call, write exactly ONE short, "
-    "present-tense line stating what you are about to look for "
-    "(e.g. 'Searching the repo for the chat streaming architecture.'). Then make the tool call(s).\n"
-    "- Keep each of these narration lines to a single sentence — they are shown to the user as the header of that step. "
-    "Do NOT write the answer yet while you are still gathering evidence.\n"
-    "- Use tools whenever concrete repository evidence is needed. When the user says 'this repo', 'this project', "
-    "or similar, treat it as TalkingCode unless they explicitly name another repository.\n"
-    "- Once you have gathered enough evidence, stop calling tools and write the full answer in prose.\n\n"
+    "HOW YOU WORK:\n"
+    "- Work step by step, like a real investigation. Use tools whenever concrete repository "
+    "evidence is needed; you may search several times across multiple turns. When the user says "
+    "'this repo', 'this project', or similar, treat it as TalkingCode unless they explicitly name "
+    "another repository.\n"
+    "- Answer progressively in prose: after a search returns, write a sentence or two about what "
+    "you found and what you want to check next, then search again. Keep building the answer this "
+    "way across turns, and once you have enough evidence, finish with the complete answer.\n"
     "GROUNDING:\n"
     "- Use retrieved repository evidence to answer. Refer to the exact repository and file path whenever possible. "
     "Keep code excerpts short and abbreviated with an ellipsis.\n\n"
@@ -57,9 +56,7 @@ AGENT_SYSTEM_PROMPT = (
     "- If multiple chunks from the same file are relevant, use the same citation number.\n\n"
     "YOUR CONSTRAINTS:\n"
     "- Do not answer questions unrelated to Chidi's code.\n"
-    "- Keep the final answer concise and evidence-based.\n"
-    "- The only text you write before tool calls is the single-sentence narration line; do not dump the full "
-    "answer until you have finished gathering evidence.\n"
+    "- Keep the answer concise and evidence-based.\n"
     "- Answer in first person as if you are Chidi Nweke.\n"
 )
 
@@ -93,7 +90,7 @@ class AgentLoopService:
     tool_registry: ToolRegistry
     timeline_repository: TimelineRepository
     default_model: str
-    max_iterations: int = 8
+    max_iterations: int = 16
     max_tools_per_turn: int = 3
     default_tool_timeout: int = 15
 
@@ -238,7 +235,7 @@ class AgentLoopService:
                     kind=WhiteboxEventKind.STEP_SUMMARY,
                     turn_id=turn_id,
                     tool_name=None,
-                    message=self._derive_step_summary(content, complete_tool_calls),
+                    message=self._derive_step_summary(complete_tool_calls),
                     visible_args=None,
                     timestamp=datetime.utcnow(),
                     iteration=iteration,
@@ -424,19 +421,12 @@ class AgentLoopService:
             )
 
     @staticmethod
-    def _derive_step_summary(content: str, calls: list[dict[str, Any]]) -> str:
-        """Choose a one-line header for a tool-calling step.
+    def _derive_step_summary(calls: list[dict[str, Any]]) -> str:
+        """Build a short, deterministic header for a tool-calling step.
 
-        Prefers the model's own narration (the first line it streamed before the
-        tool call); otherwise falls back to a label derived from the tool calls.
+        Derived from the tool calls themselves (not the model's prose, which is
+        rendered separately as the progressive answer).
         """
-        first_line = next(
-            (line.strip() for line in content.splitlines() if line.strip()),
-            "",
-        )
-        if first_line:
-            return first_line[:200]
-
         labels: list[str] = []
         for call in calls:
             name = str(call.get("name") or "")

@@ -260,7 +260,9 @@ async def test_agent_loop_emits_reasoning_and_step_summary() -> None:
 
     summaries = [event for event in events if event.kind == WhiteboxEventKind.STEP_SUMMARY]
     assert len(summaries) == 1
-    assert summaries[0].message == "Searching the repo."
+    # The header is derived from the tool call (the model's prose renders separately).
+    assert "Searching the repositories for" in summaries[0].message
+    assert "hello" in summaries[0].message
     assert summaries[0].iteration == 1
 
     # The summary heads its tool execution.
@@ -269,15 +271,20 @@ async def test_agent_loop_emits_reasoning_and_step_summary() -> None:
     )
 
 
-def test_derive_step_summary_prefers_narration_then_tool_label() -> None:
-    """Summary uses the model's narration line, falling back to a tool-derived label."""
-    assert AgentLoopService._derive_step_summary("First line.\nrest", []) == "First line."
-
+def test_derive_step_summary_from_tools() -> None:
+    """The step header is derived deterministically from the tool calls."""
     label = AgentLoopService._derive_step_summary(
-        "", [{"name": "search_github", "arguments": {"query": "chat loop"}}]
+        [{"name": "search_github", "arguments": {"query": "chat loop"}}]
     )
     assert "Searching the repositories for" in label
     assert "chat loop" in label
+
+    assert (
+        AgentLoopService._derive_step_summary(
+            [{"name": "read_file", "arguments": {"file_path": "a.py"}}]
+        )
+        == "Reading a.py"
+    )
 
 
 @pytest.mark.asyncio
