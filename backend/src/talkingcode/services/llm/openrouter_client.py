@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, AsyncGenerator, Literal, Protocol, cast
 
+import mlflow
 from openrouter import OpenRouter
 import structlog
 
@@ -96,19 +97,29 @@ class OpenRouterClient:
     ) -> str:
         """Send a non-streaming chat request."""
         try:
-            async with OpenRouter(
-                api_key=self.api_key,
-                http_referer=self.http_referer,
-                x_title=self.x_title,
-                timeout_ms=self.timeout_ms,
-            ) as client:
-                response = await client.chat.send_async(
-                    model=model,
-                    messages=cast(Any, messages),
-                    response_format=cast(Any, response_format),
+            with mlflow.start_span(name="openrouter_send_chat") as span:
+                span.set_inputs(
+                    {
+                        "model": model,
+                        "message_count": len(messages),
+                        "response_format": response_format is not None,
+                    }
                 )
+                async with OpenRouter(
+                    api_key=self.api_key,
+                    http_referer=self.http_referer,
+                    x_title=self.x_title,
+                    timeout_ms=self.timeout_ms,
+                ) as client:
+                    response = await client.chat.send_async(
+                        model=model,
+                        messages=cast(Any, messages),
+                        response_format=cast(Any, response_format),
+                    )
 
-            return _extract_message_content(response)
+                content = _extract_message_content(response)
+                span.set_outputs({"content_length": len(content)})
+                return content
         except Exception as exc:  # noqa: BLE001
             raise InfraError(f"OpenRouter chat request failed: {exc}") from exc
 
@@ -120,22 +131,35 @@ class OpenRouterClient:
     ) -> AsyncGenerator[str, None]:
         """Stream chat completion token deltas."""
         try:
-            async with OpenRouter(
-                api_key=self.api_key,
-                http_referer=self.http_referer,
-                x_title=self.x_title,
-                timeout_ms=self.timeout_ms,
-            ) as client:
-                stream = await client.chat.send_async(
-                    model=model,
-                    messages=cast(Any, messages),
-                    stream=True,
+            with mlflow.start_span(name="openrouter_stream_chat") as span:
+                span.set_inputs({"model": model, "message_count": len(messages)})
+                token_count = 0
+                content_length = 0
+                async with OpenRouter(
+                    api_key=self.api_key,
+                    http_referer=self.http_referer,
+                    x_title=self.x_title,
+                    timeout_ms=self.timeout_ms,
+                ) as client:
+                    stream = await client.chat.send_async(
+                        model=model,
+                        messages=cast(Any, messages),
+                        stream=True,
+                    )
+                    async with stream:
+                        async for chunk in stream:
+                            token = _extract_delta_content(chunk)
+                            if token:
+                                token_count += 1
+                                content_length += len(token)
+                                yield token
+
+                span.set_outputs(
+                    {
+                        "token_count": token_count,
+                        "content_length": content_length,
+                    }
                 )
-                async with stream:
-                    async for chunk in stream:
-                        token = _extract_delta_content(chunk)
-                        if token:
-                            yield token
         except Exception as exc:  # noqa: BLE001
             raise InfraError(f"OpenRouter streaming request failed: {exc}") from exc
 
@@ -148,25 +172,49 @@ class OpenRouterClient:
     ) -> AsyncGenerator[ChatStreamDelta, None]:
         """Stream chat completion token and tool call deltas."""
         try:
-            async with OpenRouter(
-                api_key=self.api_key,
-                http_referer=self.http_referer,
-                x_title=self.x_title,
-                timeout_ms=self.timeout_ms,
-            ) as client:
-                stream = await client.chat.send_async(
-                    model=model,
-                    messages=cast(Any, messages),
-                    tools=cast(Any, tools),
-                    stream=True,
-                    # Request reasoning tokens. OpenRouter ignores this for models
-                    # that do not support it, so it degrades gracefully.
-                    reasoning=cast(Any, {"effort": "low"}),
+            with mlflow.start_span(name="openrouter_stream_chat_with_tools") as span:
+                span.set_inputs(
+                    {
+                        "model": model,
+                        "message_count": len(messages),
+                        "tool_count": len(tools),
+                    }
                 )
-                async with stream:
-                    async for chunk in stream:
-                        for delta in _extract_stream_deltas(chunk):
-                            yield delta
+                delta_count = 0
+                content_length = 0
+                tool_call_delta_count = 0
+                async with OpenRouter(
+                    api_key=self.api_key,
+                    http_referer=self.http_referer,
+                    x_title=self.x_title,
+                    timeout_ms=self.timeout_ms,
+                ) as client:
+                    stream = await client.chat.send_async(
+                        model=model,
+                        messages=cast(Any, messages),
+                        tools=cast(Any, tools),
+                        stream=True,
+                        # Request reasoning tokens. OpenRouter ignores this for models
+                        # that do not support it, so it degrades gracefully.
+                        reasoning=cast(Any, {"effort": "low"}),
+                    )
+                    async with stream:
+                        async for chunk in stream:
+                            for delta in _extract_stream_deltas(chunk):
+                                delta_count += 1
+                                if delta.content:
+                                    content_length += len(delta.content)
+                                if delta.kind == "tool_call":
+                                    tool_call_delta_count += 1
+                                yield delta
+
+                span.set_outputs(
+                    {
+                        "delta_count": delta_count,
+                        "content_length": content_length,
+                        "tool_call_delta_count": tool_call_delta_count,
+                    }
+                )
         except Exception as exc:  # noqa: BLE001
             raise InfraError(
                 f"OpenRouter tool streaming request failed: {exc}"
@@ -184,21 +232,38 @@ class OpenRouterClient:
             return []
 
         try:
-            async with OpenRouter(
-                api_key=self.api_key,
-                http_referer=self.http_referer,
-                x_title=self.x_title,
-                timeout_ms=self.timeout_ms,
-            ) as client:
-                response = await client.embeddings.generate_async(
-                    input=texts,
-                    model=model,
-                    dimensions=dimensions,
+            with mlflow.start_span(name="openrouter_generate_embeddings") as span:
+                span.set_inputs(
+                    {
+                        "model": model,
+                        "text_count": len(texts),
+                        "dimensions": dimensions,
+                    }
                 )
+                async with OpenRouter(
+                    api_key=self.api_key,
+                    http_referer=self.http_referer,
+                    x_title=self.x_title,
+                    timeout_ms=self.timeout_ms,
+                ) as client:
+                    response = await client.embeddings.generate_async(
+                        input=texts,
+                        model=model,
+                        dimensions=dimensions,
+                    )
 
-            response_any = cast(Any, response)
-            sorted_data = sorted(response_any.data, key=lambda item: item.index)
-            return [item.embedding for item in sorted_data]
+                response_any = cast(Any, response)
+                sorted_data = sorted(response_any.data, key=lambda item: item.index)
+                embeddings = [item.embedding for item in sorted_data]
+                span.set_outputs(
+                    {
+                        "embedding_count": len(embeddings),
+                        "embedding_dimensions": len(embeddings[0])
+                        if embeddings
+                        else 0,
+                    }
+                )
+                return embeddings
         except Exception as exc:  # noqa: BLE001
             raise InfraError(f"OpenRouter embeddings request failed: {exc}") from exc
 
@@ -211,22 +276,38 @@ class OpenRouterClient:
     ) -> dict[str, Any]:
         """Send chat request with tool definitions and parse tool calls."""
         try:
-            async with OpenRouter(
-                api_key=self.api_key,
-                http_referer=self.http_referer,
-                x_title=self.x_title,
-                timeout_ms=self.timeout_ms,
-            ) as client:
-                response = await client.chat.send_async(
-                    model=model,
-                    messages=cast(Any, messages),
-                    tools=cast(Any, tools),
+            with mlflow.start_span(name="openrouter_send_chat_with_tools") as span:
+                span.set_inputs(
+                    {
+                        "model": model,
+                        "message_count": len(messages),
+                        "tool_count": len(tools),
+                    }
                 )
+                async with OpenRouter(
+                    api_key=self.api_key,
+                    http_referer=self.http_referer,
+                    x_title=self.x_title,
+                    timeout_ms=self.timeout_ms,
+                ) as client:
+                    response = await client.chat.send_async(
+                        model=model,
+                        messages=cast(Any, messages),
+                        tools=cast(Any, tools),
+                    )
 
-            return {
-                "content": _extract_message_content(response),
-                "tool_calls": _extract_tool_calls(response),
-            }
+                content = _extract_message_content(response)
+                tool_calls = _extract_tool_calls(response)
+                span.set_outputs(
+                    {
+                        "content_length": len(content),
+                        "tool_call_count": len(tool_calls),
+                    }
+                )
+                return {
+                    "content": content,
+                    "tool_calls": tool_calls,
+                }
         except Exception as exc:  # noqa: BLE001
             raise InfraError(f"OpenRouter tool chat request failed: {exc}") from exc
 

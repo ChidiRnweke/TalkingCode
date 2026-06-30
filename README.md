@@ -52,11 +52,29 @@ Telemetry is supported for traces, metrics, and logs via OTLP.
   - **Metrics**: `ingestion_runs_total`, `ingestion_files_total`, `ingestion_file_duration_seconds`, etc.
   - **Traces**: Run-level and stage-level spans.
 
-### Development Stack
+### Local Development
 
-Run the full local stack with OTel collector:
+Run local dependencies, then run the backend and frontend directly on the host:
 ```bash
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.local-dev.yml up
+```
+
+Use these host-facing env values for the backend:
+```bash
+DATABASE_URL=postgresql+asyncpg://talkingcode:talkingcode@localhost:5432/chatGITpt
+MLFLOW_TRACKING_URI=http://localhost:5000
+MLFLOW_EXPERIMENT_NAME=talkingcode-agent-dev
+MLFLOW_TRACING_ENABLED=true
+```
+
+Run the full app in Docker when you want container parity:
+```bash
+docker compose -f docker-compose.full-dev.yml up --build
+```
+
+Start the optional OTel collector for local host development with:
+```bash
+docker compose -f docker-compose.local-dev.yml --profile observability up
 ```
 
 ### Production Setup

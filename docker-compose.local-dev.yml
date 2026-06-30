@@ -1,0 +1,75 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: talkingcode
+      POSTGRES_PASSWORD: talkingcode
+      POSTGRES_DB: chatGITpt
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U talkingcode"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mlflow-db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    ports:
+      - "5433:5432"
+    volumes:
+      - mlflow-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.14.0
+    restart: unless-stopped
+    command:
+      - /bin/sh
+      - -c
+      - >
+        python -m pip install --quiet psycopg2-binary &&
+        mlflow server
+        --host 0.0.0.0
+        --port 5000
+        --backend-store-uri postgresql://mlflow:mlflow@mlflow-db:5432/mlflow
+        --artifacts-destination /mlflow/artifacts
+        --serve-artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-artifacts:/mlflow/artifacts
+    depends_on:
+      mlflow-db:
+        condition: service_healthy
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    profiles:
+      - observability
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./deploy/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+      - "8889:8889"
+      - "13133:13133"
+
+volumes:
+  postgres_data:
+  mlflow-db-data:
+  mlflow-artifacts:

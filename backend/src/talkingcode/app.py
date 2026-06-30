@@ -3,6 +3,7 @@ import os
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, AsyncGenerator
 
+import mlflow
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +22,21 @@ if TYPE_CHECKING:
     from talkingcode.config import AppConfig
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+_mlflow_autolog_enabled = False
+
+
+def configure_mlflow_tracing() -> None:
+    """Enable MLflow tracing after environment configuration is loaded."""
+    global _mlflow_autolog_enabled
+    if _mlflow_autolog_enabled:
+        return
+
+    mlflow.autolog()
+    _mlflow_autolog_enabled = True
+    logger.info(
+        "mlflow.tracing.enabled",
+        tracking_uri=os.getenv("MLFLOW_TRACKING_URI", ""),
+    )
 
 
 async def setup_database(config: "AppConfig") -> None:
@@ -36,6 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan events."""
     # Startup — use cached config to avoid redundant Infisical calls
     config = _get_cached_config()
+    configure_mlflow_tracing()
 
     # Telemetry
     endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")

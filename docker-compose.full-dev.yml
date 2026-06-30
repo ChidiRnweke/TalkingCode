@@ -1,18 +1,59 @@
 services:
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg16
     restart: always
     environment:
       POSTGRES_USER: talkingcode
       POSTGRES_PASSWORD: talkingcode
-      POSTGRES_DB: talkingcode
+      POSTGRES_DB: chatGITpt
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U talkingcode"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  mlflow-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    ports:
+      - "5433:5432"
+    volumes:
+      - mlflow-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.14.0
+    restart: always
+    command:
+      - /bin/sh
+      - -c
+      - >
+        python -m pip install --quiet psycopg2-binary &&
+        mlflow server
+        --host 0.0.0.0
+        --port 5000
+        --backend-store-uri postgresql://mlflow:mlflow@mlflow-db:5432/mlflow
+        --artifacts-destination /mlflow/artifacts
+        --serve-artifacts
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow-artifacts:/mlflow/artifacts
+    depends_on:
+      mlflow-db:
+        condition: service_healthy
 
   backend:
     build:
@@ -23,15 +64,20 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://talkingcode:talkingcode@postgres:5432/talkingcode
+      - DATABASE_URL=postgresql+asyncpg://talkingcode:talkingcode@postgres:5432/chatGITpt
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - INGESTION_API_KEY=${INGESTION_API_KEY}
       - ENVIRONMENT=development
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_EXPERIMENT_NAME=talkingcode-agent-dev
+      - MLFLOW_TRACING_ENABLED=true
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=talkingcode-backend-dev
     depends_on:
       postgres:
         condition: service_healthy
+      mlflow:
+        condition: service_started
 
   frontend:
     build:
@@ -58,3 +104,8 @@ services:
       - "8888:8888" # Prometheus metrics exposed by the collector
       - "8889:8889" # Prometheus exporter metrics
       - "13133:13133" # Health_check extension
+
+volumes:
+  postgres_data:
+  mlflow-db-data:
+  mlflow-artifacts:

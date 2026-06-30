@@ -1,0 +1,80 @@
+[
+  {
+    "id": "repo-discovery-svelte",
+    "category": "repo_discovery",
+    "question": "Which indexed projects use Svelte?",
+    "expectations": {
+      "should_use_tools": true,
+      "required_tool_names": ["get_project_descriptions", "search_github"],
+      "expected_source_paths": [],
+      "prohibited_claims": ["all projects", "every project"],
+      "max_tool_calls": 5,
+      "max_latency_ms": 60000
+    }
+  },
+  {
+    "id": "file-specific-chat-runtime",
+    "category": "file_specific_explanation",
+    "question": "Explain how the TalkingCode chat runtime works.",
+    "expectations": {
+      "should_use_tools": true,
+      "required_tool_names": ["search_github"],
+      "expected_source_paths": ["backend/src/talkingcode/services/agent/deep_agent.py"],
+      "prohibited_claims": ["without looking at the code"],
+      "max_tool_calls": 6,
+      "max_latency_ms": 60000
+    }
+  },
+  {
+    "id": "cross-repo-comparison",
+    "category": "cross_repo_comparison",
+    "question": "Compare the frontend and backend architecture in TalkingCode.",
+    "expectations": {
+      "should_use_tools": true,
+      "required_tool_names": ["search_github"],
+      "expected_source_paths": ["talkingcode-frontend", "backend"],
+      "prohibited_claims": ["identical architecture"],
+      "max_tool_calls": 6,
+      "max_latency_ms": 60000
+    }
+  },
+  {
+    "id": "citation-correctness",
+    "category": "citation_correctness",
+    "question": "What files define the chat stream contract?",
+    "expectations": {
+      "should_use_tools": true,
+      "required_tool_names": ["search_github", "read_repository_file"],
+      "expected_source_paths": ["chat_routes.py", "ChatService.ts"],
+      "prohibited_claims": [],
+      "max_tool_calls": 7,
+      "max_latency_ms": 60000
+    }
+  },
+  {
+    "id": "uncertainty-refusal",
+    "category": "uncertainty_refusal",
+    "question": "How many total projects has Chidi ever built?",
+    "expectations": {
+      "should_use_tools": true,
+      "required_tool_names": ["get_project_descriptions"],
+      "expected_source_paths": [],
+      "prohibited_claims": ["has built exactly", "all projects ever"],
+      "max_tool_calls": 4,
+      "max_latency_ms": 60000
+    }
+  },
+  {
+    "id": "tool-use-discipline",
+    "category": "tool_use_discipline",
+    "question": "Say briefly what TalkingCode is for.",
+    "expectations": {
+      "should_use_tools": true,
+      "required_tool_names": ["search_github"],
+      "expected_source_paths": [],
+      "prohibited_claims": ["I know without evidence"],
+      "max_tool_calls": 3,
+      "max_latency_ms": 45000
+    }
+  }
+]
