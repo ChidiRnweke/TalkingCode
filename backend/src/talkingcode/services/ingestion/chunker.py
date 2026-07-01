@@ -9,7 +9,7 @@ from talkingcode.domain.models import ChunkResult
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
 
-class IChunker(Protocol):
+class ILineChunker(Protocol):
     """Protocol for document chunking."""
 
     def chunk(self, content: str, max_tokens: int = 512) -> list[ChunkResult]:

@@ -81,12 +81,12 @@ def _add_open_telemetry_spans(
         return event_dict
 
     ctx = span.get_span_context()
-    parent = getattr(span, "parent", None)
+    parent_ctx = span.parent.get_span_context() if span.parent else None  # type: ignore
 
     event_dict["span"] = {
         "span_id": hex(ctx.span_id),
         "trace_id": hex(ctx.trace_id),
-        "parent_span_id": None if not parent else hex(parent.span_id),
+        "parent_span_id": None if not parent_ctx else hex(parent_ctx.span_id),
     }
 
     return event_dict

@@ -9,3 +9,8 @@ export { default as RepoCard } from './RepoCard.svelte';
 export { default as RegisterRepoForm } from './RegisterRepoForm.svelte';
 export { default as IngestionHistory } from './IngestionHistory.svelte';
 export { default as ModelSelector } from './ModelSelector.svelte';
+export { default as HeroSection } from './HeroSection.svelte';
+export { default as CapabilitiesSection } from './CapabilitiesSection.svelte';
+export { default as HowItWorksSection } from './HowItWorksSection.svelte';
+export { default as CTASection } from './CTASection.svelte';
+export { default as StickyChatBar } from './StickyChatBar.svelte';

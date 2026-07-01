@@ -1,50 +1,11 @@
 import asyncio
-import inspect
 import time
 from functools import wraps
 from typing import Any, Callable, Coroutine
 
 from opentelemetry.metrics import get_meter
 
-from .helpers import C, P, T, function_metadata, suppress_stack_trace
-
-
-def instrument_all_async(
-    decorator: Callable[
-        [Callable[..., Coroutine[Any, Any, T]]], Callable[..., Coroutine[Any, Any, T]]
-    ],
-) -> Callable[[C], C]:
-    """A class decorator that applies `decorator` to every public async method in the class."""
-
-    def class_decorator(cls: C) -> C:
-        for attr_name, attr_value in list(cls.__dict__.items()):
-            if attr_name.startswith("_"):
-                continue
-            if not inspect.iscoroutinefunction(attr_value):
-                continue
-            setattr(cls, attr_name, decorator(attr_value))
-        return cls
-
-    return class_decorator
-
-
-def instrument_all_sync(
-    decorator: Callable[[Callable[P, T]], Callable[P, T]],
-) -> Callable[[C], C]:
-    """A class decorator that applies `decorator` to every public non-async method in the class."""
-
-    def class_decorator(cls: C) -> C:
-        for attr_name, attr_value in list(cls.__dict__.items()):
-            if attr_name.startswith("_"):
-                continue
-            if not inspect.isfunction(attr_value) or inspect.iscoroutinefunction(
-                attr_value
-            ):
-                continue
-            setattr(cls, attr_name, decorator(attr_value))
-        return cls
-
-    return class_decorator
+from .helpers import P, T, function_metadata, suppress_stack_trace
 
 
 def log_execution_time(func: Callable[P, T]) -> Callable[P, T]:

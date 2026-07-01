@@ -1,4 +1,4 @@
-import { createApiClient, type ApiClient } from './client';
+import type { ApiClient } from './client';
 import { mapModel, type ModelOption } from './mappers/models';
 
 function errorMessage(error: unknown): string {
@@ -34,6 +34,3 @@ export class ModelsService {
 	}
 }
 
-export function createModelsService(fetchFn?: typeof fetch): ModelsService {
-	return new ModelsService(createApiClient(fetchFn));
-}

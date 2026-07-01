@@ -41,6 +41,7 @@
 		carouselState.orientation = orientation;
 		carouselState.options = opts;
 		carouselState.plugins = plugins;
+		return () => {};
 	});
 
 	function scrollPrev() {

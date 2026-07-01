@@ -249,74 +249,6 @@
         "title": "StartIngestionRequest",
         "type": "object"
       },
-      "ToolCallInfoResponse": {
-        "description": "Information about a tool call in the timeline.",
-        "properties": {
-          "duration_ms": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration Ms"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "timestamp": {
-            "title": "Timestamp",
-            "type": "string"
-          },
-          "tool_name": {
-            "title": "Tool Name",
-            "type": "string"
-          },
-          "turn_id": {
-            "title": "Turn Id",
-            "type": "string"
-          },
-          "visible_args": {
-            "additionalProperties": true,
-            "title": "Visible Args",
-            "type": "object"
-          }
-        },
-        "required": [
-          "turn_id",
-          "tool_name",
-          "status",
-          "duration_ms",
-          "timestamp"
-        ],
-        "title": "ToolCallInfoResponse",
-        "type": "object"
-      },
-      "ToolTimelineResponse": {
-        "description": "Response model for tool timeline endpoint.",
-        "properties": {
-          "conversation_id": {
-            "title": "Conversation Id",
-            "type": "string"
-          },
-          "timeline": {
-            "items": {
-              "$ref": "#/components/schemas/ToolCallInfoResponse"
-            },
-            "title": "Timeline",
-            "type": "array"
-          }
-        },
-        "required": [
-          "conversation_id",
-          "timeline"
-        ],
-        "title": "ToolTimelineResponse",
-        "type": "object"
-      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -400,50 +332,6 @@
           }
         },
         "summary": "Chat Agentic",
-        "tags": [
-          "chat"
-        ]
-      }
-    },
-    "/chat/timeline": {
-      "get": {
-        "description": "Get chat timeline for conversation.",
-        "operationId": "get_chat_timeline_chat_timeline_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "conversation_id",
-            "required": true,
-            "schema": {
-              "format": "uuid",
-              "title": "Conversation Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ToolTimelineResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Chat Timeline",
         "tags": [
           "chat"
         ]

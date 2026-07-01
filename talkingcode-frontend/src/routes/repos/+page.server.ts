@@ -1,9 +1,9 @@
-import { createReposService } from '$lib/server/api/repos.service';
+import { ServerFactory } from '$lib/server/ServerFactory';
 import type { IngestionRunView } from '$lib/models';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ fetch }) => {
-	const repoService = createReposService(fetch);
+	const repoService = ServerFactory.getReposService(fetch);
 
 	try {
 		const repos = await repoService.listRepos();

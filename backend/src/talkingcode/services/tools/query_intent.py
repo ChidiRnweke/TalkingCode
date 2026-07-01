@@ -1,20 +1,21 @@
 """Query intent extraction for auto-detecting metadata filters."""
-import json
+
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 import structlog
+from pydantic_ai import Agent
+from pydantic_ai.models.openrouter import OpenRouterModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 
-from talkingcode.services.llm.openrouter_client import IOpenRouterClient
+from talkingcode.domain.models import QueryIntent, QueryIntentAgentOutput
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
-INTENT_EXTRACTION_PROMPT = """Extract search metadata from this query. Return JSON only.
+INTENT_EXTRACTION_PROMPT = """Extract search metadata from this query.
 Available repos: {repo_list}
 
 Query: "{query}"
-
-Schema: {{ "refined_query": string, "repo_filter": string|null, "language_filter": string|null, "area_filter": string|null, "file_type_filter": string|null }}
 
 Rules:
 - refined_query: rewrite as one focused natural-language search phrase; do NOT convert into boolean OR keyword lists
@@ -27,55 +28,67 @@ Rules:
 - When in doubt, leave filters as null — better to search broadly first, then refine in later lookups"""
 
 
-@dataclass(frozen=True)
-class QueryIntent:
-    """Extracted metadata hints from a natural language query."""
+class IQueryIntentExtractor(Protocol):
+    """Protocol for query intent extraction."""
 
-    refined_query: str
-    repo_filter: str | None = None
-    language_filter: str | None = None
-    area_filter: str | None = None
-    file_type_filter: str | None = None
+    async def extract_query_intent(
+        self,
+        query: str,
+        openrouter_api_key: str,
+        model: str,
+        available_repos: list[str],
+    ) -> QueryIntent: ...
 
-
-async def extract_query_intent(
-    query: str,
-    openrouter_client: IOpenRouterClient,
-    model: str,
-    available_repos: list[str],
-) -> QueryIntent:
-    """Extract metadata filters from a natural language query using a cheap LLM."""
-    repo_list = ", ".join(available_repos) if available_repos else "none indexed yet"
-    prompt = INTENT_EXTRACTION_PROMPT.format(repo_list=repo_list, query=query)
-
-    try:
-        response = await openrouter_client.send_chat(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"},
-        )
-        data = json.loads(response)
-        return QueryIntent(
-            refined_query=data.get("refined_query", query),
-            repo_filter=data.get("repo_filter"),
-            language_filter=data.get("language_filter"),
-            area_filter=data.get("area_filter"),
-            file_type_filter=data.get("file_type_filter"),
-        )
-    except Exception:
-        logger.warning("Intent extraction failed, using raw query", query=query)
-        return QueryIntent(refined_query=query)
+    def intent_to_filters(self, intent: QueryIntent) -> dict[str, Any]: ...
 
 
-def intent_to_filters(intent: QueryIntent) -> dict[str, Any]:
-    """Convert QueryIntent to a filters dict for DocumentRepository.search_chunks."""
-    filters: dict[str, Any] = {}
-    if intent.repo_filter:
-        filters["repository_name"] = intent.repo_filter
-    if intent.language_filter:
-        filters["language"] = intent.language_filter
-    if intent.area_filter:
-        filters["area"] = intent.area_filter
-    if intent.file_type_filter:
-        filters["file_type"] = intent.file_type_filter
-    return filters
+@dataclass(slots=True)
+class QueryIntentExtractor:
+    """Extracts metadata filters from natural language queries."""
+
+    async def extract_query_intent(
+        self,
+        query: str,
+        openrouter_api_key: str,
+        model: str,
+        available_repos: list[str],
+    ) -> QueryIntent:
+        repo_list = ", ".join(available_repos) if available_repos else "none indexed yet"
+        prompt = INTENT_EXTRACTION_PROMPT.format(repo_list=repo_list, query=query)
+
+        try:
+            agent = Agent(
+                OpenRouterModel(
+                    model,
+                    provider=OpenRouterProvider(
+                        api_key=openrouter_api_key,
+                        app_url="https://talkingcode.dev",
+                        app_title="TalkingCode",
+                    ),
+                ),
+                output_type=QueryIntentAgentOutput,
+            )
+            result = await agent.run(prompt)
+            output = result.output
+            return QueryIntent(
+                refined_query=output.refined_query or query,
+                repo_filter=output.repo_filter,
+                language_filter=output.language_filter,
+                area_filter=output.area_filter,
+                file_type_filter=output.file_type_filter,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Intent extraction failed, using raw query", query=query, error=str(exc))
+            return QueryIntent(refined_query=query)
+
+    def intent_to_filters(self, intent: QueryIntent) -> dict[str, Any]:
+        filters: dict[str, Any] = {}
+        if intent.repo_filter:
+            filters["repository_name"] = intent.repo_filter
+        if intent.language_filter:
+            filters["language"] = intent.language_filter
+        if intent.area_filter:
+            filters["area"] = intent.area_filter
+        if intent.file_type_filter:
+            filters["file_type"] = intent.file_type_filter
+        return filters

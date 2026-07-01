@@ -1,8 +1,9 @@
 <script lang="ts">
+	// noqa: file-too-long — handleSubmit is tightly coupled to component state
 	import { ChatThread, ChatComposer, ModelSelector } from '$lib/components/domain';
 	import { chatStore } from '$lib/stores';
 	import { AppFactory } from '$lib/factories/AppFactory';
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy } from 'svelte';
 
 	interface Props {
 		data: {
@@ -56,7 +57,12 @@
 		}
 	}
 
-	onMount(() => {
+	let isInitialized = $state(false);
+
+	$effect(() => {
+		if (isInitialized) return;
+		isInitialized = true;
+
 		chatStore.initializeSelectedModel(data.defaultModel);
 
 		if (

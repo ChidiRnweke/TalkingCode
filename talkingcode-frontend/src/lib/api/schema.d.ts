@@ -24,26 +24,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/chat/timeline": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Chat Timeline
-         * @description Get chat timeline for conversation.
-         */
-        get: operations["get_chat_timeline_chat_timeline_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/health": {
         parameters: {
             query?: never;
@@ -304,36 +284,6 @@ export interface components {
             /** Git Ref */
             git_ref?: string | null;
         };
-        /**
-         * ToolCallInfoResponse
-         * @description Information about a tool call in the timeline.
-         */
-        ToolCallInfoResponse: {
-            /** Duration Ms */
-            duration_ms: number | null;
-            /** Status */
-            status: string;
-            /** Timestamp */
-            timestamp: string;
-            /** Tool Name */
-            tool_name: string;
-            /** Turn Id */
-            turn_id: string;
-            /** Visible Args */
-            visible_args?: {
-                [key: string]: unknown;
-            };
-        };
-        /**
-         * ToolTimelineResponse
-         * @description Response model for tool timeline endpoint.
-         */
-        ToolTimelineResponse: {
-            /** Conversation Id */
-            conversation_id: string;
-            /** Timeline */
-            timeline: components["schemas"]["ToolCallInfoResponse"][];
-        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -376,37 +326,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_chat_timeline_chat_timeline_get: {
-        parameters: {
-            query: {
-                conversation_id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ToolTimelineResponse"];
                 };
             };
             /** @description Validation Error */

@@ -1,8 +1,6 @@
 """Shared API request/response schemas for FastAPI routes."""
 
-from typing import Any
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class RegisterRepoRequest(BaseModel):
@@ -40,20 +38,3 @@ class ChatAgenticRequest(BaseModel):
     question: str = ""
     selected_model: str | None = None
 
-
-class ToolCallInfoResponse(BaseModel):
-    """Information about a tool call in the timeline."""
-
-    turn_id: str
-    tool_name: str
-    visible_args: dict[str, Any] = Field(default_factory=dict)
-    status: str
-    duration_ms: int | None
-    timestamp: str
-
-
-class ToolTimelineResponse(BaseModel):
-    """Response model for tool timeline endpoint."""
-
-    conversation_id: str
-    timeline: list[ToolCallInfoResponse]

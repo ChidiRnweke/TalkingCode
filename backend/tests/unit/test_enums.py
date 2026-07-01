@@ -3,7 +3,6 @@ from talkingcode.enums import (
     Area,
     FileType,
     TurnStatus,
-    WhiteboxEventKind,
 )
 
 
@@ -29,15 +28,3 @@ class TestTurnStatus:
     def test_values(self):
         assert TurnStatus.DONE.value == "done"
         assert TurnStatus.ERROR.value == "error"
-
-
-class TestWhiteboxEventKind:
-    def test_values(self):
-        assert WhiteboxEventKind.TURN_STARTED.value == "turn.started"
-        assert WhiteboxEventKind.MESSAGE_DELTA.value == "message.delta"
-        assert WhiteboxEventKind.TOOL_CALL_STARTED.value == "tool_call.started"
-        assert WhiteboxEventKind.TOOL_CALL_DELTA.value == "tool_call.delta"
-        assert WhiteboxEventKind.TOOL_CALL_COMPLETED.value == "tool_call.completed"
-        assert WhiteboxEventKind.TOOL_RESULT_AVAILABLE.value == "tool_result.available"
-        assert WhiteboxEventKind.TURN_DONE.value == "turn.done"
-        assert WhiteboxEventKind.TURN_ERROR.value == "turn.error"

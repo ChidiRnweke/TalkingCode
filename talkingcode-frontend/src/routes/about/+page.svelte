@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { Badge } from '$lib/components/ui/badge';
+	import { Container } from '$lib/components/layout';
 </script>
 
 <main class="flex-1 overflow-y-auto bg-background selection:bg-primary/10">
-	<article class="mx-auto max-w-2xl px-6 py-20 md:py-32 space-y-16">
+	<Container>
+		<article class="mx-auto max-w-2xl px-6 py-20 md:py-32 space-y-16">
 		<header class="space-y-6 text-center">
-			<Badge variant="outline" class="uppercase tracking-widest text-[10px] px-3 py-1">Technical Deep Dive</Badge>
 			<h1 class="font-display text-4xl md:text-5xl font-bold tracking-tight text-foreground">
 				Exploring <br /> Agentic Techniques
 			</h1>
@@ -14,7 +14,7 @@
 			</p>
 		</header>
 
-		<div class="h-[1px] w-24 bg-border mx-auto"></div>
+		<div class="h-px w-1/4 sm:w-1/5 lg:w-1/6 bg-border mx-auto"></div>
 
 		<section class="space-y-6">
 			<p class="text-foreground/80 leading-relaxed text-lg">
@@ -81,4 +81,5 @@
 			</p>
 		</footer>
 	</article>
+	</Container>
 </main>

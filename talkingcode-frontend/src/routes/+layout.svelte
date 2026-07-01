@@ -3,7 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { ChatLayout, ChatHeader } from '$lib/components/layout';
 	import { chatStore } from '$lib/stores';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { ModeWatcher } from 'mode-watcher';
 
 	let { children } = $props();
@@ -14,6 +14,6 @@
 <ModeWatcher />
 
 <ChatLayout>
-	<ChatHeader phase={chatStore.phase} currentPath={$page.url.pathname} />
+	<ChatHeader phase={chatStore.phase} currentPath={page.url.pathname} />
 	{@render children()}
 </ChatLayout>

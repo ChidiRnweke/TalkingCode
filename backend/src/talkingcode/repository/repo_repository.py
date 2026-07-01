@@ -2,18 +2,33 @@
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Protocol
 from uuid import UUID, uuid4
 
 import structlog
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from talkingcode.domain.models import IngestionRunInfo, RegisterRepoInput, RepositoryInfo
+from talkingcode.domain.models import (
+    IngestionRunInfo,
+    RegisterRepoInput,
+    RepositoryInfo,
+)
 from talkingcode.enums import IngestionStatus
 from talkingcode.models.orm import IngestionRun, Repository
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+
+
+class IRepoRepository(Protocol):
+    """Protocol for repository management."""
+
+    async def register(self, input_data: RegisterRepoInput) -> RepositoryInfo: ...
+    async def list_all(self) -> list[RepositoryInfo]: ...
+    async def get_by_owner_name(
+        self, owner: str, name: str
+    ) -> RepositoryInfo | None: ...
+    async def list_ingestion_runs(self, repo_id: UUID) -> list[IngestionRunInfo]: ...
 
 
 @dataclass(slots=True)
@@ -42,50 +57,54 @@ class RepoRepository:
             )
         )
 
-        await self.session.execute(stmt)
+        await self.session.scalars(stmt)
         await self.session.flush()
 
         return await self._get_by_owner_name(input_data.owner, input_data.name)
 
     async def list_all(self) -> list[RepositoryInfo]:
         """List all tracked repos ordered by created_at desc."""
-        result = await self.session.execute(
+        result = await self.session.scalars(
             select(Repository).order_by(Repository.created_at.desc())
         )
-        return [self._to_repo_domain(r) for r in result.scalars().all()]
+        return [self._to_repo_domain(r) for r in result.all()]
 
     async def get_by_id(self, repo_id: UUID) -> RepositoryInfo | None:
         """Get a repo by ID."""
-        result = await self.session.execute(select(Repository).where(Repository.id == repo_id))
-        repo = result.scalar_one_or_none()
+        result = await self.session.scalars(
+            select(Repository).where(Repository.id == repo_id)
+        )
+        repo = result.one_or_none()
         return self._to_repo_domain(repo) if repo else None
 
     async def _get_by_owner_name(self, owner: str, name: str) -> RepositoryInfo:
         """Internal: get repo by owner/name (raises if not found)."""
-        result = await self.session.execute(
+        result = await self.session.scalars(
             select(Repository).where(
                 Repository.owner == owner,
                 Repository.name == name,
             )
         )
-        repo = result.scalar_one()
+        repo = result.one()
         return self._to_repo_domain(repo)
 
     async def get_by_owner_name(self, owner: str, name: str) -> RepositoryInfo | None:
         """Get a repo by owner/name."""
-        result = await self.session.execute(
+        result = await self.session.scalars(
             select(Repository).where(
                 Repository.owner == owner,
                 Repository.name == name,
             )
         )
-        repo = result.scalar_one_or_none()
+        repo = result.one_or_none()
         return self._to_repo_domain(repo) if repo else None
 
     async def update_last_ingested(self, repo_id: UUID, timestamp: datetime) -> None:
         """Mark a repo as recently ingested."""
-        result = await self.session.execute(select(Repository).where(Repository.id == repo_id))
-        repo = result.scalar_one_or_none()
+        result = await self.session.scalars(
+            select(Repository).where(Repository.id == repo_id)
+        )
+        repo = result.one_or_none()
         if repo:
             repo.last_ingested_at = timestamp
             await self.session.flush()
@@ -109,10 +128,10 @@ class RepoRepository:
         error_message: str | None = None,
     ) -> None:
         """Complete an ingestion run (done or failed)."""
-        result = await self.session.execute(
+        result = await self.session.scalars(
             select(IngestionRun).where(IngestionRun.id == run_id)
         )
-        run = result.scalar_one_or_none()
+        run = result.one_or_none()
         if run:
             run.status = status.value
             run.completed_at = datetime.utcnow()
@@ -121,17 +140,19 @@ class RepoRepository:
 
     async def list_ingestion_runs(self, repo_id: UUID) -> list[IngestionRunInfo]:
         """List ingestion runs for a repo, newest first."""
-        result = await self.session.execute(
+        result = await self.session.scalars(
             select(IngestionRun)
             .where(IngestionRun.repository_id == repo_id)
             .order_by(IngestionRun.started_at.desc())
         )
-        return [self._to_run_domain(r) for r in result.scalars().all()]
+        return [self._to_run_domain(r) for r in result.all()]
 
     async def get_ingestion_run(self, run_id: UUID) -> IngestionRunInfo | None:
         """Get a single ingestion run."""
-        result = await self.session.execute(select(IngestionRun).where(IngestionRun.id == run_id))
-        run = result.scalar_one_or_none()
+        result = await self.session.scalars(
+            select(IngestionRun).where(IngestionRun.id == run_id)
+        )
+        run = result.one_or_none()
         return self._to_run_domain(run) if run else None
 
     def _to_repo_domain(self, repo: Repository) -> RepositoryInfo:

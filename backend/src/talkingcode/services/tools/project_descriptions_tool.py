@@ -1,24 +1,34 @@
 """Tool for discovering indexed project descriptions."""
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 import structlog
 
 from talkingcode.domain.models import RepositorySummary
-from talkingcode.repository.document_repository import DocumentRepository
-from talkingcode.services.llm.openrouter_client import IOpenRouterClient
+from talkingcode.repository.document_repository import IDocumentRepository
+from talkingcode.services.ingestion.embedder import IOpenRouterEmbedder
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+
+
+class IProjectDescriptionsTool(Protocol):
+    """Protocol for project descriptions tool."""
+
+    name: str
+    schema: dict[str, Any]
+    timeout: int
+
+    async def execute(self, query: str = "") -> dict[str, Any]:
+        """Return project summaries, optionally ranked by query relevance."""
+        ...
 
 
 @dataclass(slots=True)
 class ProjectDescriptionsTool:
     """Tool that returns summaries of indexed GitHub projects."""
 
-    document_repository: DocumentRepository
-    openrouter_client: IOpenRouterClient
-    embedding_model: str
-    embedding_dimensions: int
+    document_repository: IDocumentRepository
+    embedder: IOpenRouterEmbedder
 
     name: str = "get_project_descriptions"
     timeout: int = 10
@@ -65,11 +75,7 @@ class ProjectDescriptionsTool:
         if not query.strip():
             return await self.document_repository.get_repository_summaries()
 
-        embeddings = await self.openrouter_client.generate_embeddings(
-            model=self.embedding_model,
-            texts=[query],
-            dimensions=self.embedding_dimensions,
-        )
+        embeddings = await self.embedder.embed_batch([query])
         if not embeddings:
             logger.warning("Project ranking embedding generation returned empty result")
             return await self.document_repository.get_repository_summaries()

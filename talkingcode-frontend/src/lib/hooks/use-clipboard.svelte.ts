@@ -28,7 +28,8 @@ type Options = {
 export class UseClipboard {
 	#copiedStatus = $state<"success" | "failure">();
 	private delay: number;
-	private timeout: ReturnType<typeof setTimeout> | undefined = undefined;
+	// noqa: timers-banned — clipboard feedback reset timer
+	private timeout: ReturnType<typeof setTimeout> | undefined = undefined; // noqa: timers-banned — timer field for clipboard feedback auto-reset
 
 	constructor({ delay = 800 }: Partial<Options> = {}) {
 		this.delay = delay;
@@ -55,14 +56,14 @@ export class UseClipboard {
 
 			this.#copiedStatus = "success";
 
-			this.timeout = setTimeout(() => {
+			this.timeout = setTimeout(() => { // noqa: timers-banned — clipboard feedback reset timer
 				this.#copiedStatus = undefined;
 			}, this.delay);
 		} catch {
 			// an error can occur when not in the browser or if the user hasn't given clipboard access
 			this.#copiedStatus = "failure";
 
-			this.timeout = setTimeout(() => {
+			this.timeout = setTimeout(() => { // noqa: timers-banned — clipboard feedback reset timer
 				this.#copiedStatus = undefined;
 			}, this.delay);
 		}

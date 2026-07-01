@@ -58,6 +58,15 @@
 	--tracking-wide: 0.06em;
 	--tracking-wider: 0.12em;
 
+	/* Micro text sizes */
+	--text-2xs: 0.5625rem;  /* 9px */
+	--text-3xs: 0.625rem;   /* 10px */
+	--text-2xs-wide: 0.6875rem; /* 11px */
+
+	/* Response/citation sizing */
+	--text-citation: 0.72em;
+	--text-response: 1.04rem;
+
 	/* Spacing */
 	--space-1: 0.25rem;
 	--space-2: 0.5rem;
@@ -169,6 +178,11 @@
 	--sidebar-accent-foreground: hsl(var(--color-accent-fg));
 	--sidebar-border: hsl(var(--color-border));
 	--sidebar-ring: hsl(var(--color-primary) / 0.42);
+
+	/* Micro text sizes - same in dark */
+	--text-2xs: 0.5625rem;
+	--text-3xs: 0.625rem;
+	--text-2xs-wide: 0.6875rem;
 }
 
 @theme inline {
@@ -213,6 +227,13 @@
 	--font-display: var(--font-display);
 	--font-body: var(--font-body);
 	--font-mono: var(--font-mono);
+
+	--color-surface-2: hsl(var(--color-surface-2));
+	--color-surface-3: hsl(var(--color-surface-3));
+	--color-text-subtle: hsl(var(--color-text-subtle));
+	--color-success: hsl(var(--color-success));
+
+	--font-size-3xs: var(--text-3xs);
 }
 
 @layer base {
@@ -227,6 +248,7 @@
 			line-height: var(--leading-relaxed);
 			font-weight: 360;
 			-webkit-font-smoothing: antialiased;
+			scroll-behavior: smooth;
 		}
 	
 		::-webkit-scrollbar {
@@ -253,9 +275,101 @@
 	}
 }
 
-.streaming-cursor::after {
+/* Attach the cursor to the last block's inline flow so it sits at the end of
+   the text instead of on its own line below the container. */
+.streaming-cursor > :last-child::after {
 	content: '\2588';
 	margin-left: 1px;
 	color: hsl(var(--color-primary));
 	animation: blink-cursor 1s step-end infinite;
+}
+
+@keyframes shimmer {
+	from {
+		background-position: 100% center;
+	}
+	to {
+		background-position: 0% center;
+	}
+}
+
+@keyframes text-shimmer {
+	from {
+		background-position: 100% center;
+	}
+	to {
+		background-position: 0% center;
+	}
+}
+
+.animate-shimmer {
+	animation: shimmer var(--shimmer-duration, 2s) linear infinite;
+}
+
+.animate-text-shimmer {
+	animation: text-shimmer var(--shimmer-duration, 2s) linear infinite;
+}
+
+.shimmer-effect {
+	background-image: var(--bg), linear-gradient(var(--color-muted-foreground), var(--color-muted-foreground));
+	background-position: 100% center;
+}
+
+.shimmer-bg-size {
+	background-size: 250% 100%, auto;
+}
+
+/* Code component styles (moved from Code.svelte) */
+html.dark .ai-code .ai-code-wrapper .shiki,
+html.dark .ai-code .ai-code-wrapper .shiki span {
+	color: var(--shiki-dark) !important;
+	font-style: var(--shiki-dark-font-style) !important;
+	font-weight: var(--shiki-dark-font-weight) !important;
+	text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+.ai-code .ai-code-wrapper pre.shiki {
+	@apply overflow-x-auto rounded-lg bg-transparent py-4 text-sm;
+}
+
+.ai-code .ai-code-wrapper pre.shiki:not([data-code-overflow] *):not([data-code-overflow]) {
+	@apply overflow-y-auto;
+	max-height: min(100%, 650px);
+}
+
+.ai-code .ai-code-wrapper pre.shiki code {
+	@apply grid min-w-full rounded-none border-0 bg-transparent p-0 wrap-break-word;
+	counter-reset: line;
+	box-decoration-break: clone;
+}
+
+.ai-code .ai-code-wrapper pre.line-numbers {
+	counter-reset: step;
+	counter-increment: step 0;
+}
+
+.ai-code .ai-code-wrapper pre.line-numbers .line::before {
+	content: counter(step);
+	counter-increment: step;
+	display: inline-block;
+	width: 1.8rem;
+	margin-right: 1.4rem;
+	text-align: right;
+	@apply text-muted-foreground;
+}
+
+.ai-code .ai-code-wrapper pre .line.line--highlighted {
+	@apply bg-secondary;
+}
+
+.ai-code .ai-code-wrapper pre .line.line--highlighted span {
+	@apply relative;
+}
+
+.ai-code .ai-code-wrapper pre .line {
+	@apply inline-block min-h-4 w-full px-4 py-0.5;
+}
+
+.ai-code .ai-code-wrapper pre.line-numbers .line {
+	@apply px-2;
 }

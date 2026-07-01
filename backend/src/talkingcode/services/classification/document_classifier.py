@@ -1,14 +1,20 @@
-"""Document classifier using structured output."""
-import json
+"""Document classifier using Pydantic AI structured output."""
+
 from dataclasses import dataclass
 import re
 from typing import Protocol
 
 import structlog
+from pydantic_ai import Agent
+from pydantic_ai.models.openrouter import OpenRouterModel
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 
-from talkingcode.domain.models import DocumentClassificationInput, DocumentClassificationOutput
+from talkingcode.domain.models import (
+    DocumentClassificationAgentOutput,
+    DocumentClassificationInput,
+    DocumentClassificationOutput,
+)
 from talkingcode.enums import Area, FileType
-from talkingcode.services.llm.openrouter_client import IOpenRouterClient
 from talkingcode.telemetry.ingestion_metrics import get_ingestion_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
@@ -17,32 +23,20 @@ metrics = get_ingestion_metrics()
 
 class IDocumentClassifier(Protocol):
     """Protocol for document classifier."""
-    
+
     async def classify(self, input_data: DocumentClassificationInput) -> DocumentClassificationOutput:
         """Classify a document."""
         ...
 
-CLASSIFICATION_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "language": {"type": "string", "description": "Programming language"},
-        "area": {"type": "string", "enum": [a.value for a in Area]},
-        "file_type": {"type": "string", "enum": [ft.value for ft in FileType]},
-        "symbols": {"type": "array", "items": {"type": "string"}},
-        "tags": {"type": "array", "items": {"type": "string"}},
-    },
-    "required": ["language", "area", "file_type", "symbols", "tags"],
-}
-
 
 @dataclass(slots=True)
 class DocumentClassifier:
-    """Document classifier using OpenRouter."""
+    """Document classifier using Pydantic AI."""
 
-    openrouter_client: IOpenRouterClient
+    openrouter_api_key: str
     model: str = "openai/gpt-4o-mini"
     llm_available: bool = True
-    
+
     async def classify(
         self,
         input_data: DocumentClassificationInput,
@@ -52,39 +46,36 @@ class DocumentClassifier:
             return self._heuristic_classification(input_data)
 
         try:
-            content = await self.openrouter_client.send_chat(
-                model=self.model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Classify this code file. Return JSON with language, area (backend/frontend/infra/scripts/docs/tests), file_type (source/config/migration/test/docs/ci/unknown), symbols (function/class names), and tags.",
-                    },
-                    {
-                        "role": "user",
-                        "content": f"File: {input_data.repo}/{input_data.path}\n\n```\n{input_data.content[:4000]}\n```",
-                    },
-                ],
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "document_classification",
-                        "strict": True,
-                        "schema": CLASSIFICATION_SCHEMA,
-                    },
-                },
+            agent = Agent(
+                OpenRouterModel(
+                    self.model,
+                    provider=OpenRouterProvider(
+                        api_key=self.openrouter_api_key,
+                        app_url="https://talkingcode.dev",
+                        app_title="TalkingCode",
+                    ),
+                ),
+                output_type=DocumentClassificationAgentOutput,
+                system_prompt=(
+                    "Classify code files. Return language, area, file_type, symbols, and tags. "
+                    "Use only valid enum values for area and file_type."
+                ),
             )
-
-            parsed = json.loads(content)
-
+            result = await agent.run(
+                f"File: {input_data.repo}/{input_data.path}\n\n```\n{input_data.content[:4000]}\n```"
+            )
+            output = result.output
             return DocumentClassificationOutput(
-                language=parsed.get("language", ""),
-                area=Area(parsed.get("area", Area.UNKNOWN.value)),
-                file_type=FileType(parsed.get("file_type", FileType.UNKNOWN.value)),
-                symbols=parsed.get("symbols", []),
-                tags=parsed.get("tags", []),
+                language=output.language,
+                area=output.area,
+                file_type=output.file_type,
+                symbols=output.symbols,
+                tags=output.tags,
             )
         except Exception as exc:  # noqa: BLE001
-            metrics.ingestion_classifier_fallback_total.add(1, attributes={"operation": "classify", "status": "fallback"})
+            metrics.ingestion_classifier_fallback_total.add(
+                1, attributes={"operation": "classify", "status": "fallback"}
+            )
             logger.warning("Classifier failed; switching to heuristic fallback", error=str(exc))
             self.llm_available = False
             return self._heuristic_classification(input_data)

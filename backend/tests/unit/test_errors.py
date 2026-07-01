@@ -1,5 +1,4 @@
 """Tests for errors."""
-import pytest
 
 from talkingcode.errors import AppError, InputError, NotFoundError, InfraError, UnauthorisedError
 

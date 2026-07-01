@@ -1,7 +1,6 @@
 """Model list routes."""
 
 from fastapi import APIRouter, Depends
-from talkingcode.config import AppConfig
 from talkingcode.dependencies import get_config
 from talkingcode.models.api import ModelInfoResponse, ModelListResponse
 
@@ -20,7 +19,7 @@ def _model_label(model_id: str) -> str:
 
 
 @router.get("/models")
-async def list_models(config: AppConfig = Depends(get_config)) -> ModelListResponse:
+async def list_models(config=Depends(get_config)) -> ModelListResponse:
     """Return curated model list with labels and default."""
     model_ids = [m.strip() for m in config.curated_models.split(",") if m.strip()]
     return ModelListResponse(

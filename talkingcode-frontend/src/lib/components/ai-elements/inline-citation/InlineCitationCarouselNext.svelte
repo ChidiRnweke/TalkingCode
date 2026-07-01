@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { cn } from "$lib/utils";
+	import { Button } from "$lib/components/ui/button";
 	import { getCarouselContext } from "./carousel-context.svelte.js";
 	import { ArrowRight } from "@lucide/svelte";
 	import type { HTMLButtonAttributes } from "svelte/elements";
@@ -20,7 +21,7 @@
 	}
 </script>
 
-<button
+<Button
 	aria-label="Next"
 	class={cn("shrink-0", className)}
 	onclick={handleClick}
@@ -28,4 +29,4 @@
 	{...restProps}
 >
 	<ArrowRight class="text-muted-foreground size-4" />
-</button>
+</Button>

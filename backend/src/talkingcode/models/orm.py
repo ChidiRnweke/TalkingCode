@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import JSON, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -11,7 +11,6 @@ from talkingcode.enums import (
     Area,
     FileType,
     IngestionStatus,
-    ToolCallStatus,
     TurnStatus,
 )
 
@@ -164,33 +163,3 @@ class ConversationTurn(Base):
         Index("idx_turn_conv_created", "conversation_id", "created_at"),
     )
     
-    timeline_items: Mapped[list["ToolCallTimeline"]] = relationship(back_populates="turn")
-
-
-class ToolCallTimeline(Base):
-    """Tool call timeline table."""
-    
-    __tablename__ = "tool_call_timeline"
-    
-    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
-    turn_id: Mapped[UUID] = mapped_column(
-        PGUUID(as_uuid=True), ForeignKey("conversation_turns.id"), nullable=False
-    )
-    sequence_no: Mapped[int] = mapped_column(nullable=False)
-    group_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    tool_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    visible_args_json: Mapped[dict] = mapped_column(JSON, default=dict)
-    status: Mapped[str] = mapped_column(
-        String(20), default=ToolCallStatus.STARTED.value
-    )
-    success: Mapped[bool | None] = mapped_column(nullable=True)
-    duration_ms: Mapped[int | None] = mapped_column(nullable=True)
-    error_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    
-    __table_args__ = (
-        Index("idx_timeline_turn_seq", "turn_id", "sequence_no"),
-    )
-    
-    turn: Mapped[ConversationTurn] = relationship(back_populates="timeline_items")

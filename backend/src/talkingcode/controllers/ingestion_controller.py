@@ -11,7 +11,7 @@ from talkingcode.domain.models import (
     StartIngestionInput,
 )
 from talkingcode.errors import NotFoundError
-from talkingcode.repository.repo_repository import RepoRepository
+from talkingcode.repository.repo_repository import IRepoRepository
 from talkingcode.services.ingestion.ingestion_service import IIngestionService
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
@@ -21,7 +21,7 @@ logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 class IngestionController:
     """Controller for repo management and ingestion operations."""
 
-    repo_repository: RepoRepository
+    repo_repository: IRepoRepository
     ingestion_service: IIngestionService
 
     async def register_repo(self, input_data: RegisterRepoInput) -> RepositoryInfo:

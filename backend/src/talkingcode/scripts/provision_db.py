@@ -12,7 +12,6 @@ Follows the ReceiptToRecipe provision-db.js pattern:
 """
 
 import asyncio
-import os
 import secrets as stdlib_secrets
 
 import structlog
@@ -28,6 +27,8 @@ from infisical_client import (
 )
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
+
+from talkingcode.environment.env import EnvSecretsBackend
 
 logger = structlog.getLogger("talkingcode.provision")
 
@@ -125,22 +126,23 @@ async def provision_database() -> str:
     """
     load_dotenv()
     logger.info("provision.starting")
+    env = EnvSecretsBackend()
 
     # --- Resolve Infisical credentials ---
-    site_url = os.getenv("INFISICAL_URL")
-    infisical_enabled = os.getenv("INFISICAL_ENABLED")
+    site_url = env.read_optional("INFISICAL_URL")
+    infisical_enabled = env.read_optional("INFISICAL_ENABLED")
 
-    admin_client_id = os.getenv("INFISICAL_ADMIN_CLIENT_ID")
-    admin_client_secret = os.getenv("INFISICAL_ADMIN_CLIENT_SECRET")
-    admin_project_id = os.getenv("INFISICAL_ADMIN_PROJECT_ID")
+    admin_client_id = env.read_optional("INFISICAL_ADMIN_CLIENT_ID")
+    admin_client_secret = env.read_optional("INFISICAL_ADMIN_CLIENT_SECRET")
+    admin_project_id = env.read_optional("INFISICAL_ADMIN_PROJECT_ID")
 
-    app_client_id = os.getenv("INFISICAL_CLIENT_ID")
-    app_client_secret = os.getenv("INFISICAL_CLIENT_SECRET")
-    app_project_id = os.getenv("INFISICAL_PROJECT_ID")
-    app_environment = os.getenv("INFISICAL_ENVIRONMENT")
+    app_client_id = env.read_optional("INFISICAL_CLIENT_ID")
+    app_client_secret = env.read_optional("INFISICAL_CLIENT_SECRET")
+    app_project_id = env.read_optional("INFISICAL_PROJECT_ID")
+    app_environment = env.read_optional("INFISICAL_ENVIRONMENT")
 
-    db_name = os.getenv("DB_NAME", "talkingcode")
-    db_user = os.getenv("DB_USER", "talkingcode")
+    db_name = env.read_or_default("DB_NAME", "talkingcode")
+    db_user = env.read_or_default("DB_USER", "talkingcode")
 
     # --- Infisical mode: dual client (admin + app) ---
     if infisical_enabled and site_url and admin_client_id and app_client_id:
@@ -231,11 +233,11 @@ async def provision_database() -> str:
 
     # --- Env-only mode: use env vars directly ---
     logger.info("provision.mode.env_only")
-    admin_user = os.getenv("POSTGRES_ADMIN_USER", "postgres")
-    admin_password = os.getenv("POSTGRES_ADMIN_PASSWORD", "")
-    db_host = os.getenv("DB_HOST", "localhost")
-    db_port = os.getenv("DB_PORT", "5432")
-    db_password = os.getenv("DB_PASSWORD", "talkingcode")
+    admin_user = env.read_or_default("POSTGRES_ADMIN_USER", "postgres")
+    admin_password = env.read_or_default("POSTGRES_ADMIN_PASSWORD", "")
+    db_host = env.read_or_default("DB_HOST", "localhost")
+    db_port = env.read_or_default("DB_PORT", "5432")
+    db_password = env.read_or_default("DB_PASSWORD", "talkingcode")
 
     database_url = await _provision_pg(
         admin_user=admin_user,

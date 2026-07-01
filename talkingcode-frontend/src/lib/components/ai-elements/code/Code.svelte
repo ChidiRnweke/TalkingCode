@@ -25,71 +25,9 @@
 	});
 </script>
 
-<div {...rest} bind:this={ref} class={cn(codeVariants({ variant }), className)}>
+<div {...rest} bind:this={ref} class={cn('ai-code', codeVariants({ variant }), className)}>
 	<div class="ai-code-wrapper">
 		{@html codeState.highlighted}
 		{@render children?.()}
 	</div>
 </div>
-
-<style lang="postcss">
-	@reference '../../../../app.css';
-
-	:global(html.dark) .ai-code-wrapper :global(.shiki),
-	:global(html.dark) .ai-code-wrapper :global(.shiki span) {
-		color: var(--shiki-dark) !important;
-		font-style: var(--shiki-dark-font-style) !important;
-		font-weight: var(--shiki-dark-font-weight) !important;
-		text-decoration: var(--shiki-dark-text-decoration) !important;
-	}
-
-	.ai-code-wrapper :global(pre.shiki) {
-		@apply overflow-x-auto rounded-lg bg-transparent py-4 text-sm;
-	}
-
-	.ai-code-wrapper :global(pre.shiki:not([data-code-overflow] *):not([data-code-overflow])) {
-		@apply overflow-y-auto;
-		max-height: min(100%, 650px);
-	}
-
-	.ai-code-wrapper :global(pre.shiki code) {
-		@apply grid min-w-full rounded-none border-0 bg-transparent p-0 wrap-break-word;
-		counter-reset: line;
-		box-decoration-break: clone;
-	}
-
-	.ai-code-wrapper :global(pre.line-numbers) {
-		counter-reset: step;
-		counter-increment: step 0;
-	}
-
-	.ai-code-wrapper :global(pre.line-numbers .line::before) {
-		content: counter(step);
-		counter-increment: step;
-		display: inline-block;
-		width: 1.8rem;
-		margin-right: 1.4rem;
-		text-align: right;
-	}
-
-	.ai-code-wrapper :global(pre.line-numbers .line::before) {
-		@apply text-muted-foreground;
-	}
-
-	.ai-code-wrapper :global(pre .line.line--highlighted) {
-		@apply bg-secondary;
-		/* border-l-2 border-primary/40 if needed */
-	}
-
-	.ai-code-wrapper :global(pre .line.line--highlighted span) {
-		@apply relative;
-	}
-
-	.ai-code-wrapper :global(pre .line) {
-		@apply inline-block min-h-4 w-full px-4 py-0.5;
-	}
-
-	.ai-code-wrapper :global(pre.line-numbers .line) {
-		@apply px-2;
-	}
-</style>

@@ -1,122 +1,40 @@
 /** Chat service implementation with strict SSE parsing */
-import { env } from '$env/dynamic/public';
 import { z } from 'zod';
-import type { AgenticAskInput, AgentStreamEvent, ToolCallTimelineItem } from '$lib/models';
+import type { AgenticAskInput, AgentStreamEvent } from '$lib/models';
 import type { IChatService } from './IChatService';
 
-const baseSchema = z
+const markdownDeltaSchema = z
 	.object({
-		turn_id: z.string().min(1),
+		text: z.string(),
 		timestamp: z.string().min(1)
 	})
 	.strict();
 
-const turnStartedSchema = baseSchema
-	.extend({
-		message: z.string().optional(),
-		visible_args: z.object({ model: z.string().optional() }).optional()
-	})
-	.strict();
-
-const messageDeltaSchema = baseSchema
-	.extend({
-		message: z.string(),
-		iteration: z.number().int().positive().optional()
-	})
-	.strict();
-
-const reasoningDeltaSchema = baseSchema
-	.extend({
-		message: z.string(),
-		iteration: z.number().int().positive().optional()
-	})
-	.strict();
-
-const stepSummarySchema = baseSchema
-	.extend({
-		message: z.string(),
-		iteration: z.number().int().positive().optional()
-	})
-	.strict();
-
-const toolCallStartedSchema = baseSchema
-	.extend({
-		message: z.string().optional(),
-		iteration: z.number().int().positive().optional(),
-		index: z.number().int().nonnegative().optional(),
-		call_id: z.string().min(1).optional(),
-		tool_name: z.string().min(1),
-		visible_args: z.record(z.string(), z.unknown()).optional()
-	})
-	.strict();
-
-const toolCallDeltaSchema = baseSchema
-	.extend({
-		message: z.string().optional(),
-		iteration: z.number().int().positive().optional(),
-		index: z.number().int().nonnegative().optional(),
-		call_id: z.string().min(1).optional(),
-		tool_name: z.string().min(1).optional(),
-		visible_args: z.object({ phase: z.string().optional() }).optional()
-	})
-	.strict();
-
-const toolCallFinishedSchema = baseSchema
-	.extend({
-		message: z.string().optional(),
-		iteration: z.number().int().positive().optional(),
-		index: z.number().int().nonnegative().optional(),
-		call_id: z.string().min(1).optional(),
-		tool_name: z.string().min(1),
-		visible_args: z.object({
-			success: z.boolean(),
-			duration_ms: z.number().int().nonnegative(),
-			error_code: z.string().nullish()
-		}),
-		code: z.string().optional()
-	})
-	.strict();
-
-const toolResultAvailableSchema = baseSchema
-	.extend({
-		message: z.string().optional(),
-		iteration: z.number().int().positive().optional(),
-		index: z.number().int().nonnegative().optional(),
-		call_id: z.string().min(1).optional(),
-		tool_name: z.string().min(1),
-		visible_args: z.object({
-			success: z.boolean(),
-			error_code: z.string().nullish()
-		})
-	})
-	.strict();
-
-const assistantDoneSchema = baseSchema
-	.extend({
-		message: z.string().optional(),
-		visible_args: z
-			.object({
-				sources: z
-					.array(
-						z.object({
-							index: z.number().int().positive(),
-							repository: z.string().min(1),
-							path: z.string().min(1),
-							start_line: z.number().int().nullable().optional(),
-							end_line: z.number().int().nullable().optional(),
-							similarity_score: z.number().optional()
-						})
-					)
-					.optional()
-			})
+const assistantDoneSchema = z
+	.object({
+		turn_id: z.string().min(1),
+		timestamp: z.string().min(1),
+		sources: z
+			.array(
+				z.object({
+					index: z.number().int().positive(),
+					repository: z.string().min(1),
+					path: z.string().min(1),
+					start_line: z.number().int().nullable().optional(),
+					end_line: z.number().int().nullable().optional(),
+					similarity_score: z.number().optional()
+				})
+			)
 			.optional()
 	})
 	.strict();
-const agentErrorSchema = baseSchema
-	.extend({
+
+const agentErrorSchema = z
+	.object({
+		turn_id: z.string().min(1),
 		message: z.string(),
 		code: z.string().optional(),
-		visible_args: z.object({ code: z.string().optional() }).strict().optional()
+		timestamp: z.string().min(1)
 	})
 	.strict();
 
@@ -129,105 +47,12 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 	}
 
 	switch (eventType) {
-		case 'turn.started': {
-			const result = turnStartedSchema.safeParse(parsed);
+		case 'markdown.delta': {
+			const result = markdownDeltaSchema.safeParse(parsed);
 			if (!result.success) return null;
 			return {
-				kind: 'turn.started',
-				turnId: result.data.turn_id,
-				model: result.data.visible_args?.model,
-				timestamp: result.data.timestamp
-			};
-		}
-		case 'message.delta': {
-			const result = messageDeltaSchema.safeParse(parsed);
-			if (!result.success) return null;
-			return {
-				kind: 'message.delta',
-				turnId: result.data.turn_id,
-				iteration: result.data.iteration,
-				token: result.data.message,
-				timestamp: result.data.timestamp
-			};
-		}
-		case 'reasoning.delta': {
-			const result = reasoningDeltaSchema.safeParse(parsed);
-			if (!result.success) return null;
-			return {
-				kind: 'reasoning.delta',
-				turnId: result.data.turn_id,
-				iteration: result.data.iteration,
-				text: result.data.message,
-				timestamp: result.data.timestamp
-			};
-		}
-		case 'step.summary': {
-			const result = stepSummarySchema.safeParse(parsed);
-			if (!result.success) return null;
-			return {
-				kind: 'step.summary',
-				turnId: result.data.turn_id,
-				iteration: result.data.iteration,
-				summary: result.data.message,
-				timestamp: result.data.timestamp
-			};
-		}
-		case 'tool_call.started': {
-			const result = toolCallStartedSchema.safeParse(parsed);
-			if (!result.success) return null;
-			return {
-				kind: 'tool_call.started',
-				turnId: result.data.turn_id,
-				toolName: result.data.tool_name,
-				callId: result.data.call_id,
-				iteration: result.data.iteration,
-				index: result.data.index,
-				visibleArgs: result.data.visible_args ?? {},
-				timestamp: result.data.timestamp
-			};
-		}
-		case 'tool_call.delta': {
-			const result = toolCallDeltaSchema.safeParse(parsed);
-			if (!result.success) return null;
-			return {
-				kind: 'tool_call.delta',
-				turnId: result.data.turn_id,
-				toolName: result.data.tool_name,
-				callId: result.data.call_id,
-				iteration: result.data.iteration,
-				index: result.data.index,
-				phase: result.data.visible_args?.phase,
-				timestamp: result.data.timestamp
-			};
-		}
-		case 'tool_call.completed': {
-			const result = toolCallFinishedSchema.safeParse(parsed);
-			if (!result.success) return null;
-			return {
-				kind: 'tool_call.completed',
-				turnId: result.data.turn_id,
-				toolName: result.data.tool_name,
-				callId: result.data.call_id,
-				iteration: result.data.iteration,
-				index: result.data.index,
-				success: result.data.visible_args.success,
-				durationMs: result.data.visible_args.duration_ms,
-				errorCode: result.data.visible_args.error_code ?? result.data.code ?? undefined,
-				timestamp: result.data.timestamp
-			};
-		}
-		case 'tool_result.available': {
-			const result = toolResultAvailableSchema.safeParse(parsed);
-			if (!result.success) return null;
-			return {
-				kind: 'tool_result.available',
-				turnId: result.data.turn_id,
-				toolName: result.data.tool_name,
-				callId: result.data.call_id,
-				iteration: result.data.iteration,
-				index: result.data.index,
-				success: result.data.visible_args.success,
-				errorCode: result.data.visible_args.error_code ?? undefined,
+				kind: 'markdown.delta',
+				text: result.data.text,
 				timestamp: result.data.timestamp
 			};
 		}
@@ -237,7 +62,7 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 			return {
 				kind: 'turn.done',
 				turnId: result.data.turn_id,
-				sources: (result.data.visible_args?.sources ?? []).map((source) => ({
+				sources: (result.data.sources ?? []).map((source) => ({
 					index: source.index,
 					repository: source.repository,
 					path: source.path,
@@ -255,7 +80,7 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 				kind: 'turn.error',
 				turnId: result.data.turn_id,
 				message: result.data.message,
-				code: result.data.code || result.data.visible_args?.code || null,
+				code: result.data.code ?? null,
 				timestamp: result.data.timestamp
 			};
 		}
@@ -265,12 +90,7 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 }
 
 export class ChatService implements IChatService {
-	private backendUrl: string;
 	private currentEventType = '';
-
-	constructor() {
-		this.backendUrl = env.PUBLIC_BACKEND_URL || 'http://localhost:8000';
-	}
 
 	async *askAgentic(input: AgenticAskInput, signal?: AbortSignal): AsyncGenerator<AgentStreamEvent> {
 		const response = await fetch(`api/chat/agentic`, {
@@ -330,19 +150,6 @@ export class ChatService implements IChatService {
 		}
 
 		return null;
-	}
-
-	async getToolTimeline(conversationId: string): Promise<ToolCallTimelineItem[]> {
-		const response = await fetch(
-			`${this.backendUrl}/chat/timeline?conversation_id=${conversationId}`
-		);
-
-		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
-		}
-
-		const data = await response.json();
-		return data.timeline || [];
 	}
 }
 

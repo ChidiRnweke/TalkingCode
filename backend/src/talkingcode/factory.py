@@ -3,26 +3,26 @@
 from dataclasses import dataclass
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
+from agents import Tool, function_tool
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: import-boundary:sqlalchemy-location — Factory assembles concrete ORM sessions for repositories
 
 from talkingcode.config import AppConfig
 from talkingcode.controllers.chat_controller import ChatController
+from talkingcode.services.agent.agent_service import ChatAgentService
 from talkingcode.controllers.ingestion_controller import IngestionController
 from talkingcode.repository.conversation_repository import ConversationRepository
+from talkingcode.repository.database import get_engine, get_session_maker
 from talkingcode.repository.document_repository import DocumentRepository
 from talkingcode.repository.repo_repository import RepoRepository
-from talkingcode.services.agent.agent_loop import AgentLoopService
-from talkingcode.services.agent.timeline_repository import TimelineRepository
 from talkingcode.services.classification.document_classifier import DocumentClassifier
 from talkingcode.services.ingestion.chunker import LineChunker
 from talkingcode.services.ingestion.embedder import OpenRouterEmbedder
 from talkingcode.services.ingestion.github_fetcher import GitHubFetcher
 from talkingcode.services.ingestion.ingestion_service import IngestionService
-from talkingcode.services.llm.openrouter_client import OpenRouterClient
 from talkingcode.services.tools.project_descriptions_tool import ProjectDescriptionsTool
+from talkingcode.services.tools.query_intent import QueryIntentExtractor
 from talkingcode.services.tools.read_file_tool import ReadFileTool
 from talkingcode.services.tools.retriever_tool import RetrieverTool
-from talkingcode.services.tools.tool_registry import ToolRegistry
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
@@ -42,83 +42,108 @@ class AppFactory:
         """Get document repository."""
         return DocumentRepository(self.session)
 
-    def get_timeline_repository(self) -> TimelineRepository:
-        """Get timeline repository."""
-        return TimelineRepository(self.session)
-
     def get_document_classifier(self) -> DocumentClassifier:
         """Get document classifier."""
         return DocumentClassifier(
-            openrouter_client=self.get_openrouter_client(),
+            openrouter_api_key=self.config.openrouter_api_key,
         )
 
-    def get_openrouter_client(self) -> OpenRouterClient:
-        """Get OpenRouter SDK client adapter."""
-        return OpenRouterClient(api_key=self.config.openrouter_api_key)
-
-    async def get_tool_registry(self) -> ToolRegistry:
-        """Get tool registry with all tools."""
+    async def get_agent_tools(self) -> list[Tool]:
+        """Get OpenAI Agents SDK tools backed by application services."""
         document_repo = self.get_document_repository()
         repo_repo = self.get_repo_repository()
 
-        # Fetch available repo names for intent extraction
         repos = await repo_repo.list_all()
         available_repos = [f"{r.owner}/{r.name}" for r in repos]
 
         retriever = RetrieverTool(
             document_repository=document_repo,
-            openrouter_client=self.get_openrouter_client(),
-            embedding_model=self.config.embedding_model,
-            embedding_dimensions=self.config.embedding_dimensions,
+            embedder=self.get_embedder(),
+            intent_extractor=QueryIntentExtractor(),
+            openrouter_api_key=self.config.openrouter_api_key,
             intent_model=self.config.intent_extraction_model,
             available_repos=available_repos,
         )
 
         project_descriptions = ProjectDescriptionsTool(
             document_repository=document_repo,
-            openrouter_client=self.get_openrouter_client(),
-            embedding_model=self.config.embedding_model,
-            embedding_dimensions=self.config.embedding_dimensions,
+            embedder=self.get_embedder(),
         )
 
-        read_file = ReadFileTool(
+        read_file_tool = ReadFileTool(
             document_repository=document_repo,
             repo_repository=repo_repo,
         )
 
-        registry = ToolRegistry()
-        registry.register_tool(retriever)
-        registry.register_tool(project_descriptions)
-        registry.register_tool(read_file)
+        async def search_github(query: str) -> dict:
+            """Semantic search across indexed GitHub repositories."""
+            try:
+                result = await retriever.execute(query=query)
+            except Exception:
+                logger.exception("search_github failed", query=query)
+                raise
+            logger.info("search_github succeeded", query=query)
+            return result
 
-        return registry
+        async def get_project_descriptions(query: str = "") -> dict:
+            """Get descriptions and names of indexed GitHub projects."""
+            try:
+                result = await project_descriptions.execute(query=query)
+            except Exception:
+                logger.exception("get_project_descriptions failed", query=query)
+                raise
+            logger.info("get_project_descriptions succeeded", query=query)
+            return result
 
-    async def get_agent_loop_service(self) -> AgentLoopService:
-        """Get agent loop service."""
-        tool_registry = await self.get_tool_registry()
-        timeline_repo = self.get_timeline_repository()
+        async def read_file(repository: str, file_path: str) -> dict:
+            """Read a file from an indexed repository."""
+            try:
+                result = await read_file_tool.execute(
+                    repository=repository,
+                    file_path=file_path,
+                )
+            except Exception:
+                logger.exception(
+                    "read_file failed", repository=repository, file_path=file_path
+                )
+                raise
+            logger.info(
+                "read_file succeeded", repository=repository, file_path=file_path
+            )
+            return result
 
-        return AgentLoopService(
-            openrouter_client=self.get_openrouter_client(),
-            tool_registry=tool_registry,
-            timeline_repository=timeline_repo,
-            default_model=self.config.default_model,
-            max_iterations=self.config.max_iterations,
-            max_tools_per_turn=self.config.max_tools_per_turn,
-            default_tool_timeout=self.config.default_tool_timeout,
-        )
+        timeout = float(self.config.default_tool_timeout)
+        return [
+            function_tool(
+                search_github,
+                name_override="search_github",
+                timeout=timeout,
+            ),
+            function_tool(
+                get_project_descriptions,
+                name_override="get_project_descriptions",
+                timeout=timeout,
+            ),
+            function_tool(
+                read_file,
+                name_override="read_file",
+                timeout=timeout,
+            ),
+        ]
 
     async def get_chat_controller(self) -> "ChatController":
         """Get chat controller."""
-
-        agent_service = await self.get_agent_loop_service()
-        timeline_repo = self.get_timeline_repository()
         conversation_repo = self.get_conversation_repository()
+        agent_service = ChatAgentService(
+            tools=await self.get_agent_tools(),
+            openrouter_api_key=self.config.openrouter_api_key,
+            max_iterations=self.config.max_iterations,
+        )
 
         return ChatController(
             agent_service=agent_service,
-            timeline_repository=timeline_repo,
             conversation_repository=conversation_repo,
+            default_model=self.config.default_model,
         )
 
     def get_repo_repository(self) -> RepoRepository:
@@ -135,24 +160,16 @@ class AppFactory:
 
     def get_embedder(self) -> OpenRouterEmbedder:
         """Get embedding generator."""
-        model = self.config.embedding_model
-        dimensions = self.config.embedding_dimensions
-
-        if (
-            model == "text-embedding-3-small"
-            or model == "openai/text-embedding-3-small"
-        ):
-            model = "openai/text-embedding-3-large"
-            dimensions = 3072
-
         return OpenRouterEmbedder(
-            openrouter_client=self.get_openrouter_client(),
-            model=model,
-            dimensions=dimensions,
+            api_key=self.config.openrouter_api_key,
+            model=self.config.embedding_model,
+            dimensions=self.config.embedding_dimensions,
         )
 
     def get_ingestion_service(self) -> IngestionService:
         """Get ingestion orchestrator service."""
+        engine = get_engine(self.config.database_url)
+        session_maker = get_session_maker(engine)
         return IngestionService(
             repo_repository=self.get_repo_repository(),
             document_repository=self.get_document_repository(),
@@ -160,7 +177,7 @@ class AppFactory:
             classifier=self.get_document_classifier(),
             chunker=self.get_chunker(),
             embedder=self.get_embedder(),
-            database_url=self.config.database_url,
+            session_maker=session_maker,
         )
 
     def get_ingestion_controller(self) -> "IngestionController":

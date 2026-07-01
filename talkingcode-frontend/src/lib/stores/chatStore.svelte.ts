@@ -1,13 +1,7 @@
 /** Chat store with multi-turn conversation support */
-import type {
-	AgentStreamEvent,
-	ToolCallTimelineItem,
-	ChatMessage,
-	ReasoningStep,
-	AssistantPart
-} from '$lib/models';
+import type { AgentStreamEvent, ChatMessage } from '$lib/models';
 
-type TurnPhase = 'idle' | 'planning' | 'tools' | 'streaming' | 'done' | 'error';
+type TurnPhase = 'idle' | 'planning' | 'streaming' | 'done' | 'error';
 
 function createChatStore() {
 	let messages = $state<ChatMessage[]>([]);
@@ -17,96 +11,6 @@ function createChatStore() {
 
 	function generateId(): string {
 		return crypto.randomUUID();
-	}
-
-	function toolStepId(callId: string | undefined, toolName: string, timestamp: string): string {
-		return callId ? `tool-${callId}` : `tool-${toolName}-${timestamp}`;
-	}
-
-	function textPartId(timestamp: string, count: number): string {
-		return `text-${timestamp}-${count}`;
-	}
-
-	function appendTextPart(
-		parts: AssistantPart[] | undefined,
-		token: string,
-		iteration: number | undefined,
-		timestamp: string
-	): AssistantPart[] {
-		const next = [...(parts ?? [])];
-		const last = next.at(-1);
-
-		if (last?.kind === 'text' && last.iteration === iteration) {
-			next[next.length - 1] = {
-				...last,
-				text: last.text + token,
-				timestamp
-			};
-			return next;
-		}
-
-		next.push({
-			id: textPartId(timestamp, next.length),
-			kind: 'text',
-			text: token,
-			iteration,
-			timestamp
-		});
-		return next;
-	}
-
-	function appendReasoningPart(
-		parts: AssistantPart[] | undefined,
-		token: string,
-		iteration: number | undefined,
-		timestamp: string
-	): AssistantPart[] {
-		const next = [...(parts ?? [])];
-		const last = next.at(-1);
-
-		if (last?.kind === 'reasoning' && last.iteration === iteration) {
-			next[next.length - 1] = {
-				...last,
-				text: last.text + token,
-				timestamp
-			};
-			return next;
-		}
-
-		next.push({
-			id: `reasoning-${iteration ?? 0}-${timestamp}-${next.length}`,
-			kind: 'reasoning',
-			text: token,
-			iteration,
-			timestamp
-		});
-		return next;
-	}
-
-	function updateToolPart(
-		parts: AssistantPart[] | undefined,
-		callId: string | undefined,
-		toolName: string,
-		update: Partial<ToolCallTimelineItem>,
-		timestamp: string
-	): AssistantPart[] {
-		const next = [...(parts ?? [])];
-		const index = next.findLastIndex((part) => {
-			if (part.kind !== 'tool') return false;
-			if (callId && part.tool.callId) return part.tool.callId === callId;
-			return part.tool.toolName === toolName && part.tool.status === 'started';
-		});
-
-		if (index >= 0 && next[index].kind === 'tool') {
-			const part = next[index];
-			next[index] = {
-				...part,
-				tool: { ...part.tool, ...update },
-				timestamp
-			};
-		}
-
-		return next;
 	}
 
 	return {
@@ -133,43 +37,38 @@ function createChatStore() {
 			const active = this.activeMessage;
 			if (!active || active.role === 'user') return 'idle';
 			if (active.error) return 'error';
-			const hasReasoning = !!active.reasoningSteps?.length;
-			if (active.isStreaming) {
-				if (active.content) return 'streaming';
-				if (hasReasoning || active.plan || active.planText || active.toolCalls?.length) return 'tools';
-				return 'planning';
-			}
-			if (hasReasoning || active.plan || active.planText || active.toolCalls?.length) return 'done';
-			return 'idle';
+			if (active.isStreaming) return active.content ? 'streaming' : 'planning';
+			return active.content ? 'done' : 'idle';
 		},
 
 		addUserMessage(content: string): string {
 			const id = generateId();
-			const userMessage: ChatMessage = {
-				id,
-				role: 'user',
-				content,
-				timestamp: new Date().toISOString()
-			};
-			messages = [...messages, userMessage];
+			messages = [
+				...messages,
+				{
+					id,
+					role: 'user',
+					content,
+					timestamp: new Date().toISOString()
+				}
+			];
 			return id;
 		},
 
 		startAssistantTurn(): string {
 			const id = generateId();
 			currentTurnStartTime = Date.now();
-			const assistantMessage: ChatMessage = {
-				id,
-				role: 'assistant',
-				content: '',
-				timestamp: new Date().toISOString(),
-				plan: null,
-				toolCalls: [],
-				reasoningSteps: [],
-				isStreaming: true,
-				error: null
-			};
-			messages = [...messages, assistantMessage];
+			messages = [
+				...messages,
+				{
+					id,
+					role: 'assistant',
+					content: '',
+					timestamp: new Date().toISOString(),
+					isStreaming: true,
+					error: null
+				}
+			];
 			activeMessageId = id;
 			return id;
 		},
@@ -185,159 +84,21 @@ function createChatStore() {
 			const current = messages[idx];
 
 			switch (event.kind) {
-				case 'turn.started':
-					messages[idx] = {
-						...current,
-						reasoningSteps: current.reasoningSteps ?? []
-					};
-					break;
-
-				case 'tool_call.delta':
-					messages[idx] = {
-						...current,
-						reasoningSteps: current.reasoningSteps ?? []
-					};
-					break;
-
-				case 'tool_call.started': {
-					const newToolCall: ToolCallTimelineItem = {
-						turnId: event.turnId,
-						toolName: event.toolName,
-						callId: event.callId,
-						iteration: event.iteration,
-						visibleArgs: event.visibleArgs,
-						status: 'started',
-						timestamp: event.timestamp
-					};
-
-					const reasoningSteps: ReasoningStep[] = [
-						...(current.reasoningSteps ?? []),
-						{
-							id: toolStepId(event.callId, event.toolName, event.timestamp),
-							kind: 'tool',
-							tool: newToolCall,
-							timestamp: event.timestamp
-						}
-					];
-					const parts: AssistantPart[] = [
-						...(current.parts ?? []),
-						{
-							id: toolStepId(event.callId, event.toolName, event.timestamp),
-							kind: 'tool',
-							tool: newToolCall,
-							iteration: event.iteration,
-							timestamp: event.timestamp
-						}
-					];
-
-					messages[idx] = {
-						...current,
-						toolCalls: [...(current.toolCalls ?? []), newToolCall],
-						reasoningSteps,
-						parts
-					};
-					break;
-				}
-
-				case 'tool_call.completed': {
-					const toolCalls = current.toolCalls ?? [];
-					const idxToUpdate = toolCalls.findLastIndex((t) => {
-						if (event.callId && t.callId) {
-							return t.callId === event.callId;
-						}
-						return (
-							t.turnId === event.turnId &&
-							t.toolName === event.toolName &&
-							t.status === 'started'
-						);
-					});
-
-					if (idxToUpdate !== -1) {
-						const newToolCalls = [...toolCalls];
-						newToolCalls[idxToUpdate] = {
-							...newToolCalls[idxToUpdate],
-							status: event.success ? 'finished' : 'failed',
-							durationMs: event.durationMs
-						};
-
-						const reasoningSteps = [...(current.reasoningSteps ?? [])];
-						const stepId = toolStepId(event.callId, event.toolName, event.timestamp);
-						const stepIndex = reasoningSteps.findLastIndex(
-							(step) =>
-								step.kind === 'tool' &&
-								(step.id === stepId ||
-									(step.tool.toolName === event.toolName &&
-										step.tool.status === 'started' &&
-										(!event.callId || step.tool.callId === event.callId)))
-						);
-
-						if (stepIndex >= 0 && reasoningSteps[stepIndex].kind === 'tool') {
-							reasoningSteps[stepIndex] = {
-								...reasoningSteps[stepIndex],
-								tool: {
-									...reasoningSteps[stepIndex].tool,
-									status: event.success ? 'finished' : 'failed',
-									durationMs: event.durationMs,
-									errorCode: event.errorCode
-								},
-								timestamp: event.timestamp
-							};
-						}
-
-						const parts = updateToolPart(
-							current.parts,
-							event.callId,
-							event.toolName,
-							{
-								status: event.success ? 'finished' : 'failed',
-								durationMs: event.durationMs,
-								errorCode: event.errorCode
-							},
-							event.timestamp
-						);
-
-						messages[idx] = { ...current, toolCalls: newToolCalls, reasoningSteps, parts };
-					}
-					break;
-				}
-
-				case 'tool_result.available':
-					break;
-
-				case 'message.delta': {
+				case 'markdown.delta': {
 					const update: Partial<ChatMessage> = {
-						content: current.content + event.token,
-						isStreaming: true,
-						parts: appendTextPart(current.parts, event.token, event.iteration, event.timestamp)
+						content: current.content + event.text,
+						isStreaming: true
 					};
 
 					if (!current.content && currentTurnStartTime) {
-						update.thoughtDurationS = Math.max(1, Math.round((Date.now() - currentTurnStartTime) / 1000));
+						update.thoughtDurationS = Math.max(
+							1,
+							Math.round((Date.now() - currentTurnStartTime) / 1000)
+						);
 						currentTurnStartTime = null;
 					}
 
 					messages[idx] = { ...current, ...update };
-					break;
-				}
-
-				case 'reasoning.delta': {
-					messages[idx] = {
-						...current,
-						isStreaming: true,
-						parts: appendReasoningPart(current.parts, event.text, event.iteration, event.timestamp)
-					};
-					break;
-				}
-
-				case 'step.summary': {
-					if (event.iteration === undefined) break;
-					messages[idx] = {
-						...current,
-						stepSummaries: {
-							...(current.stepSummaries ?? {}),
-							[event.iteration]: event.summary
-						}
-					};
 					break;
 				}
 
@@ -348,7 +109,10 @@ function createChatStore() {
 					};
 
 					if (!current.thoughtDurationS && currentTurnStartTime) {
-						update.thoughtDurationS = Math.max(1, Math.round((Date.now() - currentTurnStartTime) / 1000));
+						update.thoughtDurationS = Math.max(
+							1,
+							Math.round((Date.now() - currentTurnStartTime) / 1000)
+						);
 						currentTurnStartTime = null;
 					}
 
@@ -367,9 +131,9 @@ function createChatStore() {
 			}
 		},
 
-			setSelectedModel(model: string) {
-				selectedModel = model;
-			},
+		setSelectedModel(model: string) {
+			selectedModel = model;
+		},
 
 		initializeSelectedModel(defaultModel: string | null) {
 			if (!selectedModel && defaultModel) {
@@ -381,7 +145,6 @@ function createChatStore() {
 			const idx = messages.findIndex((m) => m.id === messageId);
 			if (idx < 0) return null;
 
-			// Find preceding user message
 			let userMsgContent = null;
 			for (let i = idx - 1; i >= 0; i--) {
 				if (messages[i].role === 'user') {
@@ -391,19 +154,18 @@ function createChatStore() {
 			}
 
 			if (userMsgContent !== null) {
-				// Remove the assistant message being retried and anything after it
 				messages = messages.slice(0, idx);
 			}
 
 			return userMsgContent;
 		},
 
-			clear() {
-				messages = [];
-				activeMessageId = null;
-				selectedModel = null;
-				currentTurnStartTime = null;
-			}
+		clear() {
+			messages = [];
+			activeMessageId = null;
+			selectedModel = null;
+			currentTurnStartTime = null;
+		}
 	};
 }
 

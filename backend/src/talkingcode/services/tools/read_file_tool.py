@@ -1,21 +1,33 @@
 """Tool for reading file contents from the vector store."""
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 import structlog
 
-from talkingcode.repository.document_repository import DocumentRepository
-from talkingcode.repository.repo_repository import RepoRepository
+from talkingcode.repository.document_repository import IDocumentRepository
+from talkingcode.repository.repo_repository import IRepoRepository
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
+
+
+class IReadFileTool(Protocol):
+    """Protocol for read file tool."""
+
+    name: str
+    schema: dict[str, Any]
+    timeout: int
+
+    async def execute(self, repository: str, file_path: str) -> dict[str, Any]:
+        """Read a file's stored chunks and return reassembled content."""
+        ...
 
 
 @dataclass(slots=True)
 class ReadFileTool:
     """Tool that reads file content reconstructed from stored chunks."""
 
-    document_repository: DocumentRepository
-    repo_repository: RepoRepository
+    document_repository: IDocumentRepository
+    repo_repository: IRepoRepository
 
     name: str = "read_file"
     timeout: int = 10

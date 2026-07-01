@@ -1,0 +1,30 @@
+[[exceptions]]
+files = ["talkingcode/dependencies.py", "src/talkingcode/dependencies.py"]
+rules = [
+    "import-boundary:sqlalchemy-location",
+    "import-boundary:banned-module",
+    "import-boundary:factory-import-location",
+]
+reason = "dependencies.py IS the FastAPI DI layer; it must wire SQLAlchemy sessions and the factory for route consumption"
+
+[[exceptions]]
+files = ["talkingcode/app.py", "src/talkingcode/app.py"]
+rules = [
+    "import-boundary:fastapi-location",
+    "import-boundary:layer-no-internal-imports",
+]
+reason = "app.py IS the FastAPI web entry point; it must import FastAPI, routes, error handlers, and dependencies to assemble the application"
+
+[[exceptions]]
+files = ["talkingcode/factory.py", "src/talkingcode/factory.py"]
+rules = [
+    "import-boundary:sqlalchemy-location",
+]
+reason = "factory.py assembles concrete ORM sessions and threads them to repositories"
+
+[[exceptions]]
+files = ["talkingcode/repository/document_repository.py", "src/talkingcode/repository/document_repository.py"]
+rules = [
+    "session:session-execute-location",
+]
+reason = "DocumentRepository.search_chunks selects ORM rows plus a computed similarity column; AsyncSession.execute is the appropriate SQLAlchemy API for this multi-entity result shape"

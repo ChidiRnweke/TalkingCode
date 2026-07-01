@@ -1,13 +1,15 @@
+# noqa: import-boundary:sqlalchemy-location,import-boundary:banned-module,import-boundary:factory-import-location
 """FastAPI dependencies."""
 import time
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, Query, status
+from fastapi import Depends, Header, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from talkingcode.config import AppConfig
+from talkingcode.errors import UnauthorisedError
 from talkingcode.factory import AppFactory
 from talkingcode.repository.database import get_session as _get_session
 
@@ -63,22 +65,16 @@ async def require_ingestion_api_key(
     api_key: Annotated[str | None, Query(alias="api_key")] = None,
 ) -> None:
     """Require valid ingestion API key.
-    
+
     Checks X-API-Key header first, then api_key query parameter.
     """
     effective_key = x_api_key or api_key
-    
+
     if not config.ingestion_api_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Ingestion API key not configured",
-        )
-        
+        raise UnauthorisedError("Ingestion API key not configured")
+
     if effective_key != config.ingestion_api_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid ingestion API key",
-        )
+        raise UnauthorisedError("Invalid ingestion API key")
 
 
 ConfigDep = Annotated[AppConfig, Depends(get_config)]

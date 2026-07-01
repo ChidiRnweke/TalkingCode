@@ -1,11 +1,12 @@
 """Domain dataclasses."""
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from talkingcode.enums import Area, FileType, IngestionStatus, WhiteboxEventKind
+from talkingcode.enums import Area, FileType, IngestionStatus
 
 # =============================================================================
 # Input Models
@@ -20,6 +21,27 @@ class AgentTurnInput:
     conversation_id: UUID | None
     question: str
     selected_model: str | None = None
+
+
+@dataclass(slots=True)
+class ChatAgentDeps:
+    """Dependencies shared across a chat agent turn."""
+
+    turn_id: UUID
+    conversation_id: UUID | None
+    collected_sources: dict[tuple[str, str], "SourceReference"] = field(default_factory=dict)
+    next_source_index: int = 1
+
+
+@dataclass(slots=True, frozen=True)
+class ChatStreamEvent:
+    """SSE event for the simplified chat stream."""
+
+    event: str
+    data: dict[str, Any]
+
+    def to_sse(self) -> str:
+        return f"event: {self.event}\ndata: {json.dumps(self.data)}\n\n"
 
 
 @dataclass(slots=True, frozen=True)
@@ -54,6 +76,17 @@ class DocumentClassificationOutput:
 
 
 @dataclass(slots=True, frozen=True)
+class DocumentClassificationAgentOutput:
+    """Structured output produced by the classifier agent."""
+
+    language: str
+    area: Area
+    file_type: FileType
+    symbols: list[str]
+    tags: list[str]
+
+
+@dataclass(slots=True, frozen=True)
 class ToolExecutionResult:
     """Result of a tool execution."""
 
@@ -64,22 +97,6 @@ class ToolExecutionResult:
     duration_ms: int
     error: str | None = None
     error_code: str | None = None
-
-
-@dataclass(slots=True, frozen=True)
-class WhiteboxEvent:
-    """Streaming event for whitebox UX."""
-
-    kind: WhiteboxEventKind
-    turn_id: str
-    tool_name: str | None
-    message: str
-    visible_args: dict[str, Any] | None
-    timestamp: datetime
-    iteration: int | None = None
-    call_id: str | None = None
-    index: int | None = None
-    code: str | None = None
 
 
 @dataclass(slots=True, frozen=True)
@@ -95,22 +112,6 @@ class SourceReference:
 
 
 @dataclass(slots=True, frozen=True)
-class ToolTimelineItem:
-    """Tool call timeline item (redacted)."""
-
-    turn_id: str
-    tool_name: str
-    visible_args: dict[str, Any]
-    status: str
-    duration_ms: int | None
-    timestamp: datetime
-    call_id: str | None = None
-    iteration: int | None = None
-    error_code: str | None = None
-    error_message: str | None = None
-
-
-@dataclass(slots=True, frozen=True)
 class AgentTurn:
     """Conversation turn metadata."""
 
@@ -122,16 +123,6 @@ class AgentTurn:
     status: str
     created_at: datetime
     completed_at: datetime | None = None
-
-
-@dataclass(slots=True, frozen=True)
-class ExecuteToolGroupInput:
-    """Input for executing a group of tool calls."""
-
-    group_name: str
-    calls: list[dict[str, Any]]
-    parallel: bool = False
-    timeout_seconds: int = 15
 
 
 # =============================================================================
@@ -223,3 +214,25 @@ class ChunkResult:
     token_count: int
     start_line: int
     end_line: int
+
+
+@dataclass(frozen=True, slots=True)
+class QueryIntent:
+    """Extracted metadata hints from a natural language query."""
+
+    refined_query: str
+    repo_filter: str | None = None
+    language_filter: str | None = None
+    area_filter: str | None = None
+    file_type_filter: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class QueryIntentAgentOutput:
+    """Structured output produced by the query intent agent."""
+
+    refined_query: str
+    repo_filter: str | None = None
+    language_filter: str | None = None
+    area_filter: str | None = None
+    file_type_filter: str | None = None

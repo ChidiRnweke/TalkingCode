@@ -26,6 +26,11 @@ class AppConfig:
     intent_extraction_model: str
     curated_models: str
     default_chat_model: str
+    mlflow_tracking_uri: str
+    mlflow_experiment_name: str
+    otel_exporter_endpoint: str
+    otel_service_name: str
+    otel_environment: str
 
     @classmethod
     def from_env(cls) -> Self:
@@ -48,4 +53,9 @@ class AppConfig:
             intent_extraction_model=reader.read_or_default("INTENT_EXTRACTION_MODEL", "deepseek/deepseek-v3.2"),
             curated_models=reader.read_or_default("CURATED_MODELS", ""),
             default_chat_model=reader.read_or_default("DEFAULT_CHAT_MODEL", "google/gemini-3-flash-preview"),
+            mlflow_tracking_uri=reader.read_or_default("MLFLOW_TRACKING_URI", ""),
+            mlflow_experiment_name=reader.read_or_default("MLFLOW_EXPERIMENT_NAME", "talkingcode-agent-dev"),
+            otel_exporter_endpoint=reader.read_or_default("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+            otel_service_name=reader.read_or_default("OTEL_SERVICE_NAME", "talkingcode-backend"),
+            otel_environment=reader.read_or_default("OTEL_ENVIRONMENT", "development"),
         )

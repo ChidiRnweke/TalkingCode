@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { cn } from "$lib/utils";
+	import { Input } from "$lib/components/ui/input";
+	import { Form } from "$lib/components/ui/form";
 	import { watch } from "runed";
-	import { onMount, untrack } from "svelte";
+	import { untrack } from "svelte";
 	import {
 		AttachmentsContext,
 		setAttachmentsContext,
@@ -52,8 +54,9 @@
 	);
 
 	// Find nearest form to scope drag & drop
-	onMount(() => {
-		let root = anchorRef?.closest("form");
+	$effect(() => {
+		if (!anchorRef) return;
+		let root = anchorRef.closest("form");
 		if (root instanceof HTMLFormElement) {
 			formRef = root;
 		}
@@ -196,15 +199,15 @@
 </script>
 
 <span aria-hidden="true" class="hidden" bind:this={anchorRef}></span>
-<input
+<Input
 	{accept}
 	class="hidden"
 	{multiple}
 	onchange={handleChange}
-	bind:this={attachmentsContext.fileInputRef}
+	bind:ref={attachmentsContext.fileInputRef}
 	type="file"
 />
-<form
+<Form
 	class={cn(
 		"bg-background w-full divide-y overflow-hidden rounded-xl border shadow-sm",
 		className
@@ -215,4 +218,4 @@
 	{#if children}
 		{@render children()}
 	{/if}
-</form>
+</Form>

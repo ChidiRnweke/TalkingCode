@@ -1,5 +1,5 @@
 import type { IngestionRunView, RegisterRepoInput, RepositoryView } from '$lib/models';
-import { createApiClient, type ApiClient } from './client';
+import type { ApiClient } from './client';
 import { mapIngestionRun, mapRepository } from './mappers/repos';
 
 function errorMessage(error: unknown): string {
@@ -70,6 +70,3 @@ export class ReposService {
 	}
 }
 
-export function createReposService(fetchFn?: typeof fetch): ReposService {
-	return new ReposService(createApiClient(fetchFn));
-}

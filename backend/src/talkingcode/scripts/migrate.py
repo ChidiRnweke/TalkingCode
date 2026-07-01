@@ -13,6 +13,7 @@ from alembic import command
 from alembic.config import Config
 from dotenv import load_dotenv
 
+from talkingcode.environment.env import EnvSecretsBackend
 from talkingcode.scripts.provision_db import provision_database
 from talkingcode.telemetry import configure_telemetry
 
@@ -31,11 +32,12 @@ def _get_alembic_config() -> Config:
 
 def run() -> None:
     load_dotenv()
+    env = EnvSecretsBackend()
 
     # 1. Initialize telemetry
-    endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
-    service_name = os.getenv("OTEL_SERVICE_NAME", "talkingcode-migrate")
-    otel_env = os.getenv("OTEL_ENVIRONMENT", os.getenv("ENVIRONMENT", "development"))
+    endpoint = env.read_or_default("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+    service_name = env.read_or_default("OTEL_SERVICE_NAME", "talkingcode-migrate")
+    otel_env = env.read_or_default("OTEL_ENVIRONMENT", env.read_or_default("ENVIRONMENT", "development"))
 
     if endpoint:
         configure_telemetry(endpoint=endpoint, service_name=service_name, environment=otel_env)

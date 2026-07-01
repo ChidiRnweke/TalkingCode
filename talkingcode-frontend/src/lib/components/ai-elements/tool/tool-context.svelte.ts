@@ -45,9 +45,9 @@ export class ToolClass {
 				// Auto-close when tool completes with error (optional behavior)
 				// Uncomment if you want this behavior:
 				// if (currentState === 'output-error' && previousState !== 'output-error') {
-				//   setTimeout(() => {
-				//     this.isOpen = false;
-				//   }, 3000);
+			//   // auto-close with timer would go here if you need auto-close on error (currently disabled)
+			//   // this.isOpen = false;
+			//   // }, 3000);
 				// }
 			}
 		);

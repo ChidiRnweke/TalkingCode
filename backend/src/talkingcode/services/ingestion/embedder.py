@@ -1,88 +1,73 @@
-"""Embedding generator service."""
+"""Embedding generation service."""
 
 import asyncio
-import time
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, cast
 
 import structlog
-
+from pydantic_ai import Embedder
+from pydantic_ai.embeddings.openai import OpenAIEmbeddingModel
+from pydantic_ai.embeddings.settings import EmbeddingSettings
+from pydantic_ai.providers.openrouter import OpenRouterProvider
 from talkingcode.errors import InfraError
-from talkingcode.services.llm.openrouter_client import IOpenRouterClient
-from talkingcode.telemetry.ingestion_metrics import get_ingestion_metrics
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
-metrics = get_ingestion_metrics()
 
-MAX_BATCH_SIZE = 100
 MAX_RETRIES = 3
 
 
-class IEmbedder(Protocol):
-    """Protocol for embedding generation."""
+class IOpenRouterEmbedder(Protocol):
+    """Protocol for embedding generators."""
 
     model: str
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        """Generate embeddings for a batch of texts."""
+        """Embed a batch of text strings."""
         ...
 
 
 @dataclass(slots=True)
 class OpenRouterEmbedder:
-    """Generates embeddings using OpenRouter embeddings API."""
+    """Generates embeddings using Pydantic AI's OpenAI-compatible embedder."""
 
-    openrouter_client: IOpenRouterClient
-    model: str = "openai/text-embedding-3-large"
-    dimensions: int = 3072
+    api_key: str
+    model: str
+    dimensions: int | None
+
+    def _embedder(self) -> Embedder:
+        model_name = self.model.split(":", maxsplit=1)[-1]
+        embedding_model = OpenAIEmbeddingModel(
+            model_name,
+            provider=OpenRouterProvider(
+                api_key=self.api_key,
+                app_url="https://talkingcode.dev",
+                app_title="TalkingCode",
+            ),
+        )
+        return Embedder(embedding_model)
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        """Generate embeddings for a batch of texts.
-
-        Splits into sub-batches of MAX_BATCH_SIZE and retries on failure.
-        """
+        """Embed a batch of texts."""
         if not texts:
             return []
 
-        all_embeddings: list[list[float]] = []
-
-        for batch_start in range(0, len(texts), MAX_BATCH_SIZE):
-            batch = texts[batch_start : batch_start + MAX_BATCH_SIZE]
-            embeddings = await self._embed_single_batch(batch)
-            all_embeddings.extend(embeddings)
-
-        logger.info("Generated embeddings", count=len(all_embeddings), model=self.model)
-        return all_embeddings
-
-    async def _embed_single_batch(self, texts: list[str]) -> list[list[float]]:
-        """Embed a single batch with retry."""
+        settings = (
+            cast(EmbeddingSettings, {"dimensions": self.dimensions})
+            if self.dimensions
+            else None
+        )
         for attempt in range(MAX_RETRIES):
-            t0 = time.perf_counter()
             try:
-                embeddings = await self.openrouter_client.generate_embeddings(
-                    model=self.model,
-                    texts=texts,
-                    dimensions=self.dimensions,
+                result = await self._embedder().embed_documents(
+                    texts,
+                    settings=settings,
                 )
-                elapsed = time.perf_counter() - t0
-                metrics.ingestion_embedding_requests_total.add(1, attributes={"operation": "generate_embeddings", "status": "success"})
-                metrics.ingestion_embedding_request_duration_seconds.record(elapsed, attributes={"operation": "generate_embeddings", "status": "success"})
-                return embeddings
+                return [list(embedding) for embedding in result.embeddings]
             except Exception as exc:  # noqa: BLE001
-                elapsed = time.perf_counter() - t0
-                metrics.ingestion_embedding_requests_total.add(1, attributes={"operation": "generate_embeddings", "status": "failed"})
-                metrics.ingestion_embedding_request_duration_seconds.record(elapsed, attributes={"operation": "generate_embeddings", "status": "failed"})
                 if attempt == MAX_RETRIES - 1:
                     raise InfraError(
                         f"OpenRouter embedding failed after {MAX_RETRIES} retries: {exc}"
                     ) from exc
-                wait = 2**attempt
-                logger.warning(
-                    "Embedding request failed, retrying",
-                    attempt=attempt,
-                    error=str(exc),
-                )
-                await asyncio.sleep(wait)
-                continue
+                await asyncio.sleep(0.5 * (attempt + 1))
 
         raise InfraError("OpenRouter embedding failed: max retries exceeded")

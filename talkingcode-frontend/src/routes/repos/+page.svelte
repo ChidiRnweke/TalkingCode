@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { EmptyState } from '$lib/components/layout';
+	import { Container, EmptyState } from '$lib/components/layout';
 	import { RepoCard } from '$lib/components/domain';
 	import type { IngestionRunView, RepositoryView } from '$lib/models';
 
@@ -13,8 +13,9 @@
 	let { data }: Props = $props();
 </script>
 
-<main class="flex-1 overflow-y-auto px-[var(--page-padding)] py-8">
-	<div class="mx-auto max-w-3xl">
+<main class="flex-1 overflow-y-auto py-8 md:py-12">
+	<Container>
+		<div class="mx-auto max-w-3xl">
 		<div class="mb-3 flex items-center justify-between">
 			<h1 class="font-display text-2xl font-semibold tracking-tight text-foreground">Repositories</h1>
 		</div>
@@ -35,4 +36,5 @@
 			</div>
 		{/if}
 	</div>
+	</Container>
 </main>

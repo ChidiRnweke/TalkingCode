@@ -1,87 +1,68 @@
 <script lang="ts">
-	import { Search, Loader, Check, X } from 'lucide-svelte';
-	import type { ToolCallTimelineItem } from '$lib/models';
+	import { Loader, Check, X, Clock } from 'lucide-svelte';
+	import type { ToolSegment } from '$lib/utils/assistantTags';
 
 	interface Props {
-		tool: ToolCallTimelineItem;
+		tool: ToolSegment;
 	}
 
 	let { tool }: Props = $props();
 
-	let startTime = $state<number | null>(null);
-	let currentDurationMs = $state<number | null>(null);
-
-	$effect(() => {
-		if (tool.status === 'started') {
-			if (startTime === null) {
-				startTime = Date.now();
-			}
-			const interval = setInterval(() => {
-				if (startTime !== null) {
-					currentDurationMs = Date.now() - startTime;
-				}
-			}, 100);
-			return () => clearInterval(interval);
-		} else if (tool.status === 'finished' || tool.status === 'failed') {
-			startTime = null;
-		}
-	});
-
-	const duration = $derived(
-		tool.durationMs !== undefined
-			? `${Math.max(0.1, tool.durationMs / 1000).toFixed(tool.durationMs < 1000 ? 1 : 2)}s`
-			: currentDurationMs !== null
-				? `${Math.max(0.1, currentDurationMs / 1000).toFixed(currentDurationMs < 1000 ? 1 : 2)}s`
-				: ''
-	);
-
 	const toolName = $derived(
-		tool.toolName
+		tool.name
 			.split('_')
 			.filter(Boolean)
 			.map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
 			.join(' ')
 	);
 
-	const detailText = $derived.by(() => {
-		const query = tool.visibleArgs?.query;
+	const primary = $derived.by((): { keys: string[]; text: string | null } => {
+		const query = tool.args.query;
 		if (typeof query === 'string' && query.trim()) {
-			return query.trim();
+			return { keys: ['query'], text: query.trim() };
 		}
 
-		const repository = tool.visibleArgs?.repository;
-		const filePath = tool.visibleArgs?.file_path;
+		const repository = tool.args.repository;
+		const filePath = tool.args.file_path;
 		if (typeof repository === 'string' && typeof filePath === 'string') {
-			return `${repository}/${filePath}`;
+			return { keys: ['repository', 'file_path'], text: `${repository}/${filePath}` };
 		}
 
-		return null;
+		return { keys: [], text: null };
 	});
+
+	const extraArgs = $derived(
+		Object.entries(tool.args)
+			.filter(([key, value]) => !primary.keys.includes(key) && value !== '' && value != null)
+			.map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
+			.join('  ·  ')
+	);
 </script>
 
-<div
-	class="min-w-0 py-1 text-sm {tool.status === 'failed'
-		? 'text-destructive'
-		: 'text-muted-foreground'}"
->
-	<div class="flex items-center gap-2">
-		{#if tool.status === 'started'}
-			<Loader class="size-3.5 shrink-0 animate-spin" />
-		{:else if tool.status === 'finished'}
-			<Check class="size-3.5 shrink-0 text-emerald-600" />
-		{:else}
-			<X class="size-3.5 shrink-0 text-destructive" />
-		{/if}
+<div class="min-w-0 text-sm {tool.status === 'error' ? 'text-destructive' : 'text-muted-foreground'}">
+	<div class="flex min-w-0 items-baseline gap-2">
+		<span class="flex size-3.5 shrink-0 items-center self-center">
+			{#if tool.status === 'running'}
+				<Loader class="size-3.5 animate-spin text-primary" />
+			{:else if tool.status === 'done'}
+				<Check class="size-3.5 text-success" />
+			{:else if tool.status === 'error'}
+				<X class="size-3.5 text-destructive" />
+			{:else}
+				<Clock class="size-3.5 text-muted-foreground/70" />
+			{/if}
+		</span>
 
-		<Search class="size-3.5 shrink-0 text-muted-foreground/60" />
-		<span class="font-medium text-foreground/90">{toolName}</span>
+		<span class="shrink-0 font-medium text-foreground/75">{toolName}</span>
 
-		{#if duration}
-			<span class="ml-auto shrink-0 text-xs tabular-nums text-muted-foreground/60">{duration}</span>
+		{#if primary.text}
+			<span class="min-w-0 truncate text-muted-foreground">{primary.text}</span>
 		{/if}
 	</div>
 
-	{#if detailText}
-		<p class="mt-0.5 min-w-0 text-muted-foreground/80 wrap-anywhere">{detailText}</p>
+	{#if extraArgs}
+		<p class="ml-[22px] mt-0.5 min-w-0 font-mono text-xs text-muted-foreground/70 wrap-anywhere">
+			{extraArgs}
+		</p>
 	{/if}
 </div>

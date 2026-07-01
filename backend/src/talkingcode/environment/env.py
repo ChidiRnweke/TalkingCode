@@ -2,6 +2,7 @@ import os
 import time
 import threading
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Protocol, Self
 
 from dotenv import load_dotenv
@@ -33,13 +34,20 @@ class SecretsBackend(Protocol):
 @dataclass(frozen=True, slots=True)
 class EnvSecretsBackend(SecretsBackend):
     def read_secret(self, secret_name: str) -> str:
-        return get_env_or_raise(secret_name)
+        value = os.environ.get(secret_name)
+        if value is None:
+            raise SecretsNotFoundError(f"Missing env var: {secret_name}")
+        return value
 
     def read_or_default(self, secret_name: str, default: str) -> str:
-        return env_var_or_default(secret_name, default)
+        value = os.environ.get(secret_name)
+        if value is None:
+            logger.warning("env.default.used", var=secret_name)
+            return default
+        return value
 
     def read_optional(self, secret_name: str) -> str | None:
-        return os.getenv(secret_name)
+        return os.environ.get(secret_name)
 
 
 @dataclass(slots=True)
@@ -97,11 +105,12 @@ class InfisicalSecretsBackend(SecretsBackend):
 
     @classmethod
     def from_env(cls, ttl: int = _DEFAULT_SECRET_TTL_SECONDS) -> Self:
-        client_id = get_env_or_raise("INFISICAL_CLIENT_ID")
-        client_secret = get_env_or_raise("INFISICAL_CLIENT_SECRET")
-        project_id = get_env_or_raise("INFISICAL_PROJECT_ID")
-        environment = get_env_or_raise("INFISICAL_ENVIRONMENT")
-        url = get_env_or_raise("INFISICAL_URL")
+        env = EnvSecretsBackend()
+        client_id = env.read_secret("INFISICAL_CLIENT_ID")
+        client_secret = env.read_secret("INFISICAL_CLIENT_SECRET")
+        project_id = env.read_secret("INFISICAL_PROJECT_ID")
+        environment = env.read_secret("INFISICAL_ENVIRONMENT")
+        url = env.read_secret("INFISICAL_URL")
 
         auth = UniversalAuthMethod(client_id=client_id, client_secret=client_secret)
         auth_options = AuthenticationOptions(universal_auth=auth)
@@ -130,8 +139,11 @@ class SecretsReader:
 
     @classmethod
     def from_env(cls) -> Self:
-        load_dotenv()
-        enabled = os.getenv("INFISICAL_ENABLED")
+        # env.py is at backend/src/talkingcode/environment/env.py
+        # Resolve 4 parents up to get the backend/ directory
+        _backend_dir = Path(__file__).resolve().parent.parent.parent.parent
+        load_dotenv(_backend_dir / ".env")
+        enabled = os.environ.get("INFISICAL_ENABLED")
         if enabled:
             logger.info("secrets.backend.infisical.enabled")
             return cls(backend=InfisicalSecretsBackend.from_env())
@@ -139,17 +151,4 @@ class SecretsReader:
         return cls(backend=EnvSecretsBackend())
 
 
-def env_var_or_default(var_name: str, default: str) -> str:
-    value = os.getenv(var_name)
-    if value is None:
-        logger.warning("env.default.used", var=var_name)
-        return default
-    return value
 
-
-def get_env_or_raise(var_name: str) -> str:
-    value = os.getenv(var_name)
-    if value is None:
-        logger.error("env.required.missing", var=var_name)
-        raise SecretsNotFoundError(f"Missing env var: {var_name}")
-    return value
