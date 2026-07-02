@@ -13,9 +13,11 @@ from agents import (
     Runner,
     Tool,
 )
+from agents.extensions.memory import SQLAlchemySession
 from agents.items import ReasoningItem, ToolCallItem, ToolCallOutputItem
 from agents.stream_events import RawResponsesStreamEvent, RunItemStreamEvent
 from openai import AsyncOpenAI
+from sqlalchemy.ext.asyncio import AsyncEngine  # noqa: import-boundary:sqlalchemy-location — SDK session memory needs the engine
 from openai.types.responses import (
     ResponseReasoningSummaryTextDeltaEvent,
     ResponseReasoningTextDeltaEvent,
@@ -89,6 +91,7 @@ class ChatAgentService:
     tools: Sequence[Tool]
     openrouter_api_key: str
     max_iterations: int
+    engine: AsyncEngine
 
     async def run_turn(
         self,
@@ -100,10 +103,16 @@ class ChatAgentService:
         """Run an agent turn and stream markdown/custom-tag events."""
         # No conversation_id: Chat Completions is stateless, and server-managed
         # conversation mode would drop the question from follow-up model calls.
+        # Multi-turn memory comes from the SDK session, which replays the
+        # transcript stored in agent_sessions/agent_messages.
         result = Runner.run_streamed(
             self._build_agent(model_name),
             input=question,
             max_turns=self.max_iterations,
+            session=SQLAlchemySession(
+                str(turn.conversation_id),
+                engine=self.engine,
+            ),
         )
         state = _TurnStreamState()
         async for event in result.stream_events():
@@ -114,6 +123,7 @@ class ChatAgentService:
             event="turn.done",
             data={
                 "turn_id": str(turn.id),
+                "conversation_id": str(turn.conversation_id),
                 "sources": [],
                 "timestamp": datetime.utcnow().isoformat(),
             },

@@ -13,6 +13,7 @@ const markdownDeltaSchema = z
 const assistantDoneSchema = z
 	.object({
 		turn_id: z.string().min(1),
+		conversation_id: z.string().min(1),
 		timestamp: z.string().min(1),
 		sources: z
 			.array(
@@ -62,6 +63,7 @@ export function parseAgentEvent(eventType: string, data: string): AgentStreamEve
 			return {
 				kind: 'turn.done',
 				turnId: result.data.turn_id,
+				conversationId: result.data.conversation_id,
 				sources: (result.data.sources ?? []).map((source) => ({
 					index: source.index,
 					repository: source.repository,

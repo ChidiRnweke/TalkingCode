@@ -8,6 +8,8 @@ function createChatStore() {
 	let activeMessageId = $state<string | null>(null);
 	let selectedModel = $state<string | null>(null);
 	let currentTurnStartTime = $state<number | null>(null);
+	// Server-assigned on the first turn.done; sent with every follow-up turn.
+	let conversationId = $state<string | null>(null);
 
 	function generateId(): string {
 		return crypto.randomUUID();
@@ -22,6 +24,9 @@ function createChatStore() {
 		},
 		get selectedModel() {
 			return selectedModel;
+		},
+		get conversationId() {
+			return conversationId;
 		},
 		get activeMessage(): ChatMessage | null {
 			if (!activeMessageId) return null;
@@ -103,6 +108,7 @@ function createChatStore() {
 				}
 
 				case 'turn.done': {
+					conversationId = event.conversationId;
 					const update: Partial<ChatMessage> = {
 						isStreaming: false,
 						sources: event.sources
@@ -165,6 +171,7 @@ function createChatStore() {
 			activeMessageId = null;
 			selectedModel = null;
 			currentTurnStartTime = null;
+			conversationId = null;
 		}
 	};
 }

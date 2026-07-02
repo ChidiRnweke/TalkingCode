@@ -19,7 +19,7 @@
     "expectations": {
       "should_use_tools": true,
       "required_tool_names": ["search_github"],
-      "expected_source_paths": ["backend/src/talkingcode/services/agent/deep_agent.py"],
+      "expected_source_paths": ["backend/src/talkingcode/services/agent/agent_service.py"],
       "prohibited_claims": ["without looking at the code"],
       "max_tool_calls": 6,
       "max_latency_ms": 60000
@@ -44,7 +44,7 @@
     "question": "What files define the chat stream contract?",
     "expectations": {
       "should_use_tools": true,
-      "required_tool_names": ["search_github", "read_repository_file"],
+      "required_tool_names": ["search_github", "read_file"],
       "expected_source_paths": ["chat_routes.py", "ChatService.ts"],
       "prohibited_claims": [],
       "max_tool_calls": 7,

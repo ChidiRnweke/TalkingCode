@@ -27,6 +27,7 @@ export interface MarkdownDeltaEvent {
 export interface AssistantDoneEvent {
 	kind: 'turn.done';
 	turnId: string;
+	conversationId: string;
 	sources?: Array<{
 		index: number;
 		repository: string;

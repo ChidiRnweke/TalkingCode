@@ -61,7 +61,10 @@
 {#key currentTheme}
 	<Streamdown
 		class={cn(
-			"prose prose-base dark:prose-invert prose-pre:p-0 max-w-none size-full text-base leading-[1.65] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_strong]:font-bold [&_li]:my-0.5 [&_li]:pl-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_ul]:my-4 [&_ol]:my-4 [&_p]:my-4",
+			// prose-pre:* overrides the typography plugin's hardcoded dark pre
+			// background/text, which otherwise beats the code theme's classes on
+			// specificity and renders light-theme Shiki tokens on a dark box.
+			"prose prose-base dark:prose-invert prose-pre:p-2 prose-pre:my-0 prose-pre:bg-transparent prose-pre:text-foreground [&_pre_code]:text-inherit max-w-none size-full text-base leading-[1.65] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_strong]:font-bold [&_li]:my-0.5 [&_li]:pl-2 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_ul]:my-4 [&_ol]:my-4 [&_p]:my-4",
 			isStreaming && 'streaming-cursor',
 			className
 		)}

@@ -3,6 +3,8 @@ from uuid import uuid4
 
 import pytest
 from agents import Agent, Runner
+from agents.extensions.memory import SQLAlchemySession
+from sqlalchemy.ext.asyncio import create_async_engine
 from agents.items import ReasoningItem, ToolCallItem, ToolCallOutputItem
 from agents.stream_events import RawResponsesStreamEvent, RunItemStreamEvent
 from openai.types.responses import (
@@ -19,7 +21,13 @@ from talkingcode.services.agent.agent_service import ChatAgentService, _TurnStre
 
 @pytest.fixture
 def service() -> ChatAgentService:
-    return ChatAgentService(tools=[], openrouter_api_key="test-key", max_iterations=16)
+    return ChatAgentService(
+        tools=[],
+        openrouter_api_key="test-key",
+        max_iterations=16,
+        # Engines connect lazily; the stubbed Runner never touches the DB.
+        engine=create_async_engine("postgresql+asyncpg://unused:unused@localhost:1/unused"),
+    )
 
 
 @pytest.fixture
@@ -174,7 +182,11 @@ async def test_run_streamed_receives_no_conversation_id_and_configured_max_turns
 
     assert captured_kwargs.get("conversation_id") is None
     assert captured_kwargs["max_turns"] == 16
+    session = captured_kwargs["session"]
+    assert isinstance(session, SQLAlchemySession)
+    assert session.session_id == str(turn.conversation_id)
     assert events[-1].event == "turn.done"
+    assert events[-1].data["conversation_id"] == str(turn.conversation_id)
 
 
 @pytest.mark.asyncio

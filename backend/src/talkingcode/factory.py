@@ -138,6 +138,7 @@ class AppFactory:
             tools=await self.get_agent_tools(),
             openrouter_api_key=self.config.openrouter_api_key,
             max_iterations=self.config.max_iterations,
+            engine=get_engine(self.config.database_url),
         )
 
         return ChatController(

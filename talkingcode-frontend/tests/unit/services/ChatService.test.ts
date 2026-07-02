@@ -24,6 +24,7 @@ describe('parseAgentEvent', () => {
 			'turn.done',
 			JSON.stringify({
 				turn_id: 'turn-1',
+				conversation_id: 'conv-1',
 				timestamp: '2026-01-01T00:00:00Z',
 				sources: [
 					{
@@ -41,6 +42,7 @@ describe('parseAgentEvent', () => {
 		expect(event).toEqual({
 			kind: 'turn.done',
 			turnId: 'turn-1',
+			conversationId: 'conv-1',
 			sources: [
 				{
 					index: 1,

@@ -32,7 +32,7 @@
 
 		try {
 			const stream = controller.startAgenticTurn({
-				conversationId: null,
+				conversationId: chatStore.conversationId,
 				question,
 				model: chatStore.selectedModel
 			}, activeRequestAbortController.signal);

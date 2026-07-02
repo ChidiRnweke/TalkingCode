@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from typing import Any
+
+from agents.tracing.span_data import TurnSpanData
 
 from talkingcode import startup
 
@@ -68,12 +71,18 @@ def test_configure_mlflow_tracing_instruments_openai_agents_when_server_is_set(
         "autolog",
         lambda: calls.append(("autolog", None)),
     )
+    monkeypatch.setattr(
+        startup,
+        "_patch_openai_agents_turn_span_names",
+        lambda: calls.append(("patch_turn_span_names", None)),
+    )
 
     startup.configure_mlflow_tracing(config)
 
     assert calls == [
         ("set_tracking_uri", "http://localhost:5000"),
         ("set_experiment", "talkingcode-test"),
+        ("patch_turn_span_names", None),
         ("autolog", None),
     ]
     assert fake_logger.infos == [
@@ -85,3 +94,23 @@ def test_configure_mlflow_tracing_instruments_openai_agents_when_server_is_set(
             },
         )
     ]
+
+
+def test_patch_openai_agents_turn_span_names_renames_turn_spans(
+    monkeypatch,
+) -> None:
+    def original_get_span_name(span_data: Any) -> str:
+        return f"original:{span_data.__class__.__name__}"
+
+    monkeypatch.setattr(startup._agent_tracer, "_get_span_name", original_get_span_name)
+
+    startup._patch_openai_agents_turn_span_names()
+
+    class OtherSpanData:
+        pass
+
+    assert (
+        startup._agent_tracer._get_span_name(TurnSpanData(turn=3, agent_name="TalkingCode"))
+        == "Turn 3: TalkingCode"
+    )
+    assert startup._agent_tracer._get_span_name(OtherSpanData()) == "original:OtherSpanData"
