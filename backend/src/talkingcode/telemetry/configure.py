@@ -1,5 +1,4 @@
 import logging
-from typing import Any
 
 import structlog
 from opentelemetry._logs import set_logger_provider
@@ -14,7 +13,7 @@ from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import get_current_span, set_tracer_provider
+from opentelemetry.trace import set_tracer_provider
 
 
 def configure_telemetry(endpoint: str, service_name: str, environment: str) -> None:
@@ -63,30 +62,9 @@ def _configure_structlog() -> None:
         processors=[
             structlog.stdlib.filter_by_level,
             structlog.processors.TimeStamper(fmt="iso"),
-            _add_open_telemetry_spans,  # type: ignore
             structlog.processors.JSONRenderer(),
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-
-
-def _add_open_telemetry_spans(
-    _: Any, __: Any, event_dict: dict[str, Any]
-) -> dict[str, Any]:
-    span = get_current_span()
-    if not span.is_recording():
-        event_dict["span"] = None
-        return event_dict
-
-    ctx = span.get_span_context()
-    parent_ctx = span.parent.get_span_context() if span.parent else None  # type: ignore
-
-    event_dict["span"] = {
-        "span_id": hex(ctx.span_id),
-        "trace_id": hex(ctx.trace_id),
-        "parent_span_id": None if not parent_ctx else hex(parent_ctx.span_id),
-    }
-
-    return event_dict
