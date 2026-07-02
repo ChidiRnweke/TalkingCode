@@ -13,7 +13,7 @@
 	interface Props {
 		messages: ChatMessage[];
 		onSuggestionClick?: (suggestion: string) => void;
-		onRetry?: (question: string) => void;
+		onRetry?: (question: string, retryUserOrdinal: number) => void;
 	}
 
 	let { messages, onSuggestionClick, onRetry }: Props = $props();

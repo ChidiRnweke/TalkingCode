@@ -26,8 +26,9 @@ class AppConfig:
     intent_extraction_model: str
     curated_models: str
     default_chat_model: str
-    mlflow_tracking_uri: str
-    mlflow_experiment_name: str
+    phoenix_collector_endpoint: str
+    phoenix_api_key: str
+    phoenix_project_name: str
     otel_exporter_endpoint: str
     otel_service_name: str
     otel_environment: str
@@ -53,8 +54,9 @@ class AppConfig:
             intent_extraction_model=reader.read_or_default("INTENT_EXTRACTION_MODEL", "deepseek/deepseek-v3.2"),
             curated_models=reader.read_or_default("CURATED_MODELS", ""),
             default_chat_model=reader.read_or_default("DEFAULT_CHAT_MODEL", "google/gemini-3-flash-preview"),
-            mlflow_tracking_uri=reader.read_or_default("MLFLOW_TRACKING_URI", ""),
-            mlflow_experiment_name=reader.read_or_default("MLFLOW_EXPERIMENT_NAME", "talkingcode-agent-dev"),
+            phoenix_collector_endpoint=reader.read_or_default("PHOENIX_COLLECTOR_ENDPOINT", ""),
+            phoenix_api_key=reader.read_or_default("PHOENIX_API_KEY", ""),
+            phoenix_project_name=reader.read_or_default("PHOENIX_PROJECT_NAME", "talkingcode"),
             otel_exporter_endpoint=reader.read_or_default("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
             otel_service_name=reader.read_or_default("OTEL_SERVICE_NAME", "talkingcode-backend"),
             otel_environment=reader.read_or_default("OTEL_ENVIRONMENT", "development"),

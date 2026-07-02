@@ -147,23 +147,24 @@ function createChatStore() {
 			}
 		},
 
-		retry(messageId: string): string | null {
+		retry(messageId: string): { question: string; userMessageOrdinal: number } | null {
 			const idx = messages.findIndex((m) => m.id === messageId);
 			if (idx < 0) return null;
 
-			let userMsgContent = null;
 			for (let i = idx - 1; i >= 0; i--) {
 				if (messages[i].role === 'user') {
-					userMsgContent = messages[i].content;
-					break;
+					// 1-based count of user messages up to and including this one;
+					// the backend uses it to rewind session memory to this point.
+					const userMessageOrdinal = messages
+						.slice(0, i + 1)
+						.filter((m) => m.role === 'user').length;
+					const question = messages[i].content;
+					messages = messages.slice(0, idx);
+					return { question, userMessageOrdinal };
 				}
 			}
 
-			if (userMsgContent !== null) {
-				messages = messages.slice(0, idx);
-			}
-
-			return userMsgContent;
+			return null;
 		},
 
 		clear() {

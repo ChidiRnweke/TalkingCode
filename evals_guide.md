@@ -8,8 +8,8 @@ The core question is: did the agent search the right evidence, use tools well,
 cite real sources, avoid unsupported claims, and produce a useful answer grounded
 in indexed repositories?
 
-MLflow should be the system of record for traces, eval datasets, scorer results,
-and human feedback.
+Phoenix should be the system of record for traces, eval datasets, evaluator
+results, and human feedback.
 
 ## Evaluation Strategy
 
@@ -52,7 +52,7 @@ Golden cases should include expectations like:
 
 ## 2. Trace-Derived Dataset
 
-Use real MLflow traces from app usage to build eval datasets.
+Use real Phoenix traces from app usage to build eval datasets.
 
 Promote traces when they represent:
 
@@ -103,12 +103,12 @@ Recommended rubric dimensions:
 
 ## 4. Human Feedback Loop
 
-Use MLflow traces for review.
+Use Phoenix traces for review.
 
 Workflow:
 
 1. Run the app.
-2. Inspect MLflow traces.
+2. Inspect Phoenix traces.
 3. Mark good and bad traces.
 4. Promote selected traces into eval datasets.
 5. Add expectations.
@@ -149,35 +149,35 @@ trace_fields:
   errors: []
 ```
 
-## MLflow Notes
+## Phoenix Notes
 
-Use MLflow for:
+Use Phoenix for:
 
-- trace capture
+- trace capture (OpenInference instrumentation of the OpenAI Agents SDK)
 - eval datasets
-- scorer execution
+- experiment/evaluator execution
 - model/prompt comparison
-- human feedback
+- human feedback (annotations)
 - regression tracking
 
-MLflow docs:
+Dataset semantics: Phoenix datasets are append-only and versioned. The sync
+script dedupes golden records by metadata id, so editing an existing case's
+expectations requires bumping its id (or moving to a new dataset name, e.g.
+`talkingcode-golden-v2`).
 
-- GenAI overview: https://mlflow.org/docs/latest/genai/
-- Tracing: https://mlflow.org/docs/latest/genai/tracing/
-- DeepAgents tracing: https://mlflow.org/docs/latest/genai/tracing/integrations/listing/deepagent/
-- Datasets: https://mlflow.org/docs/latest/genai/datasets/
-- Scorers: https://mlflow.org/docs/latest/genai/eval-monitor/scorers/
-- Eval quickstart: https://mlflow.org/docs/latest/genai/eval-monitor/quickstart/
+Phoenix docs:
 
-## Hosting Requirement
+- Overview: https://arize.com/docs/phoenix
+- Tracing: https://arize.com/docs/phoenix/tracing/llm-traces
+- OpenAI Agents integration: https://arize.com/docs/phoenix/tracing/integrations-tracing/openai-agents-sdk
+- Datasets: https://arize.com/docs/phoenix/datasets-and-experiments/datasets
+- Experiments & evaluators: https://arize.com/docs/phoenix/datasets-and-experiments/experiments
 
-Use a real MLflow Tracking Server with SQL-backed storage from the start.
+## Hosting
 
-Do not rely on local file-only tracking if eval datasets and trace promotion are
-first-class workflows.
-
-For local development, host MLflow in Docker Compose with Postgres-backed
-tracking.
+Traces and datasets go to the hosted Phoenix instance at
+https://phoenix.chidinweke.be (`PHOENIX_COLLECTOR_ENDPOINT` +
+`PHOENIX_API_KEY`); no local server is required for development.
 
 ## Guiding Principle
 

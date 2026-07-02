@@ -5,6 +5,7 @@ from collections.abc import AsyncGenerator, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
+from uuid import UUID
 
 import structlog
 from agents import (
@@ -76,6 +77,15 @@ class IChatAgentService(Protocol):
         """Run an agent turn and stream markdown events."""
         ...
 
+    async def rewind_session(
+        self,
+        *,
+        conversation_id: UUID,
+        user_message_ordinal: int,
+    ) -> None:
+        """Delete the Nth user message and everything after it from session memory."""
+        ...
+
 
 @dataclass(slots=True)
 class _TurnStreamState:
@@ -109,10 +119,7 @@ class ChatAgentService:
             self._build_agent(model_name),
             input=question,
             max_turns=self.max_iterations,
-            session=SQLAlchemySession(
-                str(turn.conversation_id),
-                engine=self.engine,
-            ),
+            session=self._session(turn.conversation_id),
         )
         state = _TurnStreamState()
         async for event in result.stream_events():
@@ -128,6 +135,39 @@ class ChatAgentService:
                 "timestamp": datetime.utcnow().isoformat(),
             },
         )
+
+    async def rewind_session(
+        self,
+        *,
+        conversation_id: UUID,
+        user_message_ordinal: int,
+    ) -> None:
+        """Delete the Nth user message and everything after it from session memory.
+
+        Used on retry: the retried question is re-sent as the new run's input,
+        so the discarded turn must be removed before the run replays the
+        transcript. Only items with role == "user" count towards the ordinal;
+        tool calls/outputs carry no role.
+        """
+        session = self._session(conversation_id)
+        items = await session.get_items()
+        user_indices = [
+            i
+            for i, item in enumerate(items)
+            if isinstance(item, dict) and item.get("role") == "user"
+        ]
+        if len(user_indices) < user_message_ordinal:
+            # The retried turn never persisted its input (e.g. it failed
+            # before the SDK wrote to the session); nothing to rewind.
+            return
+        cut = user_indices[user_message_ordinal - 1]
+        # clear + re-add is not atomic, but the UI serializes turns per
+        # conversation, so no concurrent run can interleave here.
+        await session.clear_session()
+        await session.add_items(items[:cut])
+
+    def _session(self, conversation_id: UUID | None) -> SQLAlchemySession:
+        return SQLAlchemySession(str(conversation_id), engine=self.engine)
 
     def _build_agent(self, model_name: str) -> Agent:
         client = AsyncOpenAI(

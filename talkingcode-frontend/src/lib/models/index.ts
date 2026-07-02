@@ -8,6 +8,8 @@ export interface AgenticAskInput {
 	conversationId: string | null;
 	question: string;
 	model: string | null;
+	/** 1-based ordinal of the retried user message; rewinds backend session memory. */
+	retryUserOrdinal?: number | null;
 }
 
 export interface AgentErrorEvent {

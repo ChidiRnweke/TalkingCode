@@ -62,9 +62,9 @@ docker compose -f docker-compose.local-dev.yml up
 Use these host-facing env values for the backend:
 ```bash
 DATABASE_URL=postgresql+asyncpg://talkingcode:talkingcode@localhost:5432/chatGITpt
-MLFLOW_TRACKING_URI=http://localhost:5000
-MLFLOW_EXPERIMENT_NAME=talkingcode-agent-dev
-MLFLOW_TRACING_ENABLED=true
+PHOENIX_COLLECTOR_ENDPOINT=https://phoenix.chidinweke.be
+PHOENIX_API_KEY=<your-phoenix-api-key>
+PHOENIX_PROJECT_NAME=talkingcode
 ```
 
 Run the full app in Docker when you want container parity:

@@ -102,7 +102,8 @@ export class ChatService implements IChatService {
 			body: JSON.stringify({
 				conversation_id: input.conversationId,
 				question: input.question,
-				selected_model: input.model
+				selected_model: input.model,
+				retry_user_ordinal: input.retryUserOrdinal ?? null
 			})
 		});
 

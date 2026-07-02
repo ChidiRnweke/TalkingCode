@@ -1,6 +1,6 @@
 """Shared API request/response schemas for FastAPI routes."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RegisterRepoRequest(BaseModel):
@@ -37,4 +37,5 @@ class ChatAgenticRequest(BaseModel):
     conversation_id: str | None = None
     question: str = ""
     selected_model: str | None = None
+    retry_user_ordinal: int | None = Field(default=None, ge=1)
 

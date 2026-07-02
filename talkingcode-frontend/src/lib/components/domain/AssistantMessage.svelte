@@ -24,7 +24,7 @@
 
 	interface Props {
 		message: ChatMessage;
-		onRetry?: (question: string) => void;
+		onRetry?: (question: string, retryUserOrdinal: number) => void;
 	}
 
 	let { message, onRetry }: Props = $props();
@@ -34,9 +34,9 @@
 	}
 
 	function handleRetry() {
-		const question = chatStore.retry(message.id);
-		if (question && onRetry) {
-			onRetry(question);
+		const result = chatStore.retry(message.id);
+		if (result && onRetry) {
+			onRetry(result.question, result.userMessageOrdinal);
 		}
 	}
 
@@ -111,8 +111,8 @@
 
 				{#each blocks as block (block.kind === 'text' ? block.segment.id : block.id)}
 					{#if block.kind === 'text'}
-						<MessageContent class="my-1">
-							<MessageResponse
+						<MessageContent >
+							<MessageResponse	
 								content={block.segment.text}
 								isStreaming={!!message.isStreaming && block.segment === lastSegment}
 								sources={message.sources}

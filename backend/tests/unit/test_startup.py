@@ -1,15 +1,15 @@
 from dataclasses import dataclass
-from typing import Any
 
-from agents.tracing.span_data import TurnSpanData
+import pytest
 
 from talkingcode import startup
 
 
 @dataclass(slots=True)
 class StartupConfig:
-    mlflow_tracking_uri: str = ""
-    mlflow_experiment_name: str = "test"
+    phoenix_collector_endpoint: str = ""
+    phoenix_api_key: str = ""
+    phoenix_project_name: str = "test"
 
 
 class FakeLogger:
@@ -24,93 +24,93 @@ class FakeLogger:
         self.warnings.append((event, kwargs))
 
 
-def test_configure_mlflow_tracing_warns_when_tracking_uri_is_missing(
+class FakeInstrumentor:
+    instrument_calls: list[dict] = []
+
+    def instrument(self, **kwargs) -> None:
+        FakeInstrumentor.instrument_calls.append(kwargs)
+
+
+@pytest.fixture(autouse=True)
+def reset_phoenix_state(monkeypatch) -> None:
+    monkeypatch.setattr(startup, "_phoenix_configured", False)
+    FakeInstrumentor.instrument_calls = []
+
+
+def test_configure_phoenix_tracing_warns_when_endpoint_is_missing(
     monkeypatch,
 ) -> None:
-    autolog_calls = 0
+    register_calls: list[dict] = []
     fake_logger = FakeLogger()
 
-    def fake_autolog() -> None:
-        nonlocal autolog_calls
-        autolog_calls += 1
-
     monkeypatch.setattr(startup.logger, "warning", fake_logger.warning)
-    monkeypatch.setattr(startup.mlflow.openai, "autolog", fake_autolog)
+    monkeypatch.setattr(
+        startup, "register", lambda **kwargs: register_calls.append(kwargs)
+    )
 
-    startup.configure_mlflow_tracing(StartupConfig(mlflow_tracking_uri=""))
+    startup.configure_phoenix_tracing(StartupConfig(phoenix_collector_endpoint=""))
 
-    assert autolog_calls == 0
+    assert register_calls == []
     assert fake_logger.warnings == [
-        ("mlflow.tracing.disabled", {"reason": "missing_tracking_uri"})
+        ("phoenix.tracing.disabled", {"reason": "missing_collector_endpoint"})
     ]
 
 
-def test_configure_mlflow_tracing_instruments_openai_agents_when_server_is_set(
+def test_configure_phoenix_tracing_instruments_openai_agents_when_endpoint_is_set(
     monkeypatch,
 ) -> None:
-    calls: list[tuple[str, object]] = []
+    register_calls: list[dict] = []
     fake_logger = FakeLogger()
+    sentinel_provider = object()
     config = StartupConfig(
-        mlflow_tracking_uri="http://localhost:5000",
-        mlflow_experiment_name="talkingcode-test",
+        phoenix_collector_endpoint="https://phoenix.example.com/",
+        phoenix_api_key="test-api-key",
+        phoenix_project_name="talkingcode-test",
     )
+
+    def fake_register(**kwargs) -> object:
+        register_calls.append(kwargs)
+        return sentinel_provider
 
     monkeypatch.setattr(startup.logger, "info", fake_logger.info)
-    monkeypatch.setattr(
-        startup.mlflow,
-        "set_tracking_uri",
-        lambda uri: calls.append(("set_tracking_uri", uri)),
-    )
-    monkeypatch.setattr(
-        startup.mlflow,
-        "set_experiment",
-        lambda *, experiment_name: calls.append(("set_experiment", experiment_name)),
-    )
-    monkeypatch.setattr(
-        startup.mlflow.openai,
-        "autolog",
-        lambda: calls.append(("autolog", None)),
-    )
-    monkeypatch.setattr(
-        startup,
-        "_patch_openai_agents_turn_span_names",
-        lambda: calls.append(("patch_turn_span_names", None)),
-    )
+    monkeypatch.setattr(startup, "register", fake_register)
+    monkeypatch.setattr(startup, "OpenAIAgentsInstrumentor", FakeInstrumentor)
 
-    startup.configure_mlflow_tracing(config)
+    startup.configure_phoenix_tracing(config)
 
-    assert calls == [
-        ("set_tracking_uri", "http://localhost:5000"),
-        ("set_experiment", "talkingcode-test"),
-        ("patch_turn_span_names", None),
-        ("autolog", None),
+    assert len(register_calls) == 1
+    register_kwargs = register_calls[0]
+    assert register_kwargs["endpoint"] == "https://phoenix.example.com/v1/traces"
+    assert register_kwargs["project_name"] == "talkingcode-test"
+    assert register_kwargs["api_key"] == "test-api-key"
+    assert register_kwargs["set_global_tracer_provider"] is False
+    assert FakeInstrumentor.instrument_calls == [
+        {"tracer_provider": sentinel_provider}
     ]
     assert fake_logger.infos == [
         (
-            "mlflow.openai_agents_tracing.enabled",
+            "phoenix.openai_agents_tracing.enabled",
             {
-                "tracking_uri": "http://localhost:5000",
-                "experiment_name": "talkingcode-test",
+                "endpoint": "https://phoenix.example.com/",
+                "project_name": "talkingcode-test",
             },
         )
     ]
 
 
-def test_patch_openai_agents_turn_span_names_renames_turn_spans(
-    monkeypatch,
-) -> None:
-    def original_get_span_name(span_data: Any) -> str:
-        return f"original:{span_data.__class__.__name__}"
+def test_configure_phoenix_tracing_is_idempotent(monkeypatch) -> None:
+    register_calls: list[dict] = []
+    config = StartupConfig(phoenix_collector_endpoint="https://phoenix.example.com")
 
-    monkeypatch.setattr(startup._agent_tracer, "_get_span_name", original_get_span_name)
+    def fake_register(**kwargs) -> object:
+        register_calls.append(kwargs)
+        return object()
 
-    startup._patch_openai_agents_turn_span_names()
+    monkeypatch.setattr(startup, "register", fake_register)
+    monkeypatch.setattr(startup, "OpenAIAgentsInstrumentor", FakeInstrumentor)
 
-    class OtherSpanData:
-        pass
+    startup.configure_phoenix_tracing(config)
+    startup.configure_phoenix_tracing(config)
 
-    assert (
-        startup._agent_tracer._get_span_name(TurnSpanData(turn=3, agent_name="TalkingCode"))
-        == "Turn 3: TalkingCode"
-    )
-    assert startup._agent_tracer._get_span_name(OtherSpanData()) == "original:OtherSpanData"
+    assert len(register_calls) == 1
+    assert len(FakeInstrumentor.instrument_calls) == 1

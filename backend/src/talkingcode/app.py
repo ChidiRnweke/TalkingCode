@@ -14,7 +14,7 @@ from talkingcode.dependencies import _get_cached_config
 from talkingcode.errors import AppError
 from talkingcode.error_handlers import app_error_handler
 from talkingcode.routes import chat_routes, health_routes, model_routes, repo_routes
-from talkingcode.startup import configure_mlflow_tracing, setup_database, setup_telemetry_if_enabled
+from talkingcode.startup import configure_phoenix_tracing, setup_database, setup_telemetry_if_enabled
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
@@ -22,7 +22,7 @@ logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     config = _get_cached_config()
-    configure_mlflow_tracing(config)
+    configure_phoenix_tracing(config)
     setup_telemetry_if_enabled(config)
     await setup_database(config)
     logger.info("Application started", environment=config.environment)

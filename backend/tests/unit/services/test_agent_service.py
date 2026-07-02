@@ -5,6 +5,7 @@ import pytest
 from agents import Agent, Runner
 from agents.extensions.memory import SQLAlchemySession
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import StaticPool
 from agents.items import ReasoningItem, ToolCallItem, ToolCallOutputItem
 from agents.stream_events import RawResponsesStreamEvent, RunItemStreamEvent
 from openai.types.responses import (
@@ -187,6 +188,96 @@ async def test_run_streamed_receives_no_conversation_id_and_configured_max_turns
     assert session.session_id == str(turn.conversation_id)
     assert events[-1].event == "turn.done"
     assert events[-1].data["conversation_id"] == str(turn.conversation_id)
+
+
+def sqlite_service() -> ChatAgentService:
+    # StaticPool so every connection sees the same in-memory database;
+    # production creates the agent session tables via alembic instead.
+    engine = create_async_engine("sqlite+aiosqlite://", poolclass=StaticPool)
+    return ChatAgentService(
+        tools=[],
+        openrouter_api_key="test-key",
+        max_iterations=16,
+        engine=engine,
+    )
+
+
+async def seed_session(service: ChatAgentService, conversation_id, items: list[dict]) -> None:
+    session = SQLAlchemySession(str(conversation_id), engine=service.engine, create_tables=True)
+    await session.add_items(items)
+
+
+def user_item(content: str) -> dict:
+    return {"role": "user", "content": content}
+
+
+def assistant_item(content: str) -> dict:
+    return {
+        "role": "assistant",
+        "type": "message",
+        "status": "completed",
+        "content": [{"type": "output_text", "text": content, "annotations": []}],
+    }
+
+
+def tool_call_items(call_id: str) -> list[dict]:
+    return [
+        {
+            "type": "function_call",
+            "call_id": call_id,
+            "name": "search_github",
+            "arguments": "{}",
+        },
+        {"type": "function_call_output", "call_id": call_id, "output": "results"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_rewind_session_drops_nth_user_message_and_everything_after():
+    service = sqlite_service()
+    conversation_id = uuid4()
+    turn_one = [user_item("q1"), *tool_call_items("call-1"), assistant_item("a1")]
+    turn_two = [user_item("q2"), assistant_item("a2")]
+    await seed_session(service, conversation_id, turn_one + turn_two)
+
+    await service.rewind_session(conversation_id=conversation_id, user_message_ordinal=2)
+
+    assert await service._session(conversation_id).get_items() == turn_one
+
+
+@pytest.mark.asyncio
+async def test_rewind_session_at_first_user_message_empties_session():
+    service = sqlite_service()
+    conversation_id = uuid4()
+    await seed_session(service, conversation_id, [user_item("q1"), assistant_item("a1")])
+
+    await service.rewind_session(conversation_id=conversation_id, user_message_ordinal=1)
+
+    assert await service._session(conversation_id).get_items() == []
+
+
+@pytest.mark.asyncio
+async def test_rewind_session_noop_when_ordinal_exceeds_user_messages():
+    service = sqlite_service()
+    conversation_id = uuid4()
+    items = [user_item("q1"), assistant_item("a1")]
+    await seed_session(service, conversation_id, items)
+
+    await service.rewind_session(conversation_id=conversation_id, user_message_ordinal=2)
+
+    assert await service._session(conversation_id).get_items() == items
+
+
+@pytest.mark.asyncio
+async def test_rewind_session_noop_on_missing_session():
+    service = sqlite_service()
+    other_conversation = uuid4()
+    items = [user_item("q1")]
+    await seed_session(service, other_conversation, items)
+
+    await service.rewind_session(conversation_id=uuid4(), user_message_ordinal=1)
+
+    assert await service._session(other_conversation).get_items() == items
 
 
 @pytest.mark.asyncio

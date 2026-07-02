@@ -1,12 +1,12 @@
-"""List MLflow GenAI datasets for TalkingCode."""
+"""List Phoenix datasets for TalkingCode."""
 
 import argparse
 import json
 import os
 
 from talkingcode.evals.dataset import (
-    DEFAULT_EXPERIMENT_NAME,
-    DEFAULT_TRACKING_URI,
+    DEFAULT_BASE_URL,
+    get_phoenix_client,
     list_evaluation_datasets,
 )
 
@@ -14,12 +14,8 @@ from talkingcode.evals.dataset import (
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--tracking-uri",
-        default=os.getenv("MLFLOW_TRACKING_URI", DEFAULT_TRACKING_URI),
-    )
-    parser.add_argument(
-        "--experiment-name",
-        default=os.getenv("MLFLOW_EXPERIMENT_NAME", DEFAULT_EXPERIMENT_NAME),
+        "--base-url",
+        default=os.getenv("PHOENIX_COLLECTOR_ENDPOINT", DEFAULT_BASE_URL),
     )
     parser.add_argument("--json", action="store_true")
     return parser
@@ -27,10 +23,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
-    datasets = list_evaluation_datasets(
-        tracking_uri=args.tracking_uri,
-        experiment_name=args.experiment_name,
+    client = get_phoenix_client(
+        base_url=args.base_url,
+        api_key=os.getenv("PHOENIX_API_KEY"),
     )
+    datasets = list_evaluation_datasets(client)
     if args.json:
         print(json.dumps(datasets, indent=2))
         return
@@ -40,12 +37,8 @@ def main() -> None:
         return
 
     for dataset in datasets:
-        print(
-            f"{dataset['name']} records={dataset['record_count']} "
-            f"id={dataset['dataset_id']} digest={dataset['digest']}"
-        )
+        print(f"{dataset['name']} id={dataset['dataset_id']}")
 
 
 if __name__ == "__main__":
     main()
-

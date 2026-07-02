@@ -21,6 +21,20 @@ export interface ReasoningSegment {
 
 export type AssistantSegment = TextSegment | ToolSegment | ReasoningSegment;
 
+export interface StepBlock {
+	kind: 'step';
+	id: string;
+	reasoning: ReasoningSegment | null;
+	tools: ToolSegment[];
+}
+
+export interface TextBlock {
+	kind: 'text';
+	segment: TextSegment;
+}
+
+export type AssistantBlock = StepBlock | TextBlock;
+
 const tagPattern = /<tc-tool\s+([^>]*)><\/tc-tool>|<tc-reasoning>([\s\S]*?)<\/tc-reasoning>/g;
 
 function parseAttrs(raw: string): Record<string, string> {
@@ -137,4 +151,36 @@ export function parseAssistantTags(content: string): AssistantSegment[] {
 	}
 
 	return segments;
+}
+
+/**
+ * Group each thought with the tool calls of the same step so that a collapsed
+ * step renders as a single muted line. The model narrates before calling
+ * tools, so when answer text streamed between a thought and its tool calls the
+ * step moves below that text — live tool updates then always happen in the
+ * bottom-most block. A step that never gets tools (the final thought before
+ * the answer) stays where it streamed, above its text.
+ */
+export function groupAssistantBlocks(segments: AssistantSegment[]): AssistantBlock[] {
+	const result: AssistantBlock[] = [];
+	let currentStep: StepBlock | null = null;
+	for (const segment of segments) {
+		if (segment.kind === 'text') {
+			if (segment.text.trim()) result.push({ kind: 'text', segment });
+		} else if (segment.kind === 'reasoning') {
+			if (!segment.text.trim()) continue;
+			currentStep = { kind: 'step', id: segment.id, reasoning: segment, tools: [] };
+			result.push(currentStep);
+		} else {
+			if (!currentStep) {
+				currentStep = { kind: 'step', id: `step-${segment.id}`, reasoning: null, tools: [] };
+				result.push(currentStep);
+			} else if (result[result.length - 1] !== currentStep) {
+				result.splice(result.indexOf(currentStep), 1);
+				result.push(currentStep);
+			}
+			currentStep.tools.push(segment);
+		}
+	}
+	return result;
 }

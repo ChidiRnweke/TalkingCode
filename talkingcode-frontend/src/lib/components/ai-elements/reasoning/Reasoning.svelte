@@ -126,7 +126,7 @@
 </script>
 
 <Collapsible
-	class={cn("not-prose mb-4 min-w-0", className)}
+	class={cn("not-prose min-w-0", className)}
 	bind:open={isOpen}
 	onOpenChange={(newOpen) => handleOpenChange(newOpen, true)}
 	{...props}

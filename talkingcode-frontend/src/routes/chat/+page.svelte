@@ -17,7 +17,11 @@
 	const controller = AppFactory.getChatController();
 	let activeRequestAbortController: AbortController | null = null;
 
-	async function handleSubmit(question: string, skipAdd = false) {
+	async function handleSubmit(
+		question: string,
+		skipAdd = false,
+		retryUserOrdinal: number | null = null
+	) {
 		if (chatStore.isStreaming) {
 			return;
 		}
@@ -34,7 +38,8 @@
 			const stream = controller.startAgenticTurn({
 				conversationId: chatStore.conversationId,
 				question,
-				model: chatStore.selectedModel
+				model: chatStore.selectedModel,
+				retryUserOrdinal
 			}, activeRequestAbortController.signal);
 
 			for await (const event of stream) {
@@ -93,7 +98,7 @@
 		<ChatThread
 			messages={chatStore.messages}
 			onSuggestionClick={handleSubmit}
-			onRetry={(question) => handleSubmit(question, true)}
+			onRetry={(question, ordinal) => handleSubmit(question, true, ordinal)}
 		/>
 
 		<ChatComposer

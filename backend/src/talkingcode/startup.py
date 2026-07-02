@@ -1,11 +1,8 @@
 """Application startup helpers."""
 
-from typing import Any
-
-import mlflow
 import structlog
-from agents.tracing.span_data import TurnSpanData
-from mlflow.openai import _agent_tracer
+from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
+from phoenix.otel import register
 from sqlalchemy import text
 
 from talkingcode.config import AppConfig
@@ -14,41 +11,37 @@ from talkingcode.telemetry import configure_telemetry
 
 logger = structlog.getLogger(__name__)
 
+_phoenix_configured = False
 
-def configure_mlflow_tracing(config: AppConfig) -> None:
-    if not config.mlflow_tracking_uri:
-        logger.warning("mlflow.tracing.disabled", reason="missing_tracking_uri")
+
+def configure_phoenix_tracing(config: AppConfig) -> None:
+    global _phoenix_configured
+    if not config.phoenix_collector_endpoint:
+        logger.warning("phoenix.tracing.disabled", reason="missing_collector_endpoint")
         return
 
-    mlflow.set_tracking_uri(config.mlflow_tracking_uri)
+    if _phoenix_configured:
+        return
 
-    if config.mlflow_experiment_name:
-        mlflow.set_experiment(experiment_name=config.mlflow_experiment_name)
-
-    _patch_openai_agents_turn_span_names()
-    mlflow.openai.autolog()  # type: ignore
-    logger.info(
-        "mlflow.openai_agents_tracing.enabled",
-        tracking_uri=config.mlflow_tracking_uri,
-        experiment_name=config.mlflow_experiment_name,
+    # Phoenix must not own the global tracer provider: app telemetry
+    # (FastAPI/SQLAlchemy/HTTPX -> otel-collector) keeps it; only the
+    # OpenAI Agents instrumentor exports to Phoenix.
+    tracer_provider = register(
+        endpoint=f"{config.phoenix_collector_endpoint.rstrip('/')}/v1/traces",
+        protocol="http/protobuf",
+        project_name=config.phoenix_project_name,
+        api_key=config.phoenix_api_key or None,
+        set_global_tracer_provider=False,
+        batch=True,
+        verbose=False,
     )
-
-
-def _patch_openai_agents_turn_span_names() -> None:
-    """Name OpenAI Agents turn spans until MLflow handles TurnSpanData directly."""
-    original_get_span_name = _agent_tracer._get_span_name
-
-    if getattr(original_get_span_name, "_talkingcode_patched", False):
-        return
-
-    def get_span_name(span_data: Any) -> str:
-        if isinstance(span_data, TurnSpanData):
-            return f"Turn {span_data.turn}: {span_data.agent_name}"
-
-        return original_get_span_name(span_data)
-
-    get_span_name._talkingcode_patched = True  # type: ignore[attr-defined]
-    _agent_tracer._get_span_name = get_span_name
+    OpenAIAgentsInstrumentor().instrument(tracer_provider=tracer_provider)
+    _phoenix_configured = True
+    logger.info(
+        "phoenix.openai_agents_tracing.enabled",
+        endpoint=config.phoenix_collector_endpoint,
+        project_name=config.phoenix_project_name,
+    )
 
 
 async def setup_database(config: AppConfig) -> None:

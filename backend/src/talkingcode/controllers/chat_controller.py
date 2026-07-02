@@ -22,9 +22,18 @@ class ChatController:
         conversation_id: UUID | None,
         question: str,
         selected_model: str | None,
+        retry_user_ordinal: int | None = None,
     ) -> AsyncGenerator[ChatStreamEvent, None]:
         """Start an agentic turn and stream events."""
         model_name = selected_model or self.default_model
+        # A retry of the very first turn arrives without a conversation id
+        # (the client only learns it on turn.done), so there is no session
+        # to rewind yet.
+        if retry_user_ordinal is not None and conversation_id is not None:
+            await self.agent_service.rewind_session(
+                conversation_id=conversation_id,
+                user_message_ordinal=retry_user_ordinal,
+            )
         # Server-assigned identity: the turn row, the SDK session memory, and
         # the turn.done payload must all share the same conversation id.
         conversation_id = conversation_id or uuid4()
