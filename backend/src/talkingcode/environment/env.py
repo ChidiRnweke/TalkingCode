@@ -20,6 +20,12 @@ logger = structlog.getLogger("talkingcode")
 # Default TTL for cached secrets: 30 minutes
 _DEFAULT_SECRET_TTL_SECONDS = 30 * 60
 
+# Retry a transient Infisical fetch failure (e.g. a cold-start network race)
+# before giving up, so a boot-time hiccup doesn't get cached as "no secret"
+# for the lifetime of the process.
+_INFISICAL_FETCH_RETRIES = 3
+_INFISICAL_FETCH_BACKOFF_SECONDS = (0.5, 1.0, 2.0)
+
 
 class SecretsNotFoundError(Exception):
     pass
@@ -76,18 +82,36 @@ class InfisicalSecretsBackend(SecretsBackend):
                 if now < expires_at:
                     return value
 
-        # Cache miss or expired — fetch from Infisical
-        try:
-            secret = self.client.getSecret(
-                options=GetSecretOptions(
-                    environment=self.environment,
-                    project_id=self.project_id,
-                    secret_name=secret_name,
+        # Cache miss or expired — fetch from Infisical, retrying transient
+        # failures (e.g. a cold-start network race) before giving up.
+        last_exc: Exception | None = None
+        value: str | None = None
+        for attempt in range(_INFISICAL_FETCH_RETRIES):
+            try:
+                secret = self.client.getSecret(
+                    options=GetSecretOptions(
+                        environment=self.environment,
+                        project_id=self.project_id,
+                        secret_name=secret_name,
+                    )
                 )
-            )
-            value = secret.secret_value
-        except Exception as exc:  # noqa: BLE001
-            raise SecretsNotFoundError(f"Secret {secret_name} not found") from exc
+                value = secret.secret_value
+                last_exc = None
+                break
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                if attempt < _INFISICAL_FETCH_RETRIES - 1:
+                    logger.warning(
+                        "secrets.fetch.retry",
+                        secret=secret_name,
+                        attempt=attempt + 1,
+                        error=str(exc),
+                    )
+                    time.sleep(_INFISICAL_FETCH_BACKOFF_SECONDS[attempt])
+
+        if last_exc is not None:
+            raise SecretsNotFoundError(f"Secret {secret_name} not found") from last_exc
+        assert value is not None
 
         with self._lock:
             self._cache[secret_name] = (value, now + self.ttl)

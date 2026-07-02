@@ -57,7 +57,7 @@ class RepoRepository:
             )
         )
 
-        await self.session.scalars(stmt)
+        await self.session.execute(stmt)
         await self.session.flush()
 
         return await self._get_by_owner_name(input_data.owner, input_data.name)

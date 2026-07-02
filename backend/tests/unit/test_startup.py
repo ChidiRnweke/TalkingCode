@@ -16,12 +16,16 @@ class FakeLogger:
     def __init__(self) -> None:
         self.infos: list[tuple[str, dict]] = []
         self.warnings: list[tuple[str, dict]] = []
+        self.errors: list[tuple[str, dict]] = []
 
     def info(self, event: str, **kwargs) -> None:
         self.infos.append((event, kwargs))
 
     def warning(self, event: str, **kwargs) -> None:
         self.warnings.append((event, kwargs))
+
+    def error(self, event: str, **kwargs) -> None:
+        self.errors.append((event, kwargs))
 
 
 class FakeInstrumentor:
@@ -93,6 +97,33 @@ def test_configure_phoenix_tracing_instruments_openai_agents_when_endpoint_is_se
             {
                 "endpoint": "https://phoenix.example.com/",
                 "project_name": "talkingcode-test",
+            },
+        )
+    ]
+
+
+def test_configure_phoenix_tracing_logs_error_when_api_key_missing(
+    monkeypatch,
+) -> None:
+    fake_logger = FakeLogger()
+    config = StartupConfig(
+        phoenix_collector_endpoint="https://phoenix.example.com/",
+        phoenix_api_key="",
+    )
+
+    monkeypatch.setattr(startup.logger, "info", fake_logger.info)
+    monkeypatch.setattr(startup.logger, "error", fake_logger.error)
+    monkeypatch.setattr(startup, "register", lambda **kwargs: object())
+    monkeypatch.setattr(startup, "OpenAIAgentsInstrumentor", FakeInstrumentor)
+
+    startup.configure_phoenix_tracing(config)
+
+    assert fake_logger.errors == [
+        (
+            "phoenix.tracing.misconfigured",
+            {
+                "reason": "missing_api_key",
+                "endpoint": "https://phoenix.example.com/",
             },
         )
     ]

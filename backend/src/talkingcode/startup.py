@@ -23,6 +23,13 @@ def configure_phoenix_tracing(config: AppConfig) -> None:
     if _phoenix_configured:
         return
 
+    if not config.phoenix_api_key:
+        logger.error(
+            "phoenix.tracing.misconfigured",
+            reason="missing_api_key",
+            endpoint=config.phoenix_collector_endpoint,
+        )
+
     # Phoenix must not own the global tracer provider: app telemetry
     # (FastAPI/SQLAlchemy/HTTPX -> otel-collector) keeps it; only the
     # OpenAI Agents instrumentor exports to Phoenix.
