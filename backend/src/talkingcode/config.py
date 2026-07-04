@@ -1,5 +1,6 @@
 """Application configuration."""
 
+import os
 from dataclasses import dataclass
 from typing import Self
 
@@ -57,7 +58,7 @@ class AppConfig:
             phoenix_base_url=reader.read_or_default("PHOENIX_BASE_URL", ""),
             phoenix_api_key=reader.read_or_default("PHOENIX_API_KEY", ""),
             phoenix_project_name=reader.read_or_default("PHOENIX_PROJECT_NAME", "talkingcode"),
-            otel_exporter_endpoint=reader.read_or_default("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
-            otel_service_name=reader.read_or_default("OTEL_SERVICE_NAME", "talkingcode-backend"),
-            otel_environment=reader.read_or_default("OTEL_ENVIRONMENT", "development"),
+            otel_exporter_endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+            otel_service_name=os.getenv("OTEL_SERVICE_NAME", "talkingcode-backend"),
+            otel_environment=os.getenv("OTEL_ENVIRONMENT", "development"),
         )
