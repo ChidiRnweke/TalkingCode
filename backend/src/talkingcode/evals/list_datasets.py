@@ -1,6 +1,7 @@
 """List Phoenix datasets for TalkingCode."""
 
 import argparse
+import asyncio
 import json
 import sys
 
@@ -26,7 +27,7 @@ def main() -> None:
         base_url=args.base_url or config.phoenix_base_url or DEFAULT_BASE_URL,
         api_key=config.phoenix_api_key,
     )
-    datasets = list_evaluation_datasets(client)
+    datasets = asyncio.run(list_evaluation_datasets(client))
     if args.json:
         sys.stdout.write(f"{json.dumps(datasets, indent=2)}\n")
         return

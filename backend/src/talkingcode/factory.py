@@ -116,15 +116,19 @@ class AppFactory:
             ),
         ]
 
-    async def get_chat_controller(self) -> "ChatController":
-        """Get chat controller."""
-        conversation_repo = self.get_conversation_repository()
-        agent_service = ChatAgentService(
+    async def get_chat_agent_service(self) -> ChatAgentService:
+        """Get chat agent service."""
+        return ChatAgentService(
             tools=await self.get_agent_tools(),
             openrouter_api_key=self.config.openrouter_api_key,
             max_iterations=self.config.max_iterations,
             engine=get_engine(self.config.database_url),
         )
+
+    async def get_chat_controller(self) -> "ChatController":
+        """Get chat controller."""
+        conversation_repo = self.get_conversation_repository()
+        agent_service = await self.get_chat_agent_service()
 
         return ChatController(
             agent_service=agent_service,

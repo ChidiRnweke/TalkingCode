@@ -74,32 +74,39 @@ Use both deterministic code-based scorers and LLM judge scorers.
 
 ### Code-Based Scorers
 
-Recommended checks:
+Implemented in `backend/src/talkingcode/evals/scorers.py`; each returns
+`{score, label, explanation}` so failures are diagnosable in the Phoenix UI.
+They read the structured trajectory captured by
+`talkingcode/evals/trajectory.py` (tool calls with arguments and condensed
+outputs, retrieved paths, search queries, tool errors, latency), not the
+streamed markdown.
 
-- answer includes citations when referencing code
-- citations map to actual retrieved or read files
-- no citation points to a nonexistent source id
 - required tools were called
-- prohibited tools were not called
-- no tool errors occurred
+- tools were used when the case requires them
+- tool count stays within budget
 - latency stays below threshold
-- tool count stays below threshold
-- iteration count stays below threshold
-- answer avoids unsupported absolute claims like "all projects" unless evidence
-  supports it
+- no tool call returned an error
+- no duplicate search queries (redundancy = "too much" tool use)
+- search queries mention the case's expected terms ("right direction")
+- retrieval hit: expected paths were surfaced by tool results (separates
+  retrieval failure from the agent ignoring evidence)
+- answer mentions the expected source paths
+- answer avoids prohibited unsupported claims
+- answer carries [n] citations whenever evidence tools ran
+- no citation index exceeds the number of retrieved files
+- no internal markup (`<tc-...>`, `[Source n]`) leaks into the answer
 
 ### LLM Judge Scorers
 
-Recommended rubric dimensions:
+Implemented in `backend/src/talkingcode/evals/judge.py`: a trajectory judge
+(Arize trace-level eval pattern) that reads the ordered tool calls with
+arguments and condensed results — not the final answer — and labels the
+decision path `on_track` (1.0), `wandering` (0.5), or `lost` (0.0) with an
+explanation. Runs through OpenRouter; model defaults to the intent-extraction
+model and is overridable with `--judge-model`. Disable with `--no-judge`.
 
-- groundedness
-- relevance
-- completeness
-- uncertainty calibration
-- citation usefulness
-- source faithfulness
-- whether the answer represents Chidi's work accurately
-- whether the agent used evidence appropriately
+Candidate future rubric dimensions (not yet implemented): groundedness of the
+final answer in tool outputs, uncertainty calibration, citation usefulness.
 
 ## 4. Human Feedback Loop
 
@@ -160,10 +167,23 @@ Use Phoenix for:
 - human feedback (annotations)
 - regression tracking
 
-Dataset semantics: Phoenix datasets are append-only and versioned. The sync
-script dedupes golden records by metadata id, so editing an existing case's
-expectations requires bumping its id (or moving to a new dataset name, e.g.
-`talkingcode-golden-v2`).
+Dataset semantics: golden examples carry stable ids (the case id) and are
+diff-synced — `create_dataset` compares the upload against the current version
+and applies the minimal adds, edits, and deletes, so editing a case locally
+and re-syncing updates it in place (new dataset version; old experiments keep
+their version). Each case's category is also its dataset split, so
+experiments can target a slice (e.g. only `tool_use_discipline`).
+
+Running:
+
+```
+uv run python -m talkingcode.evals.runner \
+  [--sync-dataset] [--dry-run] [--no-judge] \
+  [--repetitions 3] [--concurrency 3] [--model-name ...] [--judge-model ...]
+```
+
+Repetitions matter because agent runs are nondeterministic: a single run per
+case makes pass/fail flappy; 3 repetitions per case gives a variance signal.
 
 Phoenix docs:
 

@@ -1,6 +1,7 @@
 """Sync the local golden dataset into Phoenix."""
 
 import argparse
+import asyncio
 import sys
 
 from talkingcode.config import AppConfig
@@ -26,7 +27,7 @@ def main() -> None:
         base_url=args.base_url or config.phoenix_base_url or DEFAULT_BASE_URL,
         api_key=config.phoenix_api_key,
     )
-    dataset = sync_golden_dataset(client, dataset_name=args.dataset_name)
+    dataset = asyncio.run(sync_golden_dataset(client, dataset_name=args.dataset_name))
     sys.stdout.write(f"Synced dataset {dataset.name} ({dataset.id}).\n")
 
 

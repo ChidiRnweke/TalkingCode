@@ -5,6 +5,7 @@
     "question": "Which indexed projects use Svelte?",
     "expectations": {
       "should_use_tools": true,
+      "expected_query_terms": ["svelte"],
       "required_tool_names": ["get_project_descriptions", "search_github"],
       "expected_source_paths": [],
       "prohibited_claims": ["all projects", "every project"],
@@ -70,6 +71,7 @@
     "question": "Say briefly what TalkingCode is for.",
     "expectations": {
       "should_use_tools": true,
+      "expected_query_terms": ["talkingcode"],
       "required_tool_names": ["search_github"],
       "expected_source_paths": [],
       "prohibited_claims": ["I know without evidence"],

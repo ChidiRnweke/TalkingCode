@@ -34,6 +34,17 @@ logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
+
+def tool_call_arguments(item: ToolCallItem) -> str:
+    """Return the raw JSON arguments of a tool call, if available."""
+    match item.raw_item:
+        case {"arguments": arguments}:
+            return str(arguments or "")
+        case object(arguments=arguments):
+            return str(arguments or "")
+        case _:
+            return ""
+
 AGENT_SYSTEM_PROMPT = (
     "YOUR ROLE:\n"
     "You are an advanced assistant created to help users navigate and understand Chidi Nweke's GitHub repositories. "
@@ -133,7 +144,7 @@ class ChatAgentService:
             # Multi-turn memory comes from the SDK session, which replays the
             # transcript stored in agent_sessions/agent_messages.
             result = Runner.run_streamed(
-                self._build_agent(model_name),
+                self.build_agent(model_name),
                 input=question,
                 max_turns=self.max_iterations,
                 session=self._session(turn.conversation_id),
@@ -191,7 +202,8 @@ class ChatAgentService:
     def _session(self, conversation_id: UUID | None) -> SQLAlchemySession:
         return SQLAlchemySession(str(conversation_id), engine=self.engine)
 
-    def _build_agent(self, model_name: str) -> Agent:
+    def build_agent(self, model_name: str) -> Agent:
+        """Build the production agent (prompt, tools, model); also used by evals."""
         client = AsyncOpenAI(
             api_key=self.openrouter_api_key,
             base_url=OPENROUTER_BASE_URL,
@@ -281,14 +293,7 @@ class ChatAgentService:
 
     @staticmethod
     def _tool_args(item: ToolCallItem) -> str:
-        """Return the raw JSON arguments of a tool call, if available."""
-        match item.raw_item:
-            case {"arguments": arguments}:
-                return str(arguments or "")
-            case object(arguments=arguments):
-                return str(arguments or "")
-            case _:
-                return ""
+        return tool_call_arguments(item)
 
     @staticmethod
     def _reasoning(text: str) -> ChatStreamEvent:
