@@ -45,19 +45,35 @@ class AppConfig:
             ingestion_api_key=reader.read_secret("INGESTION_API_KEY"),
             environment=reader.read_or_default("ENVIRONMENT", "development"),
             log_level=reader.read_or_default("LOG_LEVEL", "INFO"),
-            default_model=reader.read_or_default("DEFAULT_MODEL", "anthropic/claude-3.5-sonnet"),
-            fallback_model=reader.read_or_default("FALLBACK_MODEL", "google/gemini-3-flash"),
+            default_model=reader.read_or_default(
+                "DEFAULT_MODEL", "deepseek/deepseek-v4-flash"
+            ),
+            fallback_model=reader.read_or_default(
+                "FALLBACK_MODEL", "deepseek/deepseek-v4-flash"
+            ),
             max_iterations=int(reader.read_or_default("MAX_ITERATIONS", "16")),
             max_tools_per_turn=int(reader.read_or_default("MAX_TOOLS_PER_TURN", "3")),
-            default_tool_timeout=int(reader.read_or_default("DEFAULT_TOOL_TIMEOUT", "15")),
-            embedding_model=reader.read_or_default("EMBEDDING_MODEL", "openai/text-embedding-3-large"),
-            embedding_dimensions=int(reader.read_or_default("EMBEDDING_DIMENSIONS", "3072")),
-            intent_extraction_model=reader.read_or_default("INTENT_EXTRACTION_MODEL", "deepseek/deepseek-v3.2"),
+            default_tool_timeout=int(
+                reader.read_or_default("DEFAULT_TOOL_TIMEOUT", "15")
+            ),
+            embedding_model=reader.read_or_default(
+                "EMBEDDING_MODEL", "openai/text-embedding-3-large"
+            ),
+            embedding_dimensions=int(
+                reader.read_or_default("EMBEDDING_DIMENSIONS", "3072")
+            ),
+            intent_extraction_model=reader.read_or_default(
+                "INTENT_EXTRACTION_MODEL", "deepseek/deepseek-v4-flash"
+            ),
             curated_models=reader.read_or_default("CURATED_MODELS", ""),
-            default_chat_model=reader.read_or_default("DEFAULT_CHAT_MODEL", "google/gemini-3-flash-preview"),
+            default_chat_model=reader.read_or_default(
+                "DEFAULT_CHAT_MODEL", "deepseek/deepseek-v4-flash"
+            ),
             phoenix_base_url=reader.read_or_default("PHOENIX_BASE_URL", ""),
             phoenix_api_key=reader.read_or_default("PHOENIX_API_KEY", ""),
-            phoenix_project_name=reader.read_or_default("PHOENIX_PROJECT_NAME", "talkingcode"),
+            phoenix_project_name=reader.read_or_default(
+                "PHOENIX_PROJECT_NAME", "talkingcode"
+            ),
             otel_exporter_endpoint=os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
             otel_service_name=os.getenv("OTEL_SERVICE_NAME", "talkingcode-backend"),
             otel_environment=os.getenv("OTEL_ENVIRONMENT", "development"),
