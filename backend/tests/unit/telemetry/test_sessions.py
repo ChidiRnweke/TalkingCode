@@ -63,3 +63,22 @@ async def test_with_session_yields_all_events() -> None:
         yielded.append(event)
 
     assert yielded == ["a", "b", "c"]
+
+
+class _Service:
+    @with_session(lambda self, *, session_id, captured, **_kw: session_id)
+    async def stream(
+        self, *, session_id: str | None, captured: list[Any]
+    ) -> AsyncGenerator[Any, None]:
+        captured.append(get_value(SpanAttributes.SESSION_ID))
+        yield "x"
+
+
+@pytest.mark.asyncio
+async def test_with_session_propagates_session_id_on_bound_method() -> None:
+    captured: list[Any] = []
+
+    async for _event in _Service().stream(session_id="conv-bound", captured=captured):
+        pass
+
+    assert captured == ["conv-bound"]

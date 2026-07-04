@@ -62,7 +62,7 @@ docker compose -f docker-compose.local-dev.yml up
 Use these host-facing env values for the backend:
 ```bash
 DATABASE_URL=postgresql+asyncpg://talkingcode:talkingcode@localhost:5432/chatGITpt
-PHOENIX_COLLECTOR_ENDPOINT=https://phoenix.chidinweke.be
+PHOENIX_BASE_URL=https://phoenix.chidinweke.be
 PHOENIX_API_KEY=<your-phoenix-api-key>
 PHOENIX_PROJECT_NAME=talkingcode
 ```

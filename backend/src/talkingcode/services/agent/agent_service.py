@@ -98,7 +98,7 @@ class ChatAgentService:
     engine: AsyncEngine
 
     @with_session(
-        lambda *, turn, **_kw: str(turn.conversation_id) if turn.conversation_id else None
+        lambda self, *, turn, **_kw: str(turn.conversation_id) if turn.conversation_id else None
     )
     async def run_turn(
         self,

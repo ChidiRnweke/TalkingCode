@@ -176,7 +176,7 @@ Phoenix docs:
 ## Hosting
 
 Traces and datasets go to the hosted Phoenix instance at
-https://phoenix.chidinweke.be (`PHOENIX_COLLECTOR_ENDPOINT` +
+https://phoenix.chidinweke.be (`PHOENIX_BASE_URL` +
 `PHOENIX_API_KEY`); no local server is required for development.
 
 ## Guiding Principle

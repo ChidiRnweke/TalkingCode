@@ -23,6 +23,10 @@ def with_session(
     instrumentors (e.g. the OpenAI Agents instrumentor) read the context set by
     ``using_session`` and stamp ``session.id`` on every span they create inside
     the wrapped block, so Phoenix groups those spans into a session.
+
+    The extractor must accept the same positional args as the wrapped callable,
+    including ``self`` for bound methods — e.g.
+    ``lambda self, *, turn, **_kw: ...``.
     """
 
     def decorator(
