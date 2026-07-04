@@ -24,9 +24,15 @@ def reset_startup_state(monkeypatch) -> None:
 
 def test_setup_phoenix_tracing_registers_with_collector_endpoint(monkeypatch) -> None:
     register_calls: list[dict] = []
-    monkeypatch.setattr(
-        startup, "register", lambda **kwargs: register_calls.append(kwargs)
-    )
+    fake_provider = object()
+
+    def fake_register(**kwargs):
+        register_calls.append(kwargs)
+        return fake_provider
+
+    monkeypatch.setattr(startup, "register", fake_register)
+    provider_calls: list[object] = []
+    monkeypatch.setattr(startup, "set_phoenix_tracer_provider", provider_calls.append)
 
     config = StartupConfig(
         otel_exporter_endpoint="http://otel-collector:4317",
@@ -35,6 +41,7 @@ def test_setup_phoenix_tracing_registers_with_collector_endpoint(monkeypatch) ->
 
     startup.setup_phoenix_tracing(config)
 
+    assert provider_calls == [fake_provider]
     assert len(register_calls) == 1
     call = register_calls[0]
     assert call["endpoint"] == "http://otel-collector:4318/v1/traces"

@@ -160,6 +160,8 @@ async def test_run_streamed_receives_no_conversation_id_and_configured_max_turns
     captured_kwargs: dict = {}
 
     class FakeResult:
+        final_output = "done"
+
         async def stream_events(self):
             return
             yield
@@ -195,6 +197,61 @@ async def test_run_streamed_receives_no_conversation_id_and_configured_max_turns
     assert session.session_id == str(turn.conversation_id)
     assert events[-1].event == "turn.done"
     assert events[-1].data["conversation_id"] == str(turn.conversation_id)
+
+
+@pytest.mark.asyncio
+async def test_run_turn_records_input_output_and_session_on_span(
+    service: ChatAgentService, monkeypatch: pytest.MonkeyPatch
+):
+    from openinference.instrumentation import OITracer, TraceConfig
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+        InMemorySpanExporter,
+    )
+
+    from talkingcode.telemetry import tracing
+
+    provider = TracerProvider()
+    exporter = InMemorySpanExporter()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    monkeypatch.setattr(
+        tracing,
+        "_tracer",
+        OITracer(provider.get_tracer("test"), config=TraceConfig()),
+    )
+
+    class FakeResult:
+        final_output = "Chidi uses Python in TalkingCode."
+
+        async def stream_events(self):
+            return
+            yield
+
+    monkeypatch.setattr(Runner, "run_streamed", lambda *args, **kwargs: FakeResult())
+    turn = AgentTurn(
+        id=uuid4(),
+        conversation_id=uuid4(),
+        question="What projects use Python?",
+        selected_model=None,
+        planner_model_used="test-model",
+        status="running",
+        created_at=datetime.utcnow(),
+    )
+
+    async for _ in service.run_turn(
+        turn=turn,
+        question=turn.question,
+        model_name="test-model",
+    ):
+        pass
+
+    (span,) = exporter.get_finished_spans()
+    assert span.name == "TalkingCode.turn"
+    assert span.attributes["openinference.span.kind"] == "AGENT"
+    assert span.attributes["input.value"] == "What projects use Python?"
+    assert span.attributes["output.value"] == "Chidi uses Python in TalkingCode."
+    assert span.attributes["session.id"] == str(turn.conversation_id)
 
 
 def sqlite_service() -> ChatAgentService:

@@ -6,7 +6,7 @@ from sqlalchemy import text
 
 from talkingcode.config import AppConfig
 from talkingcode.repository.database import get_engine
-from talkingcode.telemetry import configure_telemetry
+from talkingcode.telemetry import configure_telemetry, set_phoenix_tracer_provider
 
 logger = structlog.getLogger(__name__)
 
@@ -40,7 +40,7 @@ def setup_phoenix_tracing(config: AppConfig) -> None:
         logger.warning("phoenix.tracing.disabled", reason="missing_otel_endpoint")
         return
 
-    register(
+    tracer_provider = register(
         endpoint=_collector_http_endpoint(config.otel_exporter_endpoint),
         protocol="http/protobuf",
         project_name=config.phoenix_project_name,
@@ -49,6 +49,7 @@ def setup_phoenix_tracing(config: AppConfig) -> None:
         batch=True,
         verbose=False,
     )
+    set_phoenix_tracer_provider(tracer_provider)
     logger.info(
         "phoenix.tracing.enabled",
         endpoint=config.otel_exporter_endpoint,

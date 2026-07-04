@@ -24,8 +24,10 @@ from openai.types.responses import (
     ResponseReasoningTextDeltaEvent,
     ResponseTextDeltaEvent,
 )
+from opentelemetry.trace import Status, StatusCode
+
 from talkingcode.domain.models import AgentTurn, ChatStreamEvent, TurnStreamState
-from talkingcode.telemetry import with_session
+from talkingcode.telemetry import get_phoenix_tracer, with_session
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
@@ -108,20 +110,33 @@ class ChatAgentService:
         model_name: str,
     ) -> AsyncGenerator[ChatStreamEvent, None]:
         """Run an agent turn and stream markdown/custom-tag events."""
-        # No conversation_id: Chat Completions is stateless, and server-managed
-        # conversation mode would drop the question from follow-up model calls.
-        # Multi-turn memory comes from the SDK session, which replays the
-        # transcript stored in agent_sessions/agent_messages.
-        result = Runner.run_streamed(
-            self._build_agent(model_name),
-            input=question,
-            max_turns=self.max_iterations,
-            session=self._session(turn.conversation_id),
-        )
-        state = TurnStreamState()
-        async for event in result.stream_events():
-            async for stream_event in self._map_agent_event(event, state):
-                yield stream_event
+        # The Agents instrumentor never records input/output on the trace-root
+        # or agent spans, so the turn is wrapped in a manual span that carries
+        # them; the instrumentor's "Agent workflow" trace nests under it.
+        with get_phoenix_tracer().start_as_current_span(
+            "TalkingCode.turn",
+            openinference_span_kind="agent",
+        ) as span:
+            span.set_input(question)
+            # No conversation_id: Chat Completions is stateless, and server-managed
+            # conversation mode would drop the question from follow-up model calls.
+            # Multi-turn memory comes from the SDK session, which replays the
+            # transcript stored in agent_sessions/agent_messages.
+            result = Runner.run_streamed(
+                self._build_agent(model_name),
+                input=question,
+                max_turns=self.max_iterations,
+                session=self._session(turn.conversation_id),
+            )
+            state = TurnStreamState()
+            async for event in result.stream_events():
+                async for stream_event in self._map_agent_event(event, state):
+                    yield stream_event
+
+            # final_output is only populated once stream_events() is exhausted.
+            if result.final_output is not None:
+                span.set_output(str(result.final_output))
+            span.set_status(Status(StatusCode.OK))
 
         yield ChatStreamEvent(
             event="turn.done",
