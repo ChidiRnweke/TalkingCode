@@ -29,6 +29,24 @@ def setup_openai_agents_tracing() -> None:
     logger.info("openai_agents_tracing.enabled")
 
 
+def disable_openai_native_tracing() -> None:
+    """Disable the OpenAI Agents SDK's native trace exporter.
+
+    The SDK runs a parallel tracer (``agents.tracing``) that exports to
+    ``api.openai.com/v1/traces`` using ``OPENAI_API_KEY`` as a bearer token.
+    We use OpenRouter (no ``OPENAI_API_KEY``), so every batch flush emits
+    ``"OPENAI_API_KEY is not set, skipping trace export"``.  OpenInference
+    spans routed via OpenTelemetry to the OTel collector are a separate path
+    and are unaffected by this call.  Re-enabling native tracing (e.g. after
+    switching to OpenAI-direct) means removing this call and setting
+    ``OPENAI_API_KEY``.
+    """
+    from agents.tracing import set_trace_processors
+
+    set_trace_processors([])
+    logger.info("openai_native_tracing.disabled")
+
+
 async def setup_database(config: AppConfig) -> None:
     engine = get_engine(config.database_url)
     async with engine.connect() as conn:

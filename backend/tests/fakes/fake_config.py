@@ -23,7 +23,7 @@ class FakeAppConfig:
     intent_extraction_model: str = "test-intent"
     curated_models: str = ""
     default_chat_model: str = "test-chat"
-    phoenix_collector_endpoint: str = ""
+    phoenix_base_url: str = ""
     phoenix_api_key: str = ""
     phoenix_project_name: str = "test"
     otel_exporter_endpoint: str = ""

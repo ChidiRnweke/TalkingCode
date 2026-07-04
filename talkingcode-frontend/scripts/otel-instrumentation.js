@@ -99,7 +99,7 @@ function bridgeConsoleLogs() {
 	consoleBridged = true;
 }
 
-export function initTelemetry(serviceName = 'receipt2recipe') {
+export function initTelemetry(serviceName = 'talkingcode-frontend') {
 	const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
 
 	if (!endpoint) {

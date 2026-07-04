@@ -25,6 +25,7 @@ from openai.types.responses import (
     ResponseTextDeltaEvent,
 )
 from talkingcode.domain.models import AgentTurn, ChatStreamEvent, TurnStreamState
+from talkingcode.telemetry import with_session
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
@@ -96,6 +97,9 @@ class ChatAgentService:
     max_iterations: int
     engine: AsyncEngine
 
+    @with_session(
+        lambda *, turn, **_kw: str(turn.conversation_id) if turn.conversation_id else None
+    )
     async def run_turn(
         self,
         *,

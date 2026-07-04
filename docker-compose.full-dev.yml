@@ -29,7 +29,7 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - INGESTION_API_KEY=${INGESTION_API_KEY}
       - ENVIRONMENT=development
-      - PHOENIX_COLLECTOR_ENDPOINT=${PHOENIX_COLLECTOR_ENDPOINT:-https://phoenix.chidinweke.be}
+      - PHOENIX_BASE_URL=${PHOENIX_BASE_URL:-https://phoenix.chidinweke.be}
       - PHOENIX_API_KEY=${PHOENIX_API_KEY}
       - PHOENIX_PROJECT_NAME=talkingcode
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317

@@ -97,3 +97,17 @@ def test_setup_telemetry_if_enabled_logs_disabled_when_endpoint_missing(
     startup.setup_telemetry_if_enabled(config)
 
     assert infos == [("telemetry.disabled", {})]
+
+
+def test_disable_openai_native_tracing_clears_processors(monkeypatch) -> None:
+    import agents.tracing as agents_tracing
+
+    set_calls: list[list] = []
+
+    monkeypatch.setattr(
+        agents_tracing, "set_trace_processors", lambda processors: set_calls.append(processors)
+    )
+
+    startup.disable_openai_native_tracing()
+
+    assert set_calls == [[]]

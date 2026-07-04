@@ -19,7 +19,11 @@ from talkingcode.evals.dataset import (
 from talkingcode.evals.scorers import deterministic_evaluators
 from talkingcode.factory import AppFactory
 from talkingcode.repository.database import get_session
-from talkingcode.startup import setup_openai_agents_tracing, setup_telemetry_if_enabled
+from talkingcode.startup import (
+    disable_openai_native_tracing,
+    setup_openai_agents_tracing,
+    setup_telemetry_if_enabled,
+)
 
 TOOL_TAG_RE = re.compile(r"<tc-tool\b(?P<attrs>[^>]*)>")
 TOOL_NAME_RE = re.compile(r'\bname="(?P<name>[^"]+)"')
@@ -77,8 +81,9 @@ def run_golden_evaluation(args: argparse.Namespace) -> Any:
     config = AppConfig.from_env()
     setup_telemetry_if_enabled(config)
     setup_openai_agents_tracing()
+    disable_openai_native_tracing()
     client = get_phoenix_client(
-        base_url=args.base_url or config.phoenix_collector_endpoint or DEFAULT_BASE_URL,
+        base_url=args.base_url or config.phoenix_base_url or DEFAULT_BASE_URL,
         api_key=config.phoenix_api_key,
     )
     dataset = find_dataset(client, name=args.dataset_name)

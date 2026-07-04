@@ -16,6 +16,7 @@ from talkingcode.error_handlers import app_error_handler
 from talkingcode.errors import AppError
 from talkingcode.routes import chat_routes, health_routes, model_routes, repo_routes
 from talkingcode.startup import (
+    disable_openai_native_tracing,
     setup_database,
     setup_openai_agents_tracing,
     setup_telemetry_if_enabled,
@@ -29,6 +30,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     config = _get_cached_config()
     setup_telemetry_if_enabled(config)
     setup_openai_agents_tracing()
+    disable_openai_native_tracing()
     await setup_database(config)
     logger.info("Application started", environment=config.environment)
     yield

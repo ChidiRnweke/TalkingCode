@@ -23,7 +23,7 @@ def main() -> None:
     args = build_parser().parse_args()
     config = AppConfig.from_env()
     client = get_phoenix_client(
-        base_url=args.base_url or config.phoenix_collector_endpoint or DEFAULT_BASE_URL,
+        base_url=args.base_url or config.phoenix_base_url or DEFAULT_BASE_URL,
         api_key=config.phoenix_api_key,
     )
     dataset = sync_golden_dataset(client, dataset_name=args.dataset_name)

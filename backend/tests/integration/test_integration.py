@@ -49,7 +49,7 @@ async def app_config():
         intent_extraction_model="test-intent",
         curated_models="test-curated",
         default_chat_model="test-chat",
-        phoenix_collector_endpoint="",
+        phoenix_base_url="",
         phoenix_api_key="",
         phoenix_project_name="test",
         otel_exporter_endpoint="",

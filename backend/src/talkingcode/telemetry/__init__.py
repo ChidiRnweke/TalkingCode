@@ -4,6 +4,7 @@ from .metrics import (
     log_async_execution_time,
     log_execution_time,
 )
+from .sessions import with_session
 
 __all__ = [
     "configure_telemetry",
@@ -11,4 +12,5 @@ __all__ = [
     "log_failure",
     "log_async_execution_time",
     "log_execution_time",
+    "with_session",
 ]
