@@ -110,9 +110,11 @@ class IngestionService:
                         )
                         await session.commit()
 
-                        return await local_service.run_ingestion(
+                        run_info = await local_service.run_ingestion(
                             StartIngestionInput(repository_id=registered_repo.id, git_ref=git_ref)
                         )
+                        await session.commit()
+                        return run_info
             except Exception as repo_err:  # noqa: BLE001
                 logger.error(
                     "Owned repo ingestion failed; continuing",
