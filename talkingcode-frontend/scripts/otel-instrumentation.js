@@ -7,13 +7,20 @@ import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from '@opentelemetry/semantic
 import { SimpleLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import { logs, SeverityNumber } from '@opentelemetry/api-logs';
 import { trace, context } from '@opentelemetry/api';
+import { classifyConsoleLog } from './otel-log-classifier.js';
 
+/** @typedef {'debug' | 'log' | 'info' | 'warn' | 'error'} ConsoleMethod */
+/** @typedef {Record<string, string | number>} LogAttributes */
+
+/** @type {NodeSDK | null} */
 let sdk = null;
+/** @type {import('@opentelemetry/api-logs').Logger | null} */
 let otelLogger = null;
 let consoleBridged = false;
 
 // Capture truly original console methods immediately at module load
 // (before any code has a chance to patch them)
+/** @type {Record<ConsoleMethod, (...args: unknown[]) => void>} */
 const originalConsole = {
 	log: console.log.bind(console),
 	info: console.info.bind(console),
@@ -36,15 +43,16 @@ function bridgeConsoleLogs() {
 	const loggerProvider = logs.getLoggerProvider();
 	otelLogger = loggerProvider.getLogger('console');
 
-	const severityMap = {
-		debug: SeverityNumber.DEBUG,
-		log: SeverityNumber.INFO,
-		info: SeverityNumber.INFO,
-		warn: SeverityNumber.WARN,
-		error: SeverityNumber.ERROR
-	};
+	/** @type {Array<[ConsoleMethod, number]>} */
+	const severityEntries = [
+		['debug', SeverityNumber.DEBUG],
+		['log', SeverityNumber.INFO],
+		['info', SeverityNumber.INFO],
+		['warn', SeverityNumber.WARN],
+		['error', SeverityNumber.ERROR]
+	];
 
-	for (const [method, severity] of Object.entries(severityMap)) {
+	for (const [method, severity] of severityEntries) {
 		console[method] = (...args) => {
 			// Always call original console method
 			originalConsole[method](...args);
@@ -56,24 +64,30 @@ function bridgeConsoleLogs() {
 				const message = args
 					.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)))
 					.join(' ');
+				const classification = classifyConsoleLog(method, severity, message);
 
 				// Get current span context for trace correlation
 				const activeContext = context.active();
 				const span = trace.getSpan(activeContext);
 				const spanContext = span?.spanContext();
-
-				otelLogger.emit({
-					severityNumber: severity,
-					severityText: method.toUpperCase(),
-					body: message,
-					timestamp: Date.now(),
-					context: activeContext,
-					attributes: spanContext
+				/** @type {LogAttributes} */
+				const attributes = {
+					...classification.attributes,
+					...(spanContext
 						? {
 								trace_id: spanContext.traceId,
 								span_id: spanContext.spanId
 							}
-						: undefined
+						: {})
+				};
+
+				otelLogger.emit({
+					severityNumber: classification.severityNumber,
+					severityText: classification.severityText,
+					body: message,
+					timestamp: Date.now(),
+					context: activeContext,
+					attributes: Object.keys(attributes).length > 0 ? attributes : undefined
 				});
 			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			} catch (e) {
@@ -147,7 +161,8 @@ export async function shutdownTelemetry() {
 
 // Auto-initialize if this file is imported and OTEL_EXPORTER_OTLP_ENDPOINT is set
 const endpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
-if (endpoint && !globalThis.__otel_initialized__) {
-	globalThis.__otel_initialized__ = true;
+const otelGlobal = /** @type {typeof globalThis & { __otel_initialized__?: boolean }} */ (globalThis);
+if (endpoint && !otelGlobal.__otel_initialized__) {
+	otelGlobal.__otel_initialized__ = true;
 	initTelemetry();
 }
