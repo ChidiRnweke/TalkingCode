@@ -126,6 +126,35 @@ class AgentTurn:
 
 
 # =============================================================================
+# Health Models
+# =============================================================================
+
+
+@dataclass(slots=True, frozen=True)
+class DependencyHealthStatus:
+    """Health status for one dependency."""
+
+    status: str
+    message: str | None = None
+    details: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True, frozen=True)
+class HealthReport:
+    """Aggregate health report."""
+
+    status: str
+    dependencies: dict[str, DependencyHealthStatus]
+
+
+@dataclass(slots=True)
+class TurnStreamState:
+    """Per-turn streaming state."""
+
+    reasoning_streamed: bool = False
+
+
+# =============================================================================
 # Ingestion Models
 # =============================================================================
 

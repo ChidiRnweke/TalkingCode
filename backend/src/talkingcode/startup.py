@@ -2,7 +2,6 @@
 
 import structlog
 from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
-from phoenix.otel import register
 from sqlalchemy import text
 
 from talkingcode.config import AppConfig
@@ -11,44 +10,23 @@ from talkingcode.telemetry import configure_telemetry
 
 logger = structlog.getLogger(__name__)
 
-_phoenix_configured = False
+_openai_agents_instrumented = False
 
 
-def configure_phoenix_tracing(config: AppConfig) -> None:
-    global _phoenix_configured
-    if not config.phoenix_collector_endpoint:
-        logger.warning("phoenix.tracing.disabled", reason="missing_collector_endpoint")
+def setup_openai_agents_tracing() -> None:
+    """Instrument the OpenAI Agents SDK against the global tracer provider.
+
+    Spans are exported via the OTLP endpoint configured in
+    ``setup_telemetry_if_enabled``; a downstream OTel collector routes them to
+    Phoenix (and any other backends) so the application never talks to Phoenix
+    directly for tracing.  Idempotent: subsequent calls are no-ops.
+    """
+    global _openai_agents_instrumented
+    if _openai_agents_instrumented:
         return
-
-    if _phoenix_configured:
-        return
-
-    if not config.phoenix_api_key:
-        logger.error(
-            "phoenix.tracing.misconfigured",
-            reason="missing_api_key",
-            endpoint=config.phoenix_collector_endpoint,
-        )
-
-    # Phoenix must not own the global tracer provider: app telemetry
-    # (FastAPI/SQLAlchemy/HTTPX -> otel-collector) keeps it; only the
-    # OpenAI Agents instrumentor exports to Phoenix.
-    tracer_provider = register(
-        endpoint=f"{config.phoenix_collector_endpoint.rstrip('/')}/v1/traces",
-        protocol="http/protobuf",
-        project_name=config.phoenix_project_name,
-        api_key=config.phoenix_api_key or None,
-        set_global_tracer_provider=False,
-        batch=True,
-        verbose=False,
-    )
-    OpenAIAgentsInstrumentor().instrument(tracer_provider=tracer_provider)
-    _phoenix_configured = True
-    logger.info(
-        "phoenix.openai_agents_tracing.enabled",
-        endpoint=config.phoenix_collector_endpoint,
-        project_name=config.phoenix_project_name,
-    )
+    OpenAIAgentsInstrumentor().instrument()
+    _openai_agents_instrumented = True
+    logger.info("openai_agents_tracing.enabled")
 
 
 async def setup_database(config: AppConfig) -> None:
@@ -64,11 +42,13 @@ def setup_telemetry_if_enabled(config: AppConfig) -> None:
             endpoint=config.otel_exporter_endpoint,
             service_name=config.otel_service_name,
             environment=config.otel_environment,
+            phoenix_project=config.phoenix_project_name,
         )
         logger.info(
             "telemetry.enabled",
             endpoint=config.otel_exporter_endpoint,
             service_name=config.otel_service_name,
+            phoenix_project=config.phoenix_project_name,
         )
     else:
         logger.info("telemetry.disabled")

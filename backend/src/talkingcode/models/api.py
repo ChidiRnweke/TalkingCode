@@ -1,5 +1,7 @@
 """Shared API request/response schemas for FastAPI routes."""
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -39,3 +41,17 @@ class ChatAgenticRequest(BaseModel):
     selected_model: str | None = None
     retry_user_ordinal: int | None = Field(default=None, ge=1)
 
+
+class DependencyHealthResponse(BaseModel):
+    """Health response for one dependency."""
+
+    status: str
+    message: str | None = None
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class HealthResponse(BaseModel):
+    """Aggregate health response."""
+
+    status: str
+    dependencies: dict[str, DependencyHealthResponse]

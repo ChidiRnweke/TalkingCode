@@ -85,3 +85,20 @@ export interface RegisterRepoInput {
 	name: string;
 	defaultBranch?: string;
 }
+
+// =============================================================================
+// Health
+// =============================================================================
+
+export type DependencyHealthState = 'ok' | 'failed' | 'skipped';
+
+export interface DependencyHealthStatus {
+	status: DependencyHealthState;
+	message?: string | null;
+	details: Record<string, unknown>;
+}
+
+export interface HealthReport {
+	status: 'ok' | 'failed';
+	dependencies: Record<string, DependencyHealthStatus>;
+}

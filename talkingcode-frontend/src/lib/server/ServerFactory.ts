@@ -2,6 +2,8 @@ import { env } from '$env/dynamic/private';
 import createClient, { type Middleware } from 'openapi-fetch';
 import type { paths } from '$lib/api/schema';
 import type { ApiClient } from '$lib/server/api/client';
+import { HealthService } from '$lib/server/api/health.service';
+import { HealthController } from '$lib/server/controllers/HealthController';
 import { ModelsService } from '$lib/server/api/models.service';
 import { ReposService } from '$lib/server/api/repos.service';
 
@@ -51,5 +53,9 @@ export class ServerFactory {
 
 	static getReposService(fetchFn?: typeof fetch): ReposService {
 		return new ReposService(ServerFactory.createApiClient(fetchFn));
+	}
+
+	static getHealthController(fetchFn?: typeof fetch): HealthController {
+		return new HealthController(new HealthService(ServerFactory.createApiClient(fetchFn)));
 	}
 }

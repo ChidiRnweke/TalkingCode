@@ -2,8 +2,8 @@
 
 import argparse
 import asyncio
-import os
 import re
+import sys
 import time
 from typing import Any
 from uuid import uuid4
@@ -19,7 +19,7 @@ from talkingcode.evals.dataset import (
 from talkingcode.evals.scorers import deterministic_evaluators
 from talkingcode.factory import AppFactory
 from talkingcode.repository.database import get_session
-from talkingcode.startup import configure_phoenix_tracing
+from talkingcode.startup import setup_openai_agents_tracing, setup_telemetry_if_enabled
 
 TOOL_TAG_RE = re.compile(r"<tc-tool\b(?P<attrs>[^>]*)>")
 TOOL_NAME_RE = re.compile(r'\bname="(?P<name>[^"]+)"')
@@ -75,10 +75,11 @@ def predict(question: str, model_name: str | None = None) -> dict[str, Any]:
 
 def run_golden_evaluation(args: argparse.Namespace) -> Any:
     config = AppConfig.from_env()
-    configure_phoenix_tracing(config)
+    setup_telemetry_if_enabled(config)
+    setup_openai_agents_tracing()
     client = get_phoenix_client(
-        base_url=args.base_url,
-        api_key=os.getenv("PHOENIX_API_KEY"),
+        base_url=args.base_url or config.phoenix_collector_endpoint or DEFAULT_BASE_URL,
+        api_key=config.phoenix_api_key,
     )
     dataset = find_dataset(client, name=args.dataset_name)
     if dataset is None or args.sync_dataset:
@@ -98,16 +99,13 @@ def run_golden_evaluation(args: argparse.Namespace) -> Any:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--base-url",
-        default=os.getenv("PHOENIX_COLLECTOR_ENDPOINT", DEFAULT_BASE_URL),
-    )
+    parser.add_argument("--base-url")
     parser.add_argument(
         "--experiment-name",
-        default=os.getenv("PHOENIX_EXPERIMENT_NAME", DEFAULT_EXPERIMENT_NAME),
+        default=DEFAULT_EXPERIMENT_NAME,
     )
     parser.add_argument("--dataset-name", default=DEFAULT_DATASET_NAME)
-    parser.add_argument("--model-name", default=os.getenv("EVAL_MODEL_NAME"))
+    parser.add_argument("--model-name")
     parser.add_argument("--sync-dataset", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     return parser
@@ -115,7 +113,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     result = run_golden_evaluation(build_parser().parse_args())
-    print(result)
+    sys.stdout.write(f"{result}\n")
 
 
 if __name__ == "__main__":

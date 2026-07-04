@@ -18,13 +18,13 @@ from agents.extensions.memory import SQLAlchemySession
 from agents.items import ReasoningItem, ToolCallItem, ToolCallOutputItem
 from agents.stream_events import RawResponsesStreamEvent, RunItemStreamEvent
 from openai import AsyncOpenAI
-from sqlalchemy.ext.asyncio import AsyncEngine  # noqa: import-boundary:sqlalchemy-location — SDK session memory needs the engine
+from sqlalchemy.ext.asyncio import AsyncEngine
 from openai.types.responses import (
     ResponseReasoningSummaryTextDeltaEvent,
     ResponseReasoningTextDeltaEvent,
     ResponseTextDeltaEvent,
 )
-from talkingcode.domain.models import AgentTurn, ChatStreamEvent
+from talkingcode.domain.models import AgentTurn, ChatStreamEvent, TurnStreamState
 
 logger: structlog.stdlib.BoundLogger = structlog.getLogger(__name__)
 
@@ -88,13 +88,6 @@ class IChatAgentService(Protocol):
 
 
 @dataclass(slots=True)
-class _TurnStreamState:
-    """Per-turn streaming state; the service itself is shared across requests."""
-
-    reasoning_streamed: bool = False
-
-
-@dataclass(slots=True)
 class ChatAgentService:
     """OpenAI Agents SDK-backed agent service."""
 
@@ -121,7 +114,7 @@ class ChatAgentService:
             max_turns=self.max_iterations,
             session=self._session(turn.conversation_id),
         )
-        state = _TurnStreamState()
+        state = TurnStreamState()
         async for event in result.stream_events():
             async for stream_event in self._map_agent_event(event, state):
                 yield stream_event
@@ -154,7 +147,7 @@ class ChatAgentService:
         user_indices = [
             i
             for i, item in enumerate(items)
-            if isinstance(item, dict) and item.get("role") == "user"
+            if self._is_user_message(item)
         ]
         if len(user_indices) < user_message_ordinal:
             # The retried turn never persisted its input (e.g. it failed
@@ -189,10 +182,18 @@ class ChatAgentService:
             tools=list(self.tools),
         )
 
+    @staticmethod
+    def _is_user_message(item: object) -> bool:
+        match item:
+            case {"role": "user"}:
+                return True
+            case _:
+                return False
+
     async def _map_agent_event(
         self,
         event: RawResponsesStreamEvent | RunItemStreamEvent | object,
-        state: "_TurnStreamState",
+        state: TurnStreamState,
     ) -> AsyncGenerator[ChatStreamEvent, None]:
         match event:
             case RawResponsesStreamEvent(data=ResponseTextDeltaEvent(delta=delta)):
@@ -252,9 +253,13 @@ class ChatAgentService:
     @staticmethod
     def _tool_args(item: ToolCallItem) -> str:
         """Return the raw JSON arguments of a tool call, if available."""
-        if isinstance(item.raw_item, dict):
-            return item.raw_item.get("arguments") or ""
-        return getattr(item.raw_item, "arguments", None) or ""
+        match item.raw_item:
+            case {"arguments": arguments}:
+                return str(arguments or "")
+            case object(arguments=arguments):
+                return str(arguments or "")
+            case _:
+                return ""
 
     @staticmethod
     def _reasoning(text: str) -> ChatStreamEvent:

@@ -4,8 +4,6 @@ from uuid import uuid4
 import pytest
 from agents import Agent, Runner
 from agents.extensions.memory import SQLAlchemySession
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.pool import StaticPool
 from agents.items import ReasoningItem, ToolCallItem, ToolCallOutputItem
 from agents.stream_events import RawResponsesStreamEvent, RunItemStreamEvent
 from openai.types.responses import (
@@ -15,9 +13,10 @@ from openai.types.responses import (
     ResponseTextDeltaEvent,
 )
 from openai.types.responses.response_reasoning_item import Content
-
-from talkingcode.domain.models import AgentTurn
-from talkingcode.services.agent.agent_service import ChatAgentService, _TurnStreamState
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import StaticPool
+from talkingcode.domain.models import AgentTurn, TurnStreamState
+from talkingcode.services.agent.agent_service import ChatAgentService
 
 
 @pytest.fixture
@@ -27,7 +26,9 @@ def service() -> ChatAgentService:
         openrouter_api_key="test-key",
         max_iterations=16,
         # Engines connect lazily; the stubbed Runner never touches the DB.
-        engine=create_async_engine("postgresql+asyncpg://unused:unused@localhost:1/unused"),
+        engine=create_async_engine(
+            "postgresql+asyncpg://unused:unused@localhost:1/unused"
+        ),
     )
 
 
@@ -78,13 +79,13 @@ def reasoning_item(agent: Agent, text: str) -> RunItemStreamEvent:
     )
 
 
-async def collect(service: ChatAgentService, event: object, state: _TurnStreamState):
+async def collect(service: ChatAgentService, event: object, state: TurnStreamState):
     return [item async for item in service._map_agent_event(event, state)]
 
 
 @pytest.mark.asyncio
 async def test_text_delta_maps_to_markdown_delta(service: ChatAgentService):
-    events = await collect(service, text_delta("Hello"), _TurnStreamState())
+    events = await collect(service, text_delta("Hello"), TurnStreamState())
 
     assert events[0].event == "markdown.delta"
     assert events[0].data["text"] == "Hello"
@@ -92,16 +93,20 @@ async def test_text_delta_maps_to_markdown_delta(service: ChatAgentService):
 
 @pytest.mark.asyncio
 async def test_reasoning_delta_maps_to_reasoning_tag(service: ChatAgentService):
-    events = await collect(service, reasoning_delta("checking <repo>"), _TurnStreamState())
+    events = await collect(
+        service, reasoning_delta("checking <repo>"), TurnStreamState()
+    )
 
-    assert events[0].data["text"] == "<tc-reasoning>checking &lt;repo&gt;</tc-reasoning>"
+    assert (
+        events[0].data["text"] == "<tc-reasoning>checking &lt;repo&gt;</tc-reasoning>"
+    )
 
 
 @pytest.mark.asyncio
 async def test_reasoning_item_suppressed_after_streamed_deltas(
     service: ChatAgentService, agent: Agent
 ):
-    state = _TurnStreamState()
+    state = TurnStreamState()
     await collect(service, reasoning_delta("checking"), state)
 
     events = await collect(service, reasoning_item(agent, "checking"), state)
@@ -114,7 +119,9 @@ async def test_reasoning_item_suppressed_after_streamed_deltas(
 async def test_reasoning_item_emitted_when_no_deltas_streamed(
     service: ChatAgentService, agent: Agent
 ):
-    events = await collect(service, reasoning_item(agent, "checking"), _TurnStreamState())
+    events = await collect(
+        service, reasoning_item(agent, "checking"), TurnStreamState()
+    )
 
     assert events[0].data["text"] == "<tc-reasoning>checking</tc-reasoning>"
 
@@ -136,7 +143,7 @@ async def test_tool_called_maps_to_running_tag_with_args(
         ),
     )
 
-    events = await collect(service, event, _TurnStreamState())
+    events = await collect(service, event, TurnStreamState())
 
     text = events[0].data["text"]
     assert 'name="search_github"' in text
@@ -202,9 +209,13 @@ def sqlite_service() -> ChatAgentService:
     )
 
 
-async def seed_session(service: ChatAgentService, conversation_id, items: list[dict]) -> None:
-    session = SQLAlchemySession(str(conversation_id), engine=service.engine, create_tables=True)
-    await session.add_items(items)
+async def seed_session(
+    service: ChatAgentService, conversation_id, items: list[dict]
+) -> None:
+    session = SQLAlchemySession(
+        str(conversation_id), engine=service.engine, create_tables=True
+    )
+    await session.add_items(items)  # type: ignore
 
 
 def user_item(content: str) -> dict:
@@ -240,7 +251,9 @@ async def test_rewind_session_drops_nth_user_message_and_everything_after():
     turn_two = [user_item("q2"), assistant_item("a2")]
     await seed_session(service, conversation_id, turn_one + turn_two)
 
-    await service.rewind_session(conversation_id=conversation_id, user_message_ordinal=2)
+    await service.rewind_session(
+        conversation_id=conversation_id, user_message_ordinal=2
+    )
 
     assert await service._session(conversation_id).get_items() == turn_one
 
@@ -249,9 +262,13 @@ async def test_rewind_session_drops_nth_user_message_and_everything_after():
 async def test_rewind_session_at_first_user_message_empties_session():
     service = sqlite_service()
     conversation_id = uuid4()
-    await seed_session(service, conversation_id, [user_item("q1"), assistant_item("a1")])
+    await seed_session(
+        service, conversation_id, [user_item("q1"), assistant_item("a1")]
+    )
 
-    await service.rewind_session(conversation_id=conversation_id, user_message_ordinal=1)
+    await service.rewind_session(
+        conversation_id=conversation_id, user_message_ordinal=1
+    )
 
     assert await service._session(conversation_id).get_items() == []
 
@@ -263,7 +280,9 @@ async def test_rewind_session_noop_when_ordinal_exceeds_user_messages():
     items = [user_item("q1"), assistant_item("a1")]
     await seed_session(service, conversation_id, items)
 
-    await service.rewind_session(conversation_id=conversation_id, user_message_ordinal=2)
+    await service.rewind_session(
+        conversation_id=conversation_id, user_message_ordinal=2
+    )
 
     assert await service._session(conversation_id).get_items() == items
 
@@ -295,7 +314,7 @@ async def test_tool_output_maps_to_done_tag(service: ChatAgentService, agent: Ag
         ),
     )
 
-    events = await collect(service, event, _TurnStreamState())
+    events = await collect(service, event, TurnStreamState())
 
     text = events[0].data["text"]
     assert 'call-id="call-1"' in text

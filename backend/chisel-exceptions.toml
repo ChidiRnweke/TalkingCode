@@ -28,3 +28,17 @@ rules = [
     "session:session-execute-location",
 ]
 reason = "DocumentRepository.search_chunks selects ORM rows plus a computed similarity column; AsyncSession.execute is the appropriate SQLAlchemy API for this multi-entity result shape"
+
+[[exceptions]]
+files = ["talkingcode/repository/repo_repository.py", "src/talkingcode/repository/repo_repository.py"]
+rules = [
+    "session:session-execute-location",
+]
+reason = "Chisel false positive: RepoRepository is the repository layer, and AsyncSession.execute belongs here for the PostgreSQL upsert statement"
+
+[[exceptions]]
+files = ["talkingcode/repository/health_repository.py", "src/talkingcode/repository/health_repository.py"]
+rules = [
+    "session:session-execute-location",
+]
+reason = "Chisel false positive: HealthRepository is the repository layer, and AsyncSession.execute belongs here for the database ping query"

@@ -1,13 +1,13 @@
 """Tests for the Infisical-backed secrets reader."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pytest
 
 from talkingcode.environment import env
 
 
-@dataclass
+@dataclass(slots=True)
 class FakeSecret:
     secret_value: str
 
@@ -43,6 +43,13 @@ def test_read_secret_returns_value_on_first_try() -> None:
     backend = make_backend(client)
 
     assert backend.read_secret("PHOENIX_API_KEY") == "my-value"
+
+
+def test_read_secret_calls_client_once_on_first_try() -> None:
+    client = FakeInfisicalClient([FakeSecret("my-value")])
+    backend = make_backend(client)
+
+    backend.read_secret("PHOENIX_API_KEY")
     assert client.calls == 1
 
 
@@ -53,10 +60,34 @@ def test_read_secret_retries_then_succeeds() -> None:
     backend = make_backend(client)
 
     assert backend.read_secret("PHOENIX_API_KEY") == "my-value"
+
+
+def test_read_secret_calls_client_for_each_retry() -> None:
+    client = FakeInfisicalClient(
+        [RuntimeError("network blip"), RuntimeError("network blip"), FakeSecret("my-value")]
+    )
+    backend = make_backend(client)
+
+    backend.read_secret("PHOENIX_API_KEY")
     assert client.calls == 3
 
 
 def test_read_secret_raises_after_exhausting_retries() -> None:
+    client = FakeInfisicalClient(
+        [RuntimeError("network blip"), RuntimeError("network blip"), RuntimeError("network blip")]
+    )
+    backend = make_backend(client)
+    raised = False
+
+    try:
+        backend.read_secret("PHOENIX_API_KEY")
+    except env.SecretsNotFoundError:
+        raised = True
+
+    assert raised is True
+
+
+def test_read_secret_calls_client_for_all_exhausted_retries() -> None:
     client = FakeInfisicalClient(
         [RuntimeError("network blip"), RuntimeError("network blip"), RuntimeError("network blip")]
     )
@@ -67,12 +98,20 @@ def test_read_secret_raises_after_exhausting_retries() -> None:
     assert client.calls == 3
 
 
-def test_read_secret_uses_cache_without_calling_client_again() -> None:
+def test_read_secret_uses_cached_value() -> None:
     client = FakeInfisicalClient([FakeSecret("my-value")])
     backend = make_backend(client)
 
+    backend.read_secret("PHOENIX_API_KEY")
     assert backend.read_secret("PHOENIX_API_KEY") == "my-value"
-    assert backend.read_secret("PHOENIX_API_KEY") == "my-value"
+
+
+def test_read_secret_cache_avoids_second_client_call() -> None:
+    client = FakeInfisicalClient([FakeSecret("my-value")])
+    backend = make_backend(client)
+
+    backend.read_secret("PHOENIX_API_KEY")
+    backend.read_secret("PHOENIX_API_KEY")
     assert client.calls == 1
 
 

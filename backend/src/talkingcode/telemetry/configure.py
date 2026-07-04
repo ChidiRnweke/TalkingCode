@@ -16,14 +16,24 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import set_tracer_provider
 
 
-def configure_telemetry(endpoint: str, service_name: str, environment: str) -> None:
-    """Configure telemetry for the application, including metrics, logs, and spans."""
-    resource = Resource.create(
-        {
-            "service.name": service_name,
-            "deployment.environment": environment,
-        }
-    )
+def configure_telemetry(
+    endpoint: str,
+    service_name: str,
+    environment: str,
+    phoenix_project: str = "",
+) -> None:
+    """Configure telemetry for the application, including metrics, logs, and spans.
+
+    ``phoenix_project`` is attached to the shared resource as ``phoenix.project``
+    so a downstream OTel collector can route spans to the correct Phoenix project.
+    """
+    attributes = {
+        "service.name": service_name,
+        "deployment.environment": environment,
+    }
+    if phoenix_project:
+        attributes["phoenix.project"] = phoenix_project
+    resource = Resource.create(attributes)
 
     _configure_metrics(endpoint, resource)
     _configure_logs(endpoint, resource)

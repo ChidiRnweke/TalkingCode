@@ -8,9 +8,11 @@ def _expectations(expected: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def _outputs(output: Any) -> dict[str, Any]:
-    if isinstance(output, dict):
-        return output
-    return {"final_answer": str(output or "")}
+    match output:
+        case dict() as values:
+            return values
+        case _:
+            return {"final_answer": str(output or "")}
 
 
 def required_tools_called(output: Any, expected: dict[str, Any] | None) -> bool:

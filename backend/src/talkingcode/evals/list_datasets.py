@@ -2,8 +2,9 @@
 
 import argparse
 import json
-import os
+import sys
 
+from talkingcode.config import AppConfig
 from talkingcode.evals.dataset import (
     DEFAULT_BASE_URL,
     get_phoenix_client,
@@ -13,31 +14,29 @@ from talkingcode.evals.dataset import (
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--base-url",
-        default=os.getenv("PHOENIX_COLLECTOR_ENDPOINT", DEFAULT_BASE_URL),
-    )
+    parser.add_argument("--base-url")
     parser.add_argument("--json", action="store_true")
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
+    config = AppConfig.from_env()
     client = get_phoenix_client(
-        base_url=args.base_url,
-        api_key=os.getenv("PHOENIX_API_KEY"),
+        base_url=args.base_url or config.phoenix_collector_endpoint or DEFAULT_BASE_URL,
+        api_key=config.phoenix_api_key,
     )
     datasets = list_evaluation_datasets(client)
     if args.json:
-        print(json.dumps(datasets, indent=2))
+        sys.stdout.write(f"{json.dumps(datasets, indent=2)}\n")
         return
 
     if not datasets:
-        print("No evaluation datasets found.")
+        sys.stdout.write("No evaluation datasets found.\n")
         return
 
     for dataset in datasets:
-        print(f"{dataset['name']} id={dataset['dataset_id']}")
+        sys.stdout.write(f"{dataset['name']} id={dataset['dataset_id']}\n")
 
 
 if __name__ == "__main__":

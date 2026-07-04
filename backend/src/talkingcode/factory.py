@@ -4,17 +4,20 @@ from dataclasses import dataclass
 
 import structlog
 from agents import Tool, function_tool
-from sqlalchemy.ext.asyncio import AsyncSession  # noqa: import-boundary:sqlalchemy-location — Factory assembles concrete ORM sessions for repositories
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from talkingcode.config import AppConfig
 from talkingcode.controllers.chat_controller import ChatController
+from talkingcode.controllers.health_controller import HealthController
 from talkingcode.services.agent.agent_service import ChatAgentService
 from talkingcode.controllers.ingestion_controller import IngestionController
 from talkingcode.repository.conversation_repository import ConversationRepository
 from talkingcode.repository.database import get_engine, get_session_maker
 from talkingcode.repository.document_repository import DocumentRepository
+from talkingcode.repository.health_repository import HealthRepository
 from talkingcode.repository.repo_repository import RepoRepository
 from talkingcode.services.classification.document_classifier import DocumentClassifier
+from talkingcode.services.health_service import ExternalHealthClient, HealthService
 from talkingcode.services.ingestion.chunker import LineChunker
 from talkingcode.services.ingestion.embedder import OpenRouterEmbedder
 from talkingcode.services.ingestion.github_fetcher import GitHubFetcher
@@ -41,6 +44,10 @@ class AppFactory:
     def get_document_repository(self) -> DocumentRepository:
         """Get document repository."""
         return DocumentRepository(self.session)
+
+    def get_health_repository(self) -> HealthRepository:
+        """Get health repository."""
+        return HealthRepository(self.session)
 
     def get_document_classifier(self) -> DocumentClassifier:
         """Get document classifier."""
@@ -77,40 +84,18 @@ class AppFactory:
 
         async def search_github(query: str) -> dict:
             """Semantic search across indexed GitHub repositories."""
-            try:
-                result = await retriever.execute(query=query)
-            except Exception:
-                logger.exception("search_github failed", query=query)
-                raise
-            logger.info("search_github succeeded", query=query)
-            return result
+            return await retriever.execute(query=query)
 
         async def get_project_descriptions(query: str = "") -> dict:
             """Get descriptions and names of indexed GitHub projects."""
-            try:
-                result = await project_descriptions.execute(query=query)
-            except Exception:
-                logger.exception("get_project_descriptions failed", query=query)
-                raise
-            logger.info("get_project_descriptions succeeded", query=query)
-            return result
+            return await project_descriptions.execute(query=query)
 
         async def read_file(repository: str, file_path: str) -> dict:
             """Read a file from an indexed repository."""
-            try:
-                result = await read_file_tool.execute(
-                    repository=repository,
-                    file_path=file_path,
-                )
-            except Exception:
-                logger.exception(
-                    "read_file failed", repository=repository, file_path=file_path
-                )
-                raise
-            logger.info(
-                "read_file succeeded", repository=repository, file_path=file_path
+            return await read_file_tool.execute(
+                repository=repository,
+                file_path=file_path,
             )
-            return result
 
         timeout = float(self.config.default_tool_timeout)
         return [
@@ -146,6 +131,18 @@ class AppFactory:
             conversation_repository=conversation_repo,
             default_model=self.config.default_model,
         )
+
+    def get_health_service(self) -> HealthService:
+        """Get health check service."""
+        return HealthService(
+            health_repository=self.get_health_repository(),
+            config=self.config,
+            external_client=ExternalHealthClient(),
+        )
+
+    def get_health_controller(self) -> HealthController:
+        """Get health controller."""
+        return HealthController(health_service=self.get_health_service())
 
     def get_repo_repository(self) -> RepoRepository:
         """Get repo repository."""

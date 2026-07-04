@@ -181,13 +181,41 @@ export interface components {
              * @default
              */
             question: string;
+            /** Retry User Ordinal */
+            retry_user_ordinal?: number | null;
             /** Selected Model */
             selected_model?: string | null;
+        };
+        /**
+         * DependencyHealthResponse
+         * @description Health response for one dependency.
+         */
+        DependencyHealthResponse: {
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            };
+            /** Message */
+            message?: string | null;
+            /** Status */
+            status: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HealthResponse
+         * @description Aggregate health response.
+         */
+        HealthResponse: {
+            /** Dependencies */
+            dependencies: {
+                [key: string]: components["schemas"]["DependencyHealthResponse"];
+            };
+            /** Status */
+            status: string;
         };
         /** IngestionRunInfo */
         IngestionRunInfo: {
@@ -354,9 +382,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
+                    "application/json": components["schemas"]["HealthResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthResponse"];
                 };
             };
         };

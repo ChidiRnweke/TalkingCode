@@ -34,3 +34,4 @@ qdrant-data/
 
 # Misc
 site/
+ingest.sh
