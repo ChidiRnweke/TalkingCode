@@ -1,7 +1,7 @@
 """Application startup helpers."""
 
 import structlog
-from openinference.instrumentation.openai_agents import OpenAIAgentsInstrumentor
+from phoenix.otel import register
 from sqlalchemy import text
 
 from talkingcode.config import AppConfig
@@ -10,41 +10,50 @@ from talkingcode.telemetry import configure_telemetry
 
 logger = structlog.getLogger(__name__)
 
-_openai_agents_instrumented = False
 
+def _collector_http_endpoint(grpc_endpoint: str) -> str:
+    """Derive the OTLP/HTTP traces URL from the OTLP/gRPC endpoint.
 
-def setup_openai_agents_tracing() -> None:
-    """Instrument the OpenAI Agents SDK against the global tracer provider.
-
-    Spans are exported via the OTLP endpoint configured in
-    ``setup_telemetry_if_enabled``; a downstream OTel collector routes them to
-    Phoenix (and any other backends) so the application never talks to Phoenix
-    directly for tracing.  Idempotent: subsequent calls are no-ops.
+    The OTel port convention is gRPC on :4317 and HTTP on :4318; the
+    ``register`` exporter with ``protocol="http/protobuf"`` needs the HTTP
+    endpoint with an explicit ``/v1/traces`` path.
     """
-    global _openai_agents_instrumented
-    if _openai_agents_instrumented:
+    return grpc_endpoint.replace(":4317", ":4318").rstrip("/") + "/v1/traces"
+
+
+def setup_phoenix_tracing(config: AppConfig) -> None:
+    """Configure Phoenix tracing routed through the OTel collector.
+
+    ``register`` builds a Phoenix-flavored ``TracerProvider`` carrying the
+    ``phoenix.project`` resource attribute (so the collector can route spans
+    to the right Phoenix project) and, with ``auto_instrument=True``, wires
+    the OpenAI Agents instrumentor to it.  The instrumentor's exclusive
+    processor replaces the SDK's default backend exporter, which silences
+    the ``OPENAI_API_KEY is not set`` warning when using OpenRouter.  The
+    exporter points at the OTel collector; the collector adds the Phoenix
+    ``Authorization: Bearer ...`` header and filters to OpenInference spans
+    before forwarding to Phoenix.  The provider is not set as the global one
+    so infrastructure telemetry (FastAPI/SQLAlchemy/HTTPX) stays on the
+    vanilla OTel provider configured by ``setup_telemetry_if_enabled``.
+    """
+    if not config.otel_exporter_endpoint:
+        logger.warning("phoenix.tracing.disabled", reason="missing_otel_endpoint")
         return
-    OpenAIAgentsInstrumentor().instrument()
-    _openai_agents_instrumented = True
-    logger.info("openai_agents_tracing.enabled")
 
-
-def disable_openai_native_tracing() -> None:
-    """Disable the OpenAI Agents SDK's native trace exporter.
-
-    The SDK runs a parallel tracer (``agents.tracing``) that exports to
-    ``api.openai.com/v1/traces`` using ``OPENAI_API_KEY`` as a bearer token.
-    We use OpenRouter (no ``OPENAI_API_KEY``), so every batch flush emits
-    ``"OPENAI_API_KEY is not set, skipping trace export"``.  OpenInference
-    spans routed via OpenTelemetry to the OTel collector are a separate path
-    and are unaffected by this call.  Re-enabling native tracing (e.g. after
-    switching to OpenAI-direct) means removing this call and setting
-    ``OPENAI_API_KEY``.
-    """
-    from agents.tracing import set_trace_processors
-
-    set_trace_processors([])
-    logger.info("openai_native_tracing.disabled")
+    register(
+        endpoint=_collector_http_endpoint(config.otel_exporter_endpoint),
+        protocol="http/protobuf",
+        project_name=config.phoenix_project_name,
+        set_global_tracer_provider=False,
+        auto_instrument=True,
+        batch=True,
+        verbose=False,
+    )
+    logger.info(
+        "phoenix.tracing.enabled",
+        endpoint=config.otel_exporter_endpoint,
+        project_name=config.phoenix_project_name,
+    )
 
 
 async def setup_database(config: AppConfig) -> None:
@@ -60,13 +69,11 @@ def setup_telemetry_if_enabled(config: AppConfig) -> None:
             endpoint=config.otel_exporter_endpoint,
             service_name=config.otel_service_name,
             environment=config.otel_environment,
-            phoenix_project=config.phoenix_project_name,
         )
         logger.info(
             "telemetry.enabled",
             endpoint=config.otel_exporter_endpoint,
             service_name=config.otel_service_name,
-            phoenix_project=config.phoenix_project_name,
         )
     else:
         logger.info("telemetry.disabled")

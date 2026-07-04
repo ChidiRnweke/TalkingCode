@@ -13,51 +13,56 @@ class StartupConfig:
     phoenix_project_name: str = "talkingcode"
 
 
-class FakeInstrumentor:
-    instrument_calls: list[dict] = []
-
-    def instrument(self, **kwargs) -> None:
-        FakeInstrumentor.instrument_calls.append(kwargs)
-
-
 @pytest.fixture(autouse=True)
 def reset_startup_state(monkeypatch) -> None:
-    monkeypatch.setattr(startup, "_openai_agents_instrumented", False)
-    FakeInstrumentor.instrument_calls = []
-    monkeypatch.setattr(startup, "OpenAIAgentsInstrumentor", FakeInstrumentor)
+    register_calls: list[dict] = []
+    monkeypatch.setattr(
+        startup, "register", lambda **kwargs: register_calls.append(kwargs)
+    )
+    monkeypatch.setattr(startup, "_register_calls", register_calls, raising=False)
 
 
-def test_setup_openai_agents_tracing_instruments_the_global_provider() -> None:
-    startup.setup_openai_agents_tracing()
-    assert FakeInstrumentor.instrument_calls == [{}]
+def test_setup_phoenix_tracing_registers_with_collector_endpoint(monkeypatch) -> None:
+    register_calls: list[dict] = []
+    monkeypatch.setattr(
+        startup, "register", lambda **kwargs: register_calls.append(kwargs)
+    )
+
+    config = StartupConfig(
+        otel_exporter_endpoint="http://otel-collector:4317",
+        phoenix_project_name="talkingcode-test",
+    )
+
+    startup.setup_phoenix_tracing(config)
+
+    assert len(register_calls) == 1
+    call = register_calls[0]
+    assert call["endpoint"] == "http://otel-collector:4318/v1/traces"
+    assert call["protocol"] == "http/protobuf"
+    assert call["project_name"] == "talkingcode-test"
+    assert call["set_global_tracer_provider"] is False
+    assert call["auto_instrument"] is True
+    assert call["batch"] is True
+    assert call["verbose"] is False
+    assert "api_key" not in call
 
 
-def test_setup_openai_agents_tracing_logs_enabled(monkeypatch) -> None:
-    infos: list[tuple[str, dict]] = []
+def test_setup_phoenix_tracing_skips_when_endpoint_missing(monkeypatch) -> None:
+    register_calls: list[dict] = []
+    monkeypatch.setattr(
+        startup, "register", lambda **kwargs: register_calls.append(kwargs)
+    )
+    warnings: list[tuple[str, dict]] = []
+    monkeypatch.setattr(startup.logger, "warning", lambda event, **kw: warnings.append((event, kw)))
 
-    def fake_info(event: str, **kwargs) -> None:
-        infos.append((event, kwargs))
+    config = StartupConfig(otel_exporter_endpoint="")
+    startup.setup_phoenix_tracing(config)
 
-    monkeypatch.setattr(startup.logger, "info", fake_info)
-    monkeypatch.setattr(startup, "OpenAIAgentsInstrumentor", FakeInstrumentor)
-
-    startup.setup_openai_agents_tracing()
-
-    assert infos == [("openai_agents_tracing.enabled", {})]
-
-
-def test_setup_openai_agents_tracing_is_idempotent(monkeypatch) -> None:
-    monkeypatch.setattr(startup, "OpenAIAgentsInstrumentor", FakeInstrumentor)
-
-    startup.setup_openai_agents_tracing()
-    startup.setup_openai_agents_tracing()
-
-    assert len(FakeInstrumentor.instrument_calls) == 1
+    assert register_calls == []
+    assert warnings == [("phoenix.tracing.disabled", {"reason": "missing_otel_endpoint"})]
 
 
-def test_setup_telemetry_if_enabled_passes_phoenix_project_to_configure(
-    monkeypatch,
-) -> None:
+def test_setup_telemetry_if_enabled_passes_endpoint_to_configure(monkeypatch) -> None:
     configure_calls: list[dict] = []
 
     def fake_configure(**kwargs) -> None:
@@ -69,7 +74,6 @@ def test_setup_telemetry_if_enabled_passes_phoenix_project_to_configure(
         otel_exporter_endpoint="http://otel-collector:4317",
         otel_service_name="talkingcode-backend",
         otel_environment="test",
-        phoenix_project_name="talkingcode-test",
     )
 
     startup.setup_telemetry_if_enabled(config)
@@ -79,7 +83,6 @@ def test_setup_telemetry_if_enabled_passes_phoenix_project_to_configure(
             "endpoint": "http://otel-collector:4317",
             "service_name": "talkingcode-backend",
             "environment": "test",
-            "phoenix_project": "talkingcode-test",
         }
     ]
 
@@ -97,17 +100,3 @@ def test_setup_telemetry_if_enabled_logs_disabled_when_endpoint_missing(
     startup.setup_telemetry_if_enabled(config)
 
     assert infos == [("telemetry.disabled", {})]
-
-
-def test_disable_openai_native_tracing_clears_processors(monkeypatch) -> None:
-    import agents.tracing as agents_tracing
-
-    set_calls: list[list] = []
-
-    monkeypatch.setattr(
-        agents_tracing, "set_trace_processors", lambda processors: set_calls.append(processors)
-    )
-
-    startup.disable_openai_native_tracing()
-
-    assert set_calls == [[]]
