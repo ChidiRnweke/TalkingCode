@@ -24,6 +24,7 @@ from openai.types.responses import (
     ResponseReasoningTextDeltaEvent,
     ResponseTextDeltaEvent,
 )
+from opentelemetry.context import Context
 from opentelemetry.trace import Status, StatusCode
 
 from talkingcode.domain.models import AgentTurn, ChatStreamEvent, TurnStreamState
@@ -113,9 +114,18 @@ class ChatAgentService:
         # The Agents instrumentor never records input/output on the trace-root
         # or agent spans, so the turn is wrapped in a manual span that carries
         # them; the instrumentor's "Agent workflow" trace nests under it.
+        #
+        # FastAPIInstrumentor keeps its own request span active (on the
+        # separate vanilla-OTel provider from configure.py) for the whole
+        # handler, so without an explicit empty context this span would be
+        # parented under it. Phoenix only honors session.id on a span whose
+        # parent_id is null, so a non-root span here silently drops out of
+        # the conversation's session grouping even though the trace itself
+        # still renders fine.
         with get_phoenix_tracer().start_as_current_span(
             "TalkingCode.turn",
             openinference_span_kind="agent",
+            context=Context(),
         ) as span:
             span.set_input(question)
             # No conversation_id: Chat Completions is stateless, and server-managed

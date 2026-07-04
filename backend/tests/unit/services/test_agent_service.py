@@ -13,10 +13,17 @@ from openai.types.responses import (
     ResponseTextDeltaEvent,
 )
 from openai.types.responses.response_reasoning_item import Content
+from openinference.instrumentation import OITracer, TraceConfig
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+    InMemorySpanExporter,
+)
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
 from talkingcode.domain.models import AgentTurn, TurnStreamState
 from talkingcode.services.agent.agent_service import ChatAgentService
+from talkingcode.telemetry import tracing
 
 
 @pytest.fixture
@@ -209,7 +216,6 @@ async def test_run_turn_records_input_output_and_session_on_span(
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
         InMemorySpanExporter,
     )
-
     from talkingcode.telemetry import tracing
 
     provider = TracerProvider()
@@ -252,6 +258,59 @@ async def test_run_turn_records_input_output_and_session_on_span(
     assert span.attributes["input.value"] == "What projects use Python?"
     assert span.attributes["output.value"] == "Chidi uses Python in TalkingCode."
     assert span.attributes["session.id"] == str(turn.conversation_id)
+
+
+@pytest.mark.asyncio
+async def test_run_turn_span_stays_root_under_ambient_request_span(
+    service: ChatAgentService, monkeypatch: pytest.MonkeyPatch
+):
+    """FastAPIInstrumentor keeps a request span active on a separate,
+    non-Phoenix provider for the whole handler. Phoenix only honors
+    session.id on a span whose parent_id is null, so run_turn's span must
+    stay root (ignore the ambient span) or the conversation silently drops
+    out of session grouping even though the trace itself still renders.
+    """
+
+    provider = TracerProvider()
+    exporter = InMemorySpanExporter()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    monkeypatch.setattr(
+        tracing,
+        "_tracer",
+        OITracer(provider.get_tracer("test"), config=TraceConfig()),
+    )
+
+    ambient_provider = TracerProvider()
+    ambient_tracer = ambient_provider.get_tracer("fastapi")
+
+    class FakeResult:
+        final_output = "43"
+
+        async def stream_events(self):
+            return
+            yield
+
+    monkeypatch.setattr(Runner, "run_streamed", lambda *args, **kwargs: FakeResult())
+    turn = AgentTurn(
+        id=uuid4(),
+        conversation_id=uuid4(),
+        question="what is 15+28?",
+        selected_model=None,
+        planner_model_used="test-model",
+        status="running",
+        created_at=datetime.utcnow(),
+    )
+
+    with ambient_tracer.start_as_current_span("POST /chat"):
+        async for _ in service.run_turn(
+            turn=turn,
+            question=turn.question,
+            model_name="test-model",
+        ):
+            pass
+
+    (span,) = exporter.get_finished_spans()
+    assert span.parent is None
 
 
 def sqlite_service() -> ChatAgentService:
